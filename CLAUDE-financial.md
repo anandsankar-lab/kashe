@@ -15,15 +15,17 @@ that Team Member 2 (Experience) consumes via hooks.
 
 ## Your Domain
 ```
-CSV parsers       One parser per supported institution
-Price refresh     All market price API integrations
-FX rates          Currency conversion service
-AMFI NAV feed     Indian mutual fund prices
-Spend categoriser Transaction → category mapping
-Portfolio calc    Position, allocation, coverage score
-Savings rate      Formula + monthly tracking
-FIRE engine       Calculator + projection logic
-AI insights       Claude API integration
+Universal CSV parser   Auto-detect any bank's CSV format
+                       Known formats: zero friction
+                       Unknown formats: one confirmation screen
+Price refresh          All market price API integrations
+FX rates               Currency conversion service
+AMFI NAV feed          Indian mutual fund prices (free, daily)
+Spend categoriser      Transaction → category (multilingual)
+Portfolio calc         Position, allocation, concentration risk
+Savings rate           Formula + monthly trend tracking
+FIRE engine            Calculator + projection logic
+AI insights            Claude API integration (10 insight types)
 ```
 
 ---
@@ -42,7 +44,7 @@ interface DataSource {
 }
 
 class CSVDataSource implements DataSource {
-  // V1 implementation
+  // V1 implementation — smart universal parser
 }
 
 // V2: class OpenBankingDataSource implements DataSource {}
@@ -51,43 +53,62 @@ class CSVDataSource implements DataSource {
 
 ---
 
-## Supported CSV Formats (v1)
+## Smart Universal CSV Parser
 
 ```
-Institution          CSV characteristics
-─────────────────────────────────────────────────
-ABN Amro (NL)        Semicolon-delimited. Columns:
-                     Datum, Naam/Omschrijving, Rekening,
-                     Tegenrekening, Code, Af Bij,
-                     Bedrag (EUR), Mutatiesoort, Mededelingen
-                     Date format: YYYY-MM-DD
-                     Decimal: comma (1.234,56)
+APPROACH: Auto-detect, not fixed format list.
 
-HDFC Bank (IN)       Comma-delimited.
-                     Date format: DD/MM/YY
-                     Amount: debit/credit separate columns
+Any CSV from any bank works.
+Known banks get zero-friction instant parse.
+Unknown banks get one confirmation screen.
 
-Revolut (EU)         Comma-delimited.
-                     Columns: Type, Product, Started Date,
-                     Completed Date, Description, Amount,
-                     Fee, Currency, State, Balance
-                     Standard ISO date format
+PIPELINE:
+1. User uploads any CSV file
+2. Read header row
+3. Score each column against known field types:
+     date_field:        contains 'date', 'datum', 'dt'
+     amount_field:      contains 'amount', 'bedrag', 'amt'
+     description_field: contains 'desc', 'omschrijving',
+                        'narration', 'details', 'memo'
+     debit_credit_flag: contains 'af bij', 'dr/cr', 'type'
+     balance_field:     contains 'balance', 'saldo'
+4. If confidence > 85%: auto-map, proceed silently
+5. If confidence 60-85%: show mapping confirmation screen
+6. If confidence < 60%: ask user to map columns manually
 
-DeGiro (EU)          Comma-delimited portfolio export.
-                     Columns: Product, Symbol/ISIN,
-                     Exchange, Closing, Currency, Value
+KNOWN FORMATS (instant parse, skip confirmation):
+  ABN Amro        Semicolon-delimited, Dutch headers
+                  Datum, Naam/Omschrijving, Bedrag (EUR), Af Bij
+  DeGiro          Portfolio export, ISIN column present
+  HDFC Bank       Comma-delimited, DD/MM/YY dates
+  CAMS            Pipe-delimited, scheme code present
+  Zerodha/Groww   Holdings export, symbol column
+  Morgan Stanley  StockPlan Connect format, vest date column
+  Revolut         Started Date + Completed Date pattern
 
-CAMS (IN)            Pipe-delimited or CSV.
-                     All MF holdings across all AMCs.
-                     NAV from AMFI feed (not from file).
+UNKNOWN FORMAT (one confirmation screen):
+  Show detected column mapping to user:
+  "We found these columns — does this look right?"
+  Date       → [detected column] ✓/✗
+  Amount     → [detected column] ✓/✗
+  Description→ [detected column] ✓/✗
+  User corrects if wrong, confirms, parse proceeds.
 
-Zerodha/Groww (IN)   Comma-delimited holdings export.
-                     Columns vary — parse by header detection.
+AMOUNT PARSING:
+  Handle both decimal formats:
+  European: 1.234,56 (period = thousands, comma = decimal)
+  Standard: 1,234.56 (comma = thousands, period = decimal)
+  Auto-detect from first numeric cell.
 
-Morgan Stanley       CSV export from StockPlan Connect.
-(RSU/ESPP)           Columns: Award Type, Grant Date,
-                     Vest Date, Shares, Grant Price,
-                     Market Price at Vest
+DEBIT/CREDIT DETECTION:
+  Some CSVs: separate debit + credit columns
+  Some CSVs: single amount, negative = debit
+  Some CSVs: Af/Bij or Dr/Cr flag column
+  Handle all three patterns.
+
+[V2] Learn from confirmed mappings:
+  Store confirmed mappings per institution fingerprint
+  Next upload from same bank = instant parse
 ```
 
 ---
@@ -522,30 +543,29 @@ Format: {"headline": "...", "body": "...", "action": "..."}
 
 ## Your Output Files
 ```
-/types/asset.ts
-/types/liability.ts
-/types/transaction.ts
-/types/dataSource.ts
-/services/dataSource.ts             Abstract interface
-/services/csvDataSource.ts          V1 implementation
-/services/csvParsers/               One file per institution
-  abnAmroParser.ts
-  hdfcParser.ts
-  revolutParser.ts
-  deGiroParser.ts
-  camsParser.ts
-  zerodhaParser.ts
-  morganStanleyParser.ts
-/services/priceRefresh.ts           Orchestrates all price APIs
-/services/amfiNavFeed.ts            AMFI specific
-/services/fxRefresh.ts              Exchange rates
-/services/portfolioCalc.ts          Position + allocation calcs
-/services/savingsRate.ts            Savings rate formula
-/services/spendCategoriser.ts       Keyword → category
-/services/fireEngine.ts             FIRE calculations
-/services/aiInsights.ts             Claude API integration
-/store/portfolioStore.ts            Assets + liabilities state
-/store/spendStore.ts                Transactions state
-/hooks/usePortfolio.ts              Portfolio data for UI
-/hooks/useSpend.ts                  Spend data for UI
+/types/asset.ts                     Asset interface + AssetType enum
+/types/liability.ts                 Liability interface + LiabilityType enum
+/types/transaction.ts               Transaction interface + SpendCategory enum
+/types/dataSource.ts                DataSource interface
+/types/insight.ts                   Insight interface + InsightType enum
+/services/dataSource.ts             Abstract DataSource interface
+/services/csvDataSource.ts          CSVDataSource implementation
+/services/universalParser.ts        Column detection + confidence scoring
+                                    Known format fingerprints
+                                    Amount format detection (EU vs standard)
+                                    Debit/credit pattern detection
+/services/priceRefresh.ts           Orchestrates all price API calls
+/services/amfiNavFeed.ts            AMFI NAV feed parser + cache
+/services/fxRefresh.ts              ExchangeRate-API + 1hr cache
+/services/portfolioCalc.ts          Position, allocation, coverage score,
+                                    concentration risk flags,
+                                    liquid/illiquid split
+/services/savingsRate.ts            Savings rate formula + trend tracking
+/services/spendCategoriser.ts       Keyword → category (multilingual)
+/services/fireEngine.ts             FIRE number, projection, sensitivity
+/services/aiInsights.ts             Claude API integration, all 10 insight types
+/store/portfolioStore.ts            Assets + liabilities (Zustand)
+/store/spendStore.ts                Transactions (Zustand)
+/hooks/usePortfolio.ts              Portfolio data shaped for UI
+/hooks/useSpend.ts                  Spend data shaped for UI
 ```
