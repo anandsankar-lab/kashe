@@ -214,6 +214,30 @@ Both dark and light mode from day one
 
 ---
 
+## Git Conventions
+```
+Branch naming:  feature/TICKET-ID-short-description
+                fix/TICKET-ID-short-description
+                chore/TICKET-ID-short-description
+
+Commit format:  [TICKET-ID] Brief description
+Example:        [HOME-02] Build PositionHeroCard component
+
+Rules:
+- One commit per logical change
+- Never commit directly to main
+- Always work on a feature branch
+- PR required before merge
+- CI must pass before merge
+
+Never commit:
+- API keys or tokens (use .env)
+- .env files
+- node_modules/
+- .DS_Store
+- Expo build artifacts (dist/, .expo/)
+```
+
 ## PRD Location
 Full PRD: /docs/kashe-prd-complete.md
 Read the TL;DR of each section first.
