@@ -346,6 +346,7 @@ Team Member 3 — Financial Intelligence → CLAUDE-financial.md
     teach.tsx           Introduce [+] gesture
     first-add.tsx       Guided universal add sheet
     payoff.tsx          First data view (real or ghost)
+    budget-suggest.tsx  Budget suggestion (conditional — upload only)
     portfolio-teaser.tsx
     complete.tsx        Tap [+] anytime → main app
   /settings

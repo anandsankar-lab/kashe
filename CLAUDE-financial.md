@@ -159,6 +159,62 @@ type SpendCategory =
 
 ---
 
+## Merchant Memory
+User can manually recategorise any transaction from the
+Spend Category Detail screen. When they do:
+
+```typescript
+interface MerchantOverride {
+  merchantName: string       // normalised, lowercase, trimmed
+  category: SpendCategory
+  profileId: string          // overrides are per-profile
+  createdAt: Date
+}
+
+// On recategorisation:
+// 1. Save MerchantOverride to encrypted storage
+// 2. Re-run categorisation on ALL past transactions
+//    from the same merchant → update to new category
+// 3. All future imports: merchant override takes priority
+//    over keyword matching
+
+// Merchant name normalisation:
+// Lowercase, trim whitespace, remove trailing numbers
+// "ALBERT HEIJN 1234" → "albert heijn"
+// "Thuisbezorgd.nl" → "thuisbezorgd.nl"
+
+// Conflict resolution:
+// MerchantOverride always wins over keyword match
+// User's explicit choice is never overridden by the system
+```
+
+---
+
+## Budget Storage
+```typescript
+interface CategoryBudget {
+  category: SpendCategory
+  monthlyLimit: number        // in profile's base currency
+  profileId: string           // budgets are per-profile
+}
+
+// Budgets are NOT month-specific in v1
+// Same budget applies to every month
+// Stored in encrypted storage alongside transactions
+
+// Budget suggestion in onboarding:
+// suggestedBudget = Math.ceil(actualSpend / 50) * 50
+// e.g. actual €347 → suggested €350
+// User can edit before accepting
+
+// Services that consume budgets:
+// spendCategoriser.ts  → category totals vs limits
+// savingsRate.ts       → budget context for home screen
+// aiInsights.ts        → SPEND_ANOMALY uses actuals, not budgets
+```
+
+---
+
 ## Portfolio Calculations
 
 ### Financial Position

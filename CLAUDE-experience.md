@@ -143,7 +143,7 @@ LAYOUT (top to bottom):
 [Investment Segregation Toggle]
   Three pills: [Risk]  [Vehicle]  [Geography]
   Remembers last selected view
-  
+
   Risk view:
     Horizontal allocation bars: MEDIUM / HIGH / CASH_LOW
     Target (60/20/20) shown as ghost bar behind actual
@@ -225,8 +225,211 @@ GEOGRAPHY VIEW:
 
 ---
 
-## Onboarding Stack (8 screens, linear, runs once)
+## Spend Screen — Component Inventory
+The Spend screen job: "Show me where my money went this month
+— and whether that's normal for me."
+
 ```
+LAYOUT (top to bottom):
+
+[Header Row]
+  Left:  "Spend" label (heading style)
+  Right: [+] button (upload bank statement emphasis)
+         [⋯] overflow menu → "Set budgets"
+
+[Zone 1 — Monthly Summary]  ← FIXED, does not scroll
+  Month selector
+    Left/right chevrons, current month centred
+    Default: current month
+    Can navigate back up to 12 months of history
+    Partial months shown as-is (no warning needed)
+
+  Net spend number (large, Syne 800)
+    Total debits for selected month, base currency
+    investment_transfer and transfer EXCLUDED
+    Multi-currency: base total shown
+                    dim note beneath: "inc. amounts converted from INR"
+
+  Context line (DM Sans, textSecondary)
+    "↑ 12% vs last month  ·  ↑ 8% vs 3-month avg"
+    Uses ↑ / ↓ text indicators only — no red/green colouring here
+    Colours: textPrimary, textSecondary, textDim, accent only
+    Hidden entirely if <2 months of data
+
+  Budget summary (only if budget is set)
+    "€2,847 of €4,500 budget" in textSecondary
+    Shown beneath net number
+
+[Zone 2 — AI Insight Strip]  ← conditional
+  Only renders when SPEND_ANOMALY is triggered
+  Trigger: any category >150% of its 3-month average
+  Hidden entirely if nothing anomalous — no placeholder
+  Requires minimum 2 months of history to ever render
+
+  One compact card when visible:
+    Kāshe asterisk (small, static — not pulsing)
+    Headline: max 10 words
+    Body: max 40 words
+    Dismiss: swipe left or tap × → hidden for 24 hours
+    Tap card body → InsightDetailSheet
+
+[Zone 3 — Category Rows]  ← scrollable
+  Sorted by spend amount descending
+
+  Each SpendCategoryRow:
+    Category icon (left)
+    Category name (DM Sans medium)
+    Amount in base currency (Syne, right-aligned)
+    Thin proportion bar beneath row:
+      No budget set:        accent green, width = % of total spend
+      Under budget:         accent green fill
+      80–99% of budget:     warning (#FFB547) fill
+      100%+ of budget:      danger (#FF5C5C) fill
+    Chevron (right edge)
+    Tap → SpendCategoryDetailScreen
+
+  Transfers section (bottom, below ā macron divider):
+    Section label: "Transfers & Investments" (label style)
+    investment_transfer and transfer rows shown here
+    Dim note: "excluded from totals"
+    Same row visual but muted — textDim for amount
+
+EMPTY STATE (no data uploaded):
+  Full-screen blurred ghost of populated Spend screen
+  Frosted card centred:
+    Kāshe asterisk (slow pulse)
+    "See where your money goes"
+    [+ Upload bank statement] (accent button)
+    "Add manually instead" (text link, textSecondary)
+
+PARTIAL STATE (1 month of data only):
+  Zone 1: shown normally, context line hidden
+  Zone 2: never renders (insufficient history)
+  Zone 3: shown normally
+  No error message — this is normal first-use state
+```
+
+---
+
+## Spend Category Detail Screen
+```
+Route: /app/spend/[category].tsx
+
+LAYOUT:
+  Back chevron + category name as header
+  Same month selector as parent (stays in sync)
+  Subcategory breakdown rows (same visual as category rows)
+  Tap subcategory → expands inline to show transactions
+
+TRANSACTION ROW (SpendTransactionRow):
+  Date        DM Sans, textSecondary, short format ("12 Jan")
+  Merchant    DM Sans medium, textPrimary
+  Amount      Syne, right-aligned, textPrimary
+  Category chip  small pill, textDim background
+  Tap → TransactionEditSheet
+
+TRANSACTION EDIT SHEET (TransactionEditSheet):
+  Bottom sheet
+  Merchant name (heading)
+  Current category + subcategory shown
+  [Change category] → scrollable category + subcategory picker
+  On confirm:
+    Merchant name saved to merchant memory
+    All past + future transactions from same merchant
+    → reassigned to new category automatically
+  Confirmation toast: "Albert Heijn will always be Groceries"
+```
+
+---
+
+## Spend Budget Sheet
+```
+Component: SpendBudgetSheet.tsx
+Trigger: [⋯] overflow menu → "Set budgets" on Spend screen header
+
+LAYOUT (bottom sheet, scrollable):
+  Header: "Monthly budgets"
+  Dim note: "Set a limit for each category"
+
+  One row per spend category:
+    Category icon + name (left)
+    Editable amount field (right, Syne font)
+    Clear button (×) to remove budget for that category
+
+  Total row (bottom of list, above actions):
+    "Total budgeted: €X" in textSecondary
+
+  Actions:
+    [Save budgets]  accent button — saves all, dismisses sheet
+    [Cancel]        text link — dismisses without saving
+
+RULES:
+  investment_transfer and transfer never appear in this list
+  Empty field = no budget set for that category
+  Budgets stored locally per profile (not household-level)
+  Budgets persist across months (not month-specific in v1)
+```
+
+---
+
+## Insight Detail Sheet
+```
+Component: InsightDetailSheet.tsx
+Trigger: Tap insight card in Zone 2 of Spend screen
+
+LAYOUT (bottom sheet):
+  Kāshe asterisk (small, static)
+  Insight headline (Syne, heading size)
+  Full insight body (DM Sans, up to 80 words)
+  Data points that triggered it (dim, small text)
+    e.g. "Eating out: €340 this month vs €160 average"
+  Optional action suggestion (textSecondary)
+  [Dismiss] text link at bottom
+
+RULES:
+  Same 24-hour dismiss behaviour as inline card
+  No navigation to external content from this sheet
+```
+
+---
+
+## Budget Suggestion Screen (Onboarding — screen 7)
+```
+Appears:   After first successful CSV upload in onboarding
+Position:  Between First Payoff (screen 6) and Portfolio Teaser (screen 8)
+Skippable: Always — user never forced to set budgets
+
+CONTENT:
+  Headline: "Here's what we found"
+  Subheadline: "Based on your [Month] transactions"
+
+  Category rows (same visual as Spend screen):
+    Category name + amount spent this month
+    + editable suggested budget field
+    Suggested budget = actual spend rounded up to nearest 50
+    User can tap field to adjust, accept as-is, or clear
+
+  Three actions (bottom, stacked):
+    [Use these budgets →]   accepts all suggestions, proceeds
+    [Set manually]          clears suggestions, shows blank fields
+    [Skip for now]          skips budget setup entirely
+
+  Dim note beneath actions:
+    "You can update budgets anytime in Settings or on the Spend screen"
+
+RULES:
+  Only shown if ≥1 month of spend data imported successfully
+  investment_transfer and transfer never shown in this list
+  If user skipped upload in screen 5: this screen skipped entirely
+```
+
+---
+
+## Onboarding Stack (9 screens, linear, runs once)
+```
+Screen 7 (Budget Suggestion) added after first spec session.
+Only appears if upload succeeded in screen 5. Otherwise skipped.
+
 1. Welcome
    Kāshe asterisk (large, pulsing)
    "Your money. Both worlds."
@@ -245,7 +448,6 @@ GEOGRAPHY VIEW:
 4. Teach [+]
    Static illustration showing [+] button
    "This button is how you add everything"
-   "Bank statements, investments, manual entries"
    [Got it →]
 
 5. First Add (Guided)
@@ -256,14 +458,17 @@ GEOGRAPHY VIEW:
 6. First Payoff
    If data uploaded: real Home screen preview
    If skipped: full ghost empty state
-   Both are valid — ghost is an invitation, not failure
 
-7. Portfolio Teaser
+7. Budget Suggestion  ← NEW (conditional)
+   See Budget Suggestion Screen spec above
+   Only shown if screen 5 upload succeeded
+
+8. Portfolio Teaser
    Blurred portfolio ghost
    "Your investments, one view"
    [+ Add your investments]
 
-8. Complete
+9. Complete
    "Kāshe is ready."
    "Tap [+] anytime to add more"
    [Go to Kāshe →] → loads main app
@@ -300,7 +505,7 @@ Progress bar fill:    Animate on mount, 600ms ease-out
 /constants/colours.ts
 /constants/typography.ts
 /constants/spacing.ts
-/constants/mockData.ts            Realistic fixed mock data
+/constants/mockData.ts
 /components/ui/
   Button.tsx
   Card.tsx
@@ -324,10 +529,21 @@ Progress bar fill:    Animate on mount, 600ms ease-out
   FIREProgress.tsx
   CoverageCard.tsx
   SavingsRateBadge.tsx
-/app/(tabs)/index.tsx             Home screen (assembled)
-/app/(tabs)/spend.tsx             Spend screen
-/app/(tabs)/portfolio.tsx         Portfolio screen
-/app/(tabs)/insights.tsx          Insights screen
-/app/onboarding/                  All 8 onboarding screens
+/components/spend/
+  SpendScreenHeader.tsx
+  SpendSummaryStrip.tsx           Zone 1: month selector + net + context
+  SpendInsightStrip.tsx           Zone 2: conditional AI insight card
+  SpendCategoryList.tsx           Zone 3: scrollable category rows
+  SpendCategoryRow.tsx            Single category row + proportion bar
+  SpendTransactionRow.tsx         Single transaction row
+  TransactionEditSheet.tsx        Recategorise a transaction
+  SpendBudgetSheet.tsx            Set/edit category budgets
+  InsightDetailSheet.tsx          Expanded insight detail
+/app/(tabs)/index.tsx
+/app/(tabs)/spend.tsx
+/app/spend/[category].tsx         Category detail + transactions
+/app/(tabs)/portfolio.tsx
+/app/(tabs)/insights.tsx
+/app/onboarding/                  All 9 screens
 /app/settings/index.tsx
 ```
