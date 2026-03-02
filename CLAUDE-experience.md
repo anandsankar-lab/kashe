@@ -1,6 +1,7 @@
 # Kāshe — CLAUDE-experience.md
 *Team Member 2: Experience & Delight*
 *Read CLAUDE.md first, then this file.*
+*Last updated: March 2026 — Portfolio screen spec added*
 
 ---
 
@@ -74,7 +75,9 @@ Correct uses:
   in the Position hero card (most important use)
   Active tab indicator in bottom navigation bar
   Progress bar fill colour
-  Section separator between India / Europe in Portfolio
+  Section separator between Growth / Stability / Locked
+  in Portfolio screen
+  Between Live and Locked columns in Portfolio totals card
 
 Incorrect uses:
   Random decorative lines between cards
@@ -98,11 +101,19 @@ interface UniversalAddSheetProps {
   isOnboarding?: boolean
 }
 
-// Four options always present — context changes emphasis only:
+// Five options always present — context changes emphasis only:
 // 💳  Upload bank statement
 // 📈  Upload portfolio CSV
+// 📄  Upload salary slip          ← NEW V1
 // ✋  Add manually
 // 👤  Add a profile
+
+// Salary slip option behaviour:
+//   Triggers SalarySlipUploadFlow
+//   Parser detects pension/EPF contributions
+//   Prompts user to add detected holdings
+//   "We found a pension contribution of €380/month.
+//    Want to add this as a holding? [+ Add pension] [Skip]"
 
 // isOnboarding=true:
 //   Tooltip arrow pointing to "Upload bank statement"
@@ -179,11 +190,15 @@ LAYOUT (top to bottom):
   Tap → navigates to Insights tab
   Visible with manual inputs only — no upload required
 
+[Monthly Review Ready] ← conditional
+  Only shown when a new monthly review is available
+  "Your March review is ready →"
+  Accent colour, DM Sans medium
+  Tap → Insights tab, MonthlyReviewSheet opens
+  Hidden once user has viewed the review
+
 [Coverage Score]
-  Thin 4px bar, acid green fill
-  "Portfolio coverage: 73%" label above
-  "[+ Add missing assets]" link below — accent, no underline
-  Hidden if 100% coverage (essentially never)
+  REMOVED — not in V1
 
 NOTIFICATION DOT (on [+] button):
   6px circle, top-right of button
@@ -220,7 +235,7 @@ GEOGRAPHY VIEW:
   Europe
   US
   Other
-  Each bar shows % of total liquid portfolio
+  Each bar shows % of total live portfolio
 ```
 
 ---
@@ -425,6 +440,486 @@ RULES:
 
 ---
 
+## Portfolio Screen — Full Spec
+
+**The job of this screen:**
+"Show me everything I own, organised by what it's
+doing for me — and tell me if I should be doing
+something differently."
+
+### Key decisions — locked
+```
+TERMINOLOGY:
+  "Live" not "liquid" — assets with a current market price
+  "Locked" not "illiquid" — assets committed for a period
+  "Growth / Stability / Locked" — the three purpose buckets
+  "Protection" — a designation on a Stability holding,
+                 not a standalone bucket
+
+ORGANISATION:
+  One fixed opinionated view — no grouping toggle
+  (Toggle lives on Home screen for overview)
+  Portfolio goes deep into one view
+
+BUCKET TAXONOMY:
+  GROWTH    Equity MFs, direct equity, ETFs,
+            employer stock, crypto
+  STABILITY Cash, savings, NRE/NRO, debt funds
+  LOCKED    PPF, EPF, FDs, Crowdcube, angel investments
+
+PROTECTION DESIGNATION:
+  User designates one Stability holding as emergency fund
+  Shield icon (🛡️) replaces geography flag on that row
+  Recommended amount = 3–6× average monthly spend
+  Calculated from Spend screen data
+  Powers emergency fund AI insight
+
+BUCKET ASSIGNMENT:
+  System assigns default bucket per asset type
+  User can override via BucketReassignSheet
+  Override triggers immediate insight regeneration
+
+PROPERTY EQUITY: OUT OF SCOPE V1
+PHYSICAL ASSETS: NEVER BUILD
+```
+
+### Layout overview
+```
+ZONE 1 — HEADER + TOTALS        fixed, does not scroll
+ZONE 2 — AI INSIGHT STRIP       conditional
+ZONE 3 — INVESTMENT PLAN        collapsible card
+ZONE 4 — HOLDINGS LIST          scrollable
+  Section: GROWTH
+  Section: STABILITY
+  Section: LOCKED
+```
+
+### Zone 1 — Header + Totals
+
+```
+HEADER ROW
+  Left:  "Portfolio" (Syne 700, heading style)
+  Right: [+] button with notification dot
+
+COMPONENT: PortfolioTotalsCard
+
+  Two columns, clearly separated:
+
+  Live                      Locked
+  €312,400                 €48,200
+  Syne 800, textPrimary    Syne 800, textPrimary
+
+  ā macron rule between columns — meaningful divider ✓
+
+  Combined dim total beneath:
+  "€360,600 across all holdings"
+  DM Sans, textSecondary, small
+
+  Monthly delta (live holdings only):
+  "↑ €2,340 this month"
+  textSecondary, DM Sans
+  No delta shown for Locked — stale values, no meaning
+
+  Last refreshed:
+  "Prices updated 4 min ago"
+  textDim, DM Sans, bottom of card
+```
+
+### Zone 2 — AI Insight Strip
+
+```
+COMPONENT: PortfolioInsightStrip
+
+Same visual pattern as SpendInsightStrip.
+Conditional — only renders when AI has something worth saying.
+Never a permanent fixture. Never a placeholder.
+
+TRIGGER CONDITIONS (any one sufficient):
+  Growth bucket >10% below 60% target allocation
+  Single holding >15% of live portfolio value
+  Employer stock crosses 15% of live portfolio
+  No Protection designation exists + cash holdings present
+  Monthly investment target being missed
+  Salary slip detected pension not yet added as holding
+  Live/Locked ratio significantly off for user's age
+  INR weakened >3% vs EUR in rolling 90 days
+    AND user has >20% of portfolio in India
+
+SALARY SLIP PROMPT (one-time, shown before any AI insight):
+  Shown if: no salary slip uploaded yet
+  "Upload your salary slip to detect pension
+   contributions automatically"
+  [+ Upload salary slip] accent button
+  [Skip] text link
+  Dismissed permanently once salary slip uploaded
+  or user explicitly skips
+  Never shown again after dismissal
+
+MARKET EVENT INSIGHT (highest priority):
+  Kāshe asterisk (small, static)
+  Headline: max 10 words
+  Body: max 40 words
+  Source citation: "via Reuters · 3 hours ago"
+  Forum signal (when divergence meaningful):
+    "⚡ Stocktwits 68% bearish · r/stocks mixed"
+    Only shown when institutional/retail sentiment diverges
+  Confidence indicator:
+    LOW confidence: dim note "Limited sources available"
+    MEDIUM/HIGH: no indicator (clean)
+  Dismiss: swipe left or tap × → hidden 24 hours
+  Tap → PortfolioInsightDetailSheet
+
+ALL OTHER INSIGHTS:
+  Same visual, no source citation line
+  No forum signal line
+  Same dismiss behaviour
+```
+
+### Zone 3 — Investment Plan
+
+```
+COMPONENT: InvestmentPlanCard
+COMPONENT: InvestmentPlanExpanded
+
+COLLAPSED — no target set:
+  "Monthly investment plan"   DM Sans medium, textPrimary
+  "Set a target to get personalised guidance →"
+                              DM Sans, accent colour
+  Chevron right
+  Tap → expands inline
+
+COLLAPSED — target set:
+  "Monthly investment plan"
+  Progress bar (accent green fill)
+  "€920 of €1,500 invested this month"
+  Chevron → tap to expand
+
+EXPANDED STATE:
+
+  Monthly target field:
+    Label: "Monthly target"
+    Editable number field, Syne font, large
+    Currency: base currency symbol prefix
+
+  Salary-detected contributions (if salary slip uploaded):
+    Section label: "Already going in automatically"
+    textSecondary, label style
+
+    COMPONENT: SalaryContributionRow (one per detected contribution)
+      Contribution name (e.g. "ABN Amro Pension")
+      Amount per month
+      Bucket pill: LOCKED (always — pension/EPF are locked)
+
+    "Remaining to actively allocate: €920/month"
+    textPrimary, Syne 800
+    ā macron rule beneath
+
+  Suggested allocation breakdown:
+    COMPONENT: AllocationSuggestionRow (one per bucket)
+      Bucket name
+      Suggested amount (calculated from gap analysis)
+      Percentage of remaining allocation
+
+      GROWTH     €552   60%
+      STABILITY  €184   20%
+      LOCKED     €184   20%
+
+  Gap analysis (templated, not AI-generated):
+    Shown when any bucket is off target
+    Template: "Your {bucket} allocation is {gap_amount}
+               below target this month."
+    Instrument category suggestion:
+    Template: "{instrument_category} are commonly used
+               for {bucket} allocation."
+    [Explore options →] → InstrumentSuggestionSheet
+
+  [Save target] accent button
+  [Cancel] text link
+
+RULES:
+  investment_transfer transactions from Spend screen
+  populate the "invested this month" progress
+  Salary contributions always shown as LOCKED
+  Never show specific fund names in suggestion text
+  Instrument suggestions are templated — not AI-generated
+```
+
+### Instrument Suggestion Sheet
+
+```
+COMPONENT: InstrumentSuggestionSheet
+TRIGGER: [Explore options →] in Investment Plan expanded
+
+LAYOUT (bottom sheet, scrollable):
+  Header: "{Bucket} — commonly used instruments"
+
+  Grouped by geography:
+
+  INDIA
+    [INDEX FUNDS — lower cost]
+      UTI Nifty 50 Index Fund
+      "Tracks NIFTY 50. Expense ratio ~0.18%"
+      [View on AMFI →]  [View on Groww →]
+
+    [LARGE-CAP ACTIVE]
+      Mirae Asset Large Cap
+      "Consistently well-regarded. Check Morningstar."
+      [View on AMFI →]  [View on Groww →]
+
+    [FLEXI-CAP]
+      Parag Parikh Flexi Cap
+      "Holds international stocks too — adds diversification."
+      [View on AMFI →]  [View on Groww →]
+
+  EUROPE
+    [BROAD MARKET ETFs]
+      VWRL — Vanguard FTSE All-World
+      "Global exposure. Available on DeGiro."
+      [View on justETF →]
+
+      IWDA — iShares Core MSCI World
+      "Developed markets focus."
+      [View on justETF →]
+
+  Disclaimer (always visible, never hidden):
+    "These are educational suggestions, not financial advice.
+     Kāshe earns nothing from these links.
+     Always do your own research."
+    DM Sans, textDim, small
+
+RULES:
+  No affiliate links. Ever.
+  Links open in in-app browser
+  Framing B throughout: "worth exploring" language
+  Static curated list — not dynamically fetched
+  Updated manually by PM quarterly
+  External links: AMFI, Groww, Zerodha Coin,
+                  justETF, Morningstar, DeGiro ETF list
+```
+
+### Zone 4 — Holdings List
+
+```
+Fixed section order: Growth → Stability → Locked
+Within each section: sorted by value descending
+
+COMPONENT: PortfolioSectionHeader
+  Section name (DM Sans 500, label style, uppercase)
+  Section total (Syne 800, right-aligned)
+  ā macron rule beneath — meaningful divider ✓
+
+  GROWTH                    €198,400
+
+  Empty bucket state (gentle, not full empty state):
+    "No {bucket} holdings yet"
+    "[+ Add one]" textSecondary, small, tappable
+    → Universal Add Sheet
+
+COMPONENT: PortfolioHoldingRow — LIVE variant
+  [🇮🇳/🇪🇺/🌍]  Holding name          €3,240
+                GROWTH · India        ↑ 2.3%
+                [freshness dot]
+
+  Geography flag: emoji flag, left
+  Holding name: DM Sans medium, textPrimary
+  Value: Syne 800, right-aligned, textPrimary
+  Bucket · Geography: DM Sans, textSecondary, small
+  Daily movement: ↑/↓ %, textSecondary
+    Accent/success for positive
+    Danger for negative
+    Dim for flat
+  Freshness dot: 6px circle, left of value
+    Green: updated today
+    Amber: 7–30 days stale
+    Red: >30 days stale
+  Tap → HoldingDetailScreen
+
+COMPONENT: PortfolioHoldingRow — LOCKED variant
+  [🔒]  PPF                    ₹4,20,000
+        LOCKED · India         Unlocks Mar 2031
+        [freshness dot]
+
+  Lock icon replaces geography flag
+  No daily movement (no live price)
+  Unlock date in textDim if known
+  "Outcome unknown" in textDim for Crowdcube/angel
+  Tap → HoldingDetailScreen
+
+COMPONENT: PortfolioHoldingRow — PROTECTION variant
+  [🛡️]  ABN Amro Current      €8,400
+        PROTECTION · Europe    2.8 months covered
+        [freshness dot]
+
+  Shield icon replaces geography flag
+  "X months covered" = holding value ÷ avg monthly spend
+  Accent colour if ≥3 months
+  Warning colour if <3 months
+  Tap → HoldingDetailScreen
+```
+
+### Bucket Reassign Sheet
+
+```
+COMPONENT: BucketReassignSheet
+TRIGGER: "Reassign bucket" action in HoldingDetailScreen
+
+LAYOUT (bottom sheet):
+  Header: "Reassign {holding name}"
+
+  System reasoning (dim, small, above options):
+    "We assigned this to {bucket} because it's a
+     {asset type}. Change it if that doesn't fit
+     how you think about this money."
+
+  Three options (radio select):
+    ○  Growth      Equity, high growth potential
+    ○  Stability   Cash, savings, lower risk
+    ○  Locked      Committed for a period
+
+  [Confirm] accent button
+  [Cancel] text link
+
+RULES:
+  Confirming triggers immediate AI insight regeneration
+  Does not change the asset type — only the bucket label
+  Override stored locally per profile
+  System default shown as currently selected on open
+```
+
+### Holding Detail Screen
+
+```
+ROUTE: /app/portfolio/[holdingId].tsx
+COMPONENT: HoldingDetailScreen
+
+LIVE HOLDING:
+
+  HEADER:
+    Back chevron + holding name
+    Geography flag
+
+  HERO:
+    Current value (Syne 800, large, textPrimary)
+    Daily change ↑↓ amount + percentage
+    "X% of live portfolio" (textSecondary, small)
+
+  DETAILS SECTION:
+    Quantity / units
+    Current price per unit
+    Purchase price (if known)
+    Unrealised gain/loss (if purchase price exists)
+      Accent for gain, danger for loss
+    Geography
+    Purpose bucket (tappable → BucketReassignSheet)
+    Data source: CSV / Manual / API
+    Last updated timestamp
+
+  ACTIONS (bottom):
+    [Edit holding]      → edit form (quantity, purchase price)
+    [Reassign bucket]   → BucketReassignSheet
+    [Remove holding]    → confirmation sheet
+
+LOCKED HOLDING (additional fields):
+  Lock reason label:
+    PPF: "Locked until maturity"
+    EPF: "Locked until employment ends"
+    FD: "Fixed term deposit"
+    Crowdcube/angel: "Locked — exit event required"
+
+  Unlock date (prominent if known):
+    Syne 700, textPrimary
+    "Unlocks March 2031"
+
+  COMPONENT: LockedProjectionCard (if unlock date known):
+    "Projected value at unlock"
+    Formula: currentValue × (1 + rate)^yearsToUnlock
+    Rate source shown: "at 7.1% PPF rate (current)"
+    DM Sans, textSecondary
+    Dim note: "Projection only — actual returns may vary"
+
+  For Crowdcube/angel:
+    "Unlock date: Unknown"
+    "Value at exit: Dependent on company outcome"
+    Last known valuation + date entered
+
+PROTECTION HOLDING (additional section):
+  COMPONENT: ProtectionStatusCard
+    "Emergency fund" label, shield icon
+
+    Current amount: €8,400 (Syne 800)
+    Recommended range: €7,200 – €14,400
+    Based on: "€2,560 average monthly spend (last 3 months)"
+    Coverage: 2.8 – 5.6 months
+
+    Status bar:
+      <3 months: danger colour
+      3–6 months: accent/success colour
+      >6 months: textSecondary
+                 dim note: "Consider investing the surplus"
+
+    [Remove protection designation] text link, textSecondary
+    "This won't delete the holding, just the designation"
+```
+
+### Portfolio Insight Detail Sheet
+
+```
+COMPONENT: PortfolioInsightDetailSheet
+TRIGGER: Tap insight card in Zone 2
+
+LAYOUT (bottom sheet):
+  Kāshe asterisk (small, static)
+  Insight headline (Syne, heading size)
+  Full insight body (DM Sans, up to 80 words)
+  Data points that triggered insight (dim, small)
+  Source citation (for market event insights)
+  Forum signal summary (if present)
+  Action suggestion (textSecondary, optional)
+  [View holding →] deep link where relevant
+  [Dismiss] text link, bottom
+```
+
+### Portfolio Empty State
+
+```
+Full-screen blurred ghost of populated Portfolio
+Mock data: realistic holdings across all three buckets
+           Growth: VWRL, Infosys, Parag Parikh MF
+           Stability: NRE/NRO savings, current account
+           Locked: PPF, Crowdcube investment
+Fixed constants from /constants/mockData.ts
+
+Frosted card centred:
+  Kāshe asterisk (slow pulse)
+  "See your full financial picture"
+  [+ Add your first holding] accent button
+  "Upload a portfolio CSV instead" text link, textSecondary
+```
+
+### Portfolio Partial State
+
+```
+Some holdings added, buckets are sparse.
+Show what exists normally.
+Each empty bucket shows gentle prompt:
+  "No Stability holdings yet"
+  "[+ Add one]" textSecondary, small
+Never a full empty state — just bucket-level nudges.
+No coverage score — removed from V1.
+```
+
+### Screen Transitions
+```
+Between tabs:         Slide (standard Expo Router tab behaviour)
+Push navigation:      Slide left (standard)
+Bottom sheets:        Slide up from bottom, 300ms ease-out
+Sheet dismiss:        Slide down, 250ms ease-in
+Number updates:       Gentle tick animation on change
+Progress bar fill:    Animate on mount, 600ms ease-out
+```
+
+---
+
 ## Onboarding Stack (9 screens, linear, runs once)
 ```
 Screen 7 (Budget Suggestion) added after first spec session.
@@ -459,7 +954,7 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
    If data uploaded: real Home screen preview
    If skipped: full ghost empty state
 
-7. Budget Suggestion  ← NEW (conditional)
+7. Budget Suggestion  ← conditional
    See Budget Suggestion Screen spec above
    Only shown if screen 5 upload succeeded
 
@@ -476,26 +971,17 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
 
 ---
 
-## Screen Transitions
-```
-Between tabs:         Slide (standard Expo Router tab behaviour)
-Push navigation:      Slide left (standard)
-Bottom sheets:        Slide up from bottom, 300ms ease-out
-Sheet dismiss:        Slide down, 250ms ease-in
-Number updates:       Gentle tick animation on change
-Progress bar fill:    Animate on mount, 600ms ease-out
-```
-
----
-
 ## What You Must NOT Build
 ```
 [NOT YOURS] CSV parsing or data sanitisation
+[NOT YOURS] Salary slip parsing logic (Team Member 3)
 [NOT YOURS] API calls (price refresh, news, FX, AI)
 [NOT YOURS] Authentication or storage
 [NOT YOURS] Financial calculations (savings rate, FIRE, etc)
 [NOT YOURS] Zustand store definitions
 [NOT YOURS] TypeScript type definitions for data models
+[NOT YOURS] Coverage score (removed from V1)
+[NOT YOURS] Property equity UI (out of scope V1)
 ```
 
 ---
@@ -527,23 +1013,72 @@ Progress bar fill:    Animate on mount, 600ms ease-out
   PortfolioPulse.tsx
   SegregationToggle.tsx
   FIREProgress.tsx
-  CoverageCard.tsx
+  CoverageCard.tsx          REMOVED — do not build
   SavingsRateBadge.tsx
+  MonthlyReviewLink.tsx     NEW — conditional link to monthly review
 /components/spend/
   SpendScreenHeader.tsx
-  SpendSummaryStrip.tsx           Zone 1: month selector + net + context
-  SpendInsightStrip.tsx           Zone 2: conditional AI insight card
-  SpendCategoryList.tsx           Zone 3: scrollable category rows
-  SpendCategoryRow.tsx            Single category row + proportion bar
-  SpendTransactionRow.tsx         Single transaction row
-  TransactionEditSheet.tsx        Recategorise a transaction
-  SpendBudgetSheet.tsx            Set/edit category budgets
-  InsightDetailSheet.tsx          Expanded insight detail
+  SpendSummaryStrip.tsx
+  SpendInsightStrip.tsx
+  SpendCategoryList.tsx
+  SpendCategoryRow.tsx
+  SpendTransactionRow.tsx
+  TransactionEditSheet.tsx
+  SpendBudgetSheet.tsx
+  InsightDetailSheet.tsx
+/components/portfolio/
+  PortfolioTotalsCard.tsx
+  PortfolioInsightStrip.tsx
+  PortfolioInsightDetailSheet.tsx
+  InvestmentPlanCard.tsx
+  InvestmentPlanExpanded.tsx
+  SalaryContributionRow.tsx
+  AllocationSuggestionRow.tsx
+  InstrumentSuggestionSheet.tsx
+  PortfolioSectionHeader.tsx
+  PortfolioHoldingRow.tsx
+  BucketReassignSheet.tsx
+  LockedProjectionCard.tsx
+  ProtectionStatusCard.tsx
 /app/(tabs)/index.tsx
 /app/(tabs)/spend.tsx
-/app/spend/[category].tsx         Category detail + transactions
+/app/spend/[category].tsx
 /app/(tabs)/portfolio.tsx
+/app/portfolio/[holdingId].tsx
 /app/(tabs)/insights.tsx
-/app/onboarding/                  All 9 screens
+/app/onboarding/
 /app/settings/index.tsx
+```
+
+---
+
+## V1 / V2 / Never — Portfolio Screen
+```
+V1:
+  All zones above
+  Growth / Stability / Locked taxonomy
+  Protection designation
+  Investment plan (Level 3 — category guidance)
+  Salary slip upload + pension detection prompt
+  Locked holding projections (where calculable)
+  AI insight strip (market events + portfolio health)
+  Monthly review link (review lives in Insights tab)
+  Instrument suggestion sheet (static curated list)
+  BucketReassignSheet
+
+[V2]:
+  Specific fund recommendations by name
+  Dynamic fund data from external APIs
+  Performance charts per holding
+  Tax gain/loss harvesting surface
+  Conversational advisor chat
+  Push notifications for market events
+
+[NEVER]:
+  Property equity (V1 — may revisit in V2)
+  Physical assets (car, gold, art, jewellery)
+  Regulated financial advice
+  Specific buy/sell recommendations without legal wrapper
+  Affiliate links of any kind
+  Coverage score
 ```

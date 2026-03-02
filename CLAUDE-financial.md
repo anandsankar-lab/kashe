@@ -1,6 +1,8 @@
 # Kāshe — CLAUDE-financial.md
 *Team Member 3: Financial Intelligence*
 *Read CLAUDE.md first, then this file.*
+*Last updated: March 2026 — Portfolio spec, insight engine,
+salary slip parser, investment plan added*
 
 ---
 
@@ -15,28 +17,24 @@ that Team Member 2 (Experience) consumes via hooks.
 
 ## Your Domain
 ```
-Universal CSV parser   Auto-detect any bank's CSV format
-                       Known formats: zero friction
-                       Unknown formats: one confirmation screen
+Universal CSV parser   Auto-detect any bank CSV format
+Salary slip parser     Dutch loonstrook + Indian salary slip
+                       Detect pension/EPF contributions (NEW)
 Price refresh          All market price API integrations
 FX rates               Currency conversion service
 AMFI NAV feed          Indian mutual fund prices (free, daily)
-Spend categoriser      Transaction → category (multilingual)
-Portfolio calc         Position, allocation, concentration risk
+Spend categoriser      Transaction to category (multilingual)
+Portfolio calc         Position, allocation, bucket assignment
 Savings rate           Formula + monthly trend tracking
 FIRE engine            Calculator + projection logic
-AI insights            Claude API integration (10 insight types)
+AI insights            Claude API integration - full engine
+Budget cap             Client-side token usage enforcement (NEW)
 ```
 
 ---
 
 ## The DataSource Abstraction (critical architecture)
 ```typescript
-// All data ingestion goes through this interface
-// V1 implements CSVDataSource
-// V2 will add OpenBankingDataSource
-// Never break this contract
-
 interface DataSource {
   type: 'CSV' | 'API' | 'MANUAL'
   fetchTransactions(params: FetchParams): Promise<Transaction[]>
@@ -44,11 +42,10 @@ interface DataSource {
 }
 
 class CSVDataSource implements DataSource {
-  // V1 implementation — smart universal parser
+  // V1 implementation
 }
-
 // V2: class OpenBankingDataSource implements DataSource {}
-// Adding v2 source must NOT require changes to consumers
+// Adding V2 source must NOT require changes to consumers
 ```
 
 ---
@@ -57,572 +54,491 @@ class CSVDataSource implements DataSource {
 
 ```
 APPROACH: Auto-detect, not fixed format list.
-
-Any CSV from any bank works.
-Known banks get zero-friction instant parse.
-Unknown banks get one confirmation screen.
+Known banks: zero-friction instant parse.
+Unknown banks: one confirmation screen.
 
 PIPELINE:
-1. User uploads any CSV file
-2. Read header row
-3. Score each column against known field types:
-     date_field:        contains 'date', 'datum', 'dt'
-     amount_field:      contains 'amount', 'bedrag', 'amt'
-     description_field: contains 'desc', 'omschrijving',
-                        'narration', 'details', 'memo'
-     debit_credit_flag: contains 'af bij', 'dr/cr', 'type'
-     balance_field:     contains 'balance', 'saldo'
-4. If confidence > 85%: auto-map, proceed silently
-5. If confidence 60-85%: show mapping confirmation screen
-6. If confidence < 60%: ask user to map columns manually
+1. Read header row
+2. Score columns against known field types
+3. >85% confidence: auto-map, proceed silently
+4. 60-85%: show mapping confirmation
+5. <60%: ask user to map manually
 
-KNOWN FORMATS (instant parse, skip confirmation):
+KNOWN FORMATS (instant parse):
   ABN Amro        Semicolon-delimited, Dutch headers
-                  Datum, Naam/Omschrijving, Bedrag (EUR), Af Bij
-  DeGiro          Portfolio export, ISIN column present
+  DeGiro          Portfolio export, ISIN column
   HDFC Bank       Comma-delimited, DD/MM/YY dates
-  CAMS            Pipe-delimited, scheme code present
+  CAMS            Pipe-delimited, scheme code
   Zerodha/Groww   Holdings export, symbol column
-  Morgan Stanley  StockPlan Connect format, vest date column
+  Morgan Stanley  StockPlan Connect, vest date column
   Revolut         Started Date + Completed Date pattern
 
-UNKNOWN FORMAT (one confirmation screen):
-  Show detected column mapping to user:
-  "We found these columns — does this look right?"
-  Date       → [detected column] ✓/✗
-  Amount     → [detected column] ✓/✗
-  Description→ [detected column] ✓/✗
-  User corrects if wrong, confirms, parse proceeds.
-
 AMOUNT PARSING:
-  Handle both decimal formats:
-  European: 1.234,56 (period = thousands, comma = decimal)
-  Standard: 1,234.56 (comma = thousands, period = decimal)
+  European: 1.234,56 (period=thousands, comma=decimal)
+  Standard: 1,234.56 (comma=thousands, period=decimal)
   Auto-detect from first numeric cell.
 
 DEBIT/CREDIT DETECTION:
-  Some CSVs: separate debit + credit columns
-  Some CSVs: single amount, negative = debit
-  Some CSVs: Af/Bij or Dr/Cr flag column
+  Separate debit + credit columns
+  Single amount, negative = debit
+  Af/Bij or Dr/Cr flag column
   Handle all three patterns.
-
-[V2] Learn from confirmed mappings:
-  Store confirmed mappings per institution fingerprint
-  Next upload from same bank = instant parse
 ```
+
+---
+
+## Salary Slip Parser (NEW - V1)
+
+```
+PURPOSE:
+  Detect pension and EPF contributions automatically.
+  Pre-populate Locked holdings for user to confirm.
+  Calculate true investable surplus for investment plan.
+
+SUPPORTED FORMATS:
+  Dutch loonstrook
+  Indian salary slip (any major payroll format)
+
+DUTCH LOONSTROOK - FIELDS TO EXTRACT:
+  Bruto salaris         gross salary
+  Netto salaris         net salary (income for savings rate)
+  Pensioen (werknemer)  employee pension contribution -> LOCKED
+  Pensioen (werkgever)  employer contribution (context only)
+  ZVW bijdrage          health contribution (not a holding)
+  Loonheffing           tax (not a holding)
+  Employer name         used to name the pension holding
+  Pay period            monthly / 4-weekly detection
+
+INDIAN SALARY SLIP - FIELDS TO EXTRACT:
+  Basic salary          base for EPF calculation
+  EPF employee (12%)    employee EPF contribution -> LOCKED
+  EPF employer (12%)    employer contribution (context only)
+  TDS                   tax (not a holding)
+  Professional tax      not a holding
+  Net pay               income for savings rate
+
+POST-PARSE FLOW:
+  For each detected contribution:
+    Emit: SalaryContributionDetected event
+    UI prompts user:
+    "We found a pension contribution of X/month.
+     Want to add this as a holding?"
+    [+ Add pension]  [Skip]
+
+    If accepted - pre-populate holding form:
+      name: "{Employer} Pension" or "EPF"
+      type: pension or ppf_epf
+      bucket: LOCKED (cannot be overridden)
+      monthlyContribution: detected amount
+      employerContribution: detected if present
+
+INVESTABLE SURPLUS:
+  investableSurplus = monthlyTarget - detectedLockedContributions
+  Feeds "Remaining to actively allocate" in Investment Plan card
+
+AMBIGUOUS FORMAT:
+  If not recognised: show manual field entry
+  Fields: gross, net, pension, EPF, pay frequency
+  User fills what they know, skips what they don't
+
+PRIVACY:
+  Parsed in memory - never persisted raw
+  BSN / PAN / Aadhaar / full name stripped before storage
+  Same security pipeline as CSV uploads
+```
+
+---
+
+## Portfolio Bucket Assignment
+
+DEFAULT_BUCKET per asset type:
+  indian_mf, indian_equity, eu_brokerage,
+  employer_stock, crypto  ->  GROWTH
+  nre_nro, cash           ->  STABILITY
+  ppf_epf, alternative    ->  LOCKED
+
+debt MFs, money market funds -> STABILITY
+bond ETFs -> STABILITY
+
+BucketOverride: holdingId, overrideBucket, systemBucket,
+  overriddenAt, profileId
+Override triggers immediate insight regeneration.
+Pass insightTrigger: BUCKET_REASSIGNED to insight engine.
+
+---
+
+## Protection Designation
+
+Must be a STABILITY holding.
+minimum     = averageMonthlySpend * 3
+comfortable = averageMonthlySpend * 6
+coverageMonths = protectionValue / averageMonthlySpend
+
+Thresholds:
+  <3 months:  DANGER - surface in insight
+  3-6 months: GOOD - no insight needed
+  >6 months:  SURPLUS - note: consider investing excess
+
+---
+
+## Locked Holding Projections
+
+Only where unlock date known. Never for Crowdcube/angel.
+Formula: FV = PV x (1 + r)^n
+
+Default rates (update as announced):
+  PPF: 7.1%   EPF: 8.2%   FD: user-entered   NSC: 7.2%
+
+Always show rate source.
+Always show: Projection only - actual returns may vary
+
+---
+
+## Investment Plan Gap Analysis
+
+monthlyTarget - salaryDetectedLocked = remainingToAllocate
+remainingToAllocate - currentMonthInvested = gapAmount
+mostUnderfundedBucket -> drives Investment Opportunity insight
+
+TARGET ALLOCATION (guide, not prescription):
+  GROWTH: 60%   STABILITY: 20%   LOCKED: 20%
+User cannot change target in V1.
 
 ---
 
 ## Spend Categorisation
-Map transaction descriptions to categories.
-Use keyword matching first, ML/AI later (v2).
 
-```typescript
-type SpendCategory =
-  | 'groceries'
-  | 'mortgage_rent'
-  | 'childcare'
-  | 'eating_out'
-  | 'subscriptions'
-  | 'transport'
-  | 'health'
-  | 'utilities'
-  | 'shopping'
-  | 'travel'
-  | 'income'
-  | 'investment_transfer'  // money moved to brokerage — NOT spend
-  | 'transfer'             // inter-account — NOT spend
-  | 'other'
+Categories: groceries, mortgage_rent, childcare,
+  eating_out, subscriptions, transport, health,
+  utilities, shopping, travel, income,
+  investment_transfer, transfer, other
 
-// CRITICAL: investment_transfer and transfer must be
-// excluded from spend totals and savings rate calculation.
-// Paying into DeGiro or CAMS is NOT spending.
+CRITICAL: investment_transfer and transfer excluded
+from spend totals and savings rate.
 
-// Keywords per category — multilingual required:
-// ABN Amro: Dutch descriptions (Albert Heijn, NS, GVB, etc.)
-// HDFC: English abbreviations (NEFT, IMPS, UPI/merchant names)
-// Revolut: English, often merchant name only
-// Case-insensitive matching always.
-
-// Dutch keyword examples:
-// groceries:    'albert heijn', 'jumbo', 'lidl', 'ah to go'
-// transport:    'ns ', 'gvb', 'ov-chipkaart', 'connexxion'
-// eating_out:   'thuisbezorgd', 'uber eats', 'deliveroo'
-// utilities:    'vattenfall', 'nuon', 'eneco', 'ziggo'
-
-// Indian keyword examples:
-// groceries:    'bigbasket', 'zepto', 'blinkit', 'swiggy instamart'
-// eating_out:   'swiggy', 'zomato'
-// investment:   'zerodha', 'groww', 'cams', 'nse clearing'
-// income:       'salary', 'neft cr', 'sal ', 'stipend'
-```
+Dutch: albert heijn/jumbo (groceries), ns/gvb (transport),
+  thuisbezorgd/uber eats (eating_out), eneco/ziggo (utilities)
+Indian: bigbasket/zepto (groceries), swiggy/zomato (eating_out),
+  zerodha/groww/cams (investment), salary/neft cr (income)
 
 ---
 
 ## Merchant Memory
-User can manually recategorise any transaction from the
-Spend Category Detail screen. When they do:
 
-```typescript
-interface MerchantOverride {
-  merchantName: string       // normalised, lowercase, trimmed
-  category: SpendCategory
-  profileId: string          // overrides are per-profile
-  createdAt: Date
-}
-
-// On recategorisation:
-// 1. Save MerchantOverride to encrypted storage
-// 2. Re-run categorisation on ALL past transactions
-//    from the same merchant → update to new category
-// 3. All future imports: merchant override takes priority
-//    over keyword matching
-
-// Merchant name normalisation:
-// Lowercase, trim whitespace, remove trailing numbers
-// "ALBERT HEIJN 1234" → "albert heijn"
-// "Thuisbezorgd.nl" → "thuisbezorgd.nl"
-
-// Conflict resolution:
-// MerchantOverride always wins over keyword match
-// User's explicit choice is never overridden by the system
-```
+On recategorisation:
+  Save MerchantOverride (merchantName, category, profileId)
+  Re-run on ALL past transactions from same merchant
+  Future imports: override beats keyword match
+Normalisation: ALBERT HEIJN 1234 -> albert heijn
 
 ---
 
-## Budget Storage
-```typescript
-interface CategoryBudget {
-  category: SpendCategory
-  monthlyLimit: number        // in profile's base currency
-  profileId: string           // budgets are per-profile
-}
+## Savings Rate
 
-// Budgets are NOT month-specific in v1
-// Same budget applies to every month
-// Stored in encrypted storage alongside transactions
-
-// Budget suggestion in onboarding:
-// suggestedBudget = Math.ceil(actualSpend / 50) * 50
-// e.g. actual €347 → suggested €350
-// User can edit before accepting
-
-// Services that consume budgets:
-// spendCategoriser.ts  → category totals vs limits
-// savingsRate.ts       → budget context for home screen
-// aiInsights.ts        → SPEND_ANOMALY uses actuals, not budgets
-```
-
----
-
-## Portfolio Calculations
-
-### Financial Position
-```typescript
-// NOT "net worth" — "Financial Position"
-financialPosition = liquidAssets + illiquidAssets - liabilities
-
-// Liquid: stocks, ETFs, MFs, crypto, cash, employer stock
-// Illiquid: Crowdcube/Seedrs, property equity
-// Liabilities: mortgage, loans, credit card balances
-
-// Display separately — never obscure the liquid number
-// A user with €800K position but €700K illiquid
-// has a very different real picture than one with €800K liquid
-```
-
-### Risk Allocation
-```typescript
-type RiskTier = 'MEDIUM' | 'HIGH' | 'CASH_LOW'
-
-// Asset → RiskTier mapping:
-// CASH_LOW:  Cash, savings accounts, NRE/NRO, PPF, FDs,
-//            money market funds, government bonds
-// MEDIUM:    Diversified equity MFs (large cap, flexi cap),
-//            broad ETFs (VWRL, S&P 500 ETF), balanced funds,
-//            blue chip direct equity
-// HIGH:      Small/mid cap MFs, sector funds, individual stocks,
-//            employer stock (single stock = high risk),
-//            crypto, Crowdcube/Seedrs/angel investments,
-//            leveraged products
-//            NOTE: property_equity removed from scope (v2)
-
-// Default target allocation:
-// 60% MEDIUM / 20% HIGH / 20% CASH_LOW
-// Justification: age-appropriate for 32-45 professional
-// with stable income and long investment horizon.
-// Rule of thumb: HIGH % ≈ max(100 - age, 15)
-// At 38: max(62, 15) = 62% — but we cap growth assets
-// at 80% total (MEDIUM + HIGH) for stability.
-
-// Important: this is a GUIDE not a prescription.
-// App surfaces variance, user decides action.
-// Never tell user what to do — show them the picture.
-```
-
-### Concentration Risk (flag these proactively)
-```typescript
-// Single stock threshold
-CONCENTRATION_WARN  = 0.15   // 15% — yellow flag
-CONCENTRATION_ALERT = 0.25   // 25% — red flag
-
-// Employer stock is the most common concentration problem.
-// RSUs vest and accumulate silently. Flag early.
-// Message: "Your employer stock is now 28% of your portfolio.
-//           Consider diversifying after your next vest."
-
-// Geography concentration
-GEOGRAPHY_WARN = 0.75        // 75% in one geography — flag
-
-// Single asset type
-ASSET_TYPE_WARN = 0.65       // 65% in one type — flag
-```
-
-### Indian MF Overlap Detection
-```typescript
-// Many Indian investors hold 4-6 MFs that all own
-// the same NIFTY 50 stocks. Hidden concentration.
-// Common overlap culprits:
-//   HDFC Flexi Cap + Mirae Asset Large Cap +
-//   Axis Bluechip + Kotak Standard Multicap
-//   → all >60% large cap, top 10 holdings overlap heavily
-
-// Approach:
-// 1. Identify fund categories from AMFI scheme data
-// 2. If user holds >2 large-cap/flexi-cap funds → flag overlap
-// 3. Message: "Your 4 Indian MFs may hold similar stocks.
-//             Consider consolidating to 2-3 funds."
-// Full overlap calculation requires AMFI portfolio data — v2.
-// v1: category-level overlap flag only.
-```
-
-### Coverage Score
-```typescript
-// Honest completeness indicator
-// Never shows 100% — always more to add
-const ASSET_TYPES = [
-  'indian_mf', 'indian_equity', 'nre_nro',
-  'ppf_epf', 'eu_brokerage', 'employer_stock',
-  'crypto', 'alternative',
-  'mortgage', 'other_loans', 'credit_card'
-]
-const ASSET_TYPES_TOTAL = 11   // property_equity removed (v2)
-coverageScore = (assetTypesAdded / ASSET_TYPES_TOTAL) * 100
-```
-
-### Savings Rate
-```typescript
-// The v1 financial health metric — calculated locally
 savingsRate = ((income - spend) / income) * 100
-
-// income: sum of transactions categorised as 'income'
-//         in current calendar month
-// spend:  sum of debits EXCLUDING 'investment_transfer'
-//         and 'transfer' categories
-// CRITICAL: investment transfers are NOT spend.
-//           Moving €500 to DeGiro is wealth-building,
-//           not consumption.
-
-// Show:
-//   Current month rate: 45%
-//   vs last month: ↑ 3%
-//   vs 3-month average: ↑ 1%  (context matters)
-
-// Healthy savings rate benchmarks (for context only):
-//   <10%:  Low — worth flagging gently
-//   10-20%: Moderate
-//   20-35%: Good
-//   >35%:   Strong (FIRE-track)
-// Never show these benchmarks as grades — show as context.
-```
+income: income category transactions this month
+spend: debits EXCLUDING investment_transfer + transfer
+investment_transfer is wealth-building, not consumption
 
 ---
 
 ## FIRE Calculator
-```typescript
-interface FIREInputs {
-  currentPortfolioValue: number    // liquid assets only
-  monthlyExpenses: number          // user-declared (EUR base)
-  monthlyInvestment: number        // calculated or declared
-  currentAge: number               // from profile
-  targetAge?: number               // optional target
-  expectedAnnualReturn: number     // default 7% (see below)
-  safeWithdrawalRate: number       // default 4%
-  indiaPortfolioFraction: number   // % of portfolio in India
-}
 
-interface FIREResult {
-  fireNumber: number               // monthlyExpenses * 12 * 25
-  currentProgress: number          // % of fire number
-  projectedYear: number            // when target reached
-  monthsToFire: number
-  projectedAge: number
-  assumptions: FIREAssumptions     // always show what we assumed
-}
+FIRE number = monthlyExpenses x 300 at 4% SWR
+Default return: 7% blended conservative
+  Indian equity EUR real: ~8.5%
+  European equity: ~7-8%
+  Blended 60/40: ~8% -> use 7% for conservatism
 
-// DEFAULT RETURN ASSUMPTIONS (important nuance):
-// A globally mobile Indian investor needs blended return thinking.
-//
-// Indian equity (INR):  ~12% historical CAGR (NIFTY 50, 20yr)
-// INR depreciation:     ~3.5% per year vs EUR (historical avg)
-// Indian equity (EUR):  ~8.5% real return in base currency
-//
-// European equity (EUR): ~7-8% historical (broad market)
-// Employer stock:        Unpredictable — exclude from FIRE calc
-//                        or treat conservatively at 6%
-//
-// Blended default at 60/40 India/Europe split: ~8%
-// Conservative default used: 7% (accounts for sequence risk)
-//
-// Always show assumptions to user. Never hide them.
-// Let user adjust return assumption manually.
-
-// SAFE WITHDRAWAL RATE:
-// 4% (Bengen rule, US-based research)
-// May be conservative for shorter retirements
-// May be aggressive for 40+ year retirements
-// Show sensitivity: "At 3.5% SWR your FIRE number is €X"
-
-// WHAT TO INCLUDE:
-// ✓ Liquid investment portfolio
-// ✓ Cash savings
-// ✓ Indian MFs and Demat
-// ✗ Employer stock unvested (flag: "excluded — not yet yours")
-// ✗ Crowdcube/Seedrs/angel (flag: "excluded — illiquid")
-// ✗ Property equity — not in scope (v2)
-// User can manually override inclusions
-
-// FIRE NUMBER FORMULA:
-// fireNumber = annualExpenses / safeWithdrawalRate
-//            = (monthlyExpenses * 12) / 0.04
-//            = monthlyExpenses * 300  (at 4% SWR)
-
-// PROJECTION FORMULA (compound growth):
-// Future value = PV * (1+r)^n + PMT * ((1+r)^n - 1) / r
-// Solve for n where future value >= fireNumber
-```
+Exclude: unvested employer stock, Crowdcube/angel
+Always show assumptions - never hide them.
+Formula: FV = PV(1+r)^n + PMT x ((1+r)^n - 1) / r
+Solve for n where FV >= FIRE number.
 
 ---
 
+## AI Insight Engine - Full Spec
+
+### Five insight types, priority ordered
+
+1. MARKET_EVENT_ALERT      time-sensitive, web search
+2. PORTFOLIO_HEALTH        action-needed, local calc + Claude
+3. FIRE_TRAJECTORY         important, not urgent
+4. INVESTMENT_OPPORTUNITY  helpful, fully templated, zero API cost
+5. MONTHLY_REVIEW          scheduled, own sheet in Insights tab
+
+One insight shows in strip at a time.
+Priority order determines which shows when multiple exist.
+Monthly Review has its own sheet - never competes with strip.
+Monthly Review lives in Insights tab.
+Portfolio and Home surface a review-ready link when available.
+
+---
+
+### Client-side budget enforcement
+
+MONTHLY_BUDGET_EUR = 5.00
+
+AIUsageRecord:
+  monthYear: string        // 2026-03
+  totalTokensInput: number
+  totalTokensOutput: number
+  estimatedCostEUR: number
+  callCount: number
+  lastUpdated: Date
+
+Before every Claude call:
+  Check usage.estimatedCostEUR + estimatedCallCost vs budget
+  If over: return { error: BUDGET_EXCEEDED, resetsOn: ... }
+  If under: call Claude, log usage, return response
+
+When budget exceeded: insight strip does not render.
+No error shown to user. Logged internally for PM visibility.
+
+---
+
+### API key security (V1)
+
+API key stored in encrypted storage - NEVER in app bundle.
+Never in source code. Never in GitHub.
+
+Setup flow: Settings -> AI Features -> Enter API key
+Stored via react-native-encrypted-storage (AES-256)
+Same protection as all financial data.
+
+V1b: move to Supabase Edge Functions when couple sync
+backend is introduced. App change: one line.
+
+---
+
+### Insight 1 - Market Event Alert
+
+Trigger: once per 24 hours on app open
+Source:  Claude API + web search tool enabled
+Cost:    ~0.01-0.02 EUR per call
+Cache:   24 hours
+
+holdingsContext - percentages only, never absolute values:
+  Growth bucket: X% of live portfolio
+    India equity: X%
+    EU/US equity: X%
+    Employer stock: X% (sector: Y)
+  Stability bucket: X%
+  Locked bucket: X%
+  Currency exposure: X% INR, X% EUR
+
+RESEARCH TIERS - instruct Claude to search across all:
+
+TIER 1 - AUTHORITATIVE:
+  RBI, SEBI, AMFI, NSE, BSE official announcements
+  ECB, Federal Reserve statements
+  Reuters, Bloomberg, Associated Press
+  Financial Times, Wall Street Journal
+  Economic Times, Mint, Business Standard
+  NRC Financieel Dagblad (Netherlands context)
+  Morningstar, S&P Global, Moody's
+  Capitalmind / Deepak Shenoy (Indian markets)
+  Freefincal (Indian FIRE / MF focused)
+
+TIER 2 - ANALYSIS & COMMUNITY:
+  Seeking Alpha, ValueResearch, Moneycontrol
+  TradingView public ideas
+  Bogleheads forums
+  Zerodha Varsity community
+
+TIER 3 - SOCIAL & SENTIMENT:
+  Reddit: r/IndiaInvestments, r/IndianStreetBets,
+          r/wallstreetbets, r/stocks,
+          r/DutchFIRE, r/EuropeFIRE,
+          r/financialindependence
+  Stocktwits: symbol-specific sentiment streams,
+              bullish/bearish ratio for held stocks
+  Twitter/X:  #NIFTY #Sensex #IndianMarkets
+              #MutualFunds #SP500 #ECB #earnings
+              Indian finance community, Fintwit
+
+Prompt rules:
+  Run 5-7 searches across tiers.
+  Note Tier 1 vs Tier 3 sentiment divergence.
+  Stocktwits bullish/bearish ratio for held stocks.
+  Find ONE most actionable event.
+  Return null if nothing material in 48 hours.
+  Never fabricate. Never recommend buy/sell.
+  If uncertain: confidence low, still surface.
+
+JSON response shape:
+{
+  headline: string,          // max 10 words
+  body: string,              // max 40 words
+  holdingType: string,
+  source: string,
+  sourceUrl: string,
+  sentiment: bullish | bearish | mixed | neutral,
+  confidence: high | medium | low,
+  forumSignal: {
+    summary: string,         // max 15 words
+    platforms: string[]
+  } | null
+} | null
+
+---
+
+### Insight 2 - Portfolio Health Alert
+
+Trigger: data change OR weekly check
+Source:  local calculation + Claude for narrative
+Cost:    ~0.002 EUR per call
+
+Trigger conditions (any one sufficient):
+  Growth bucket <50% (>10% below 60% target)
+  Single holding >15% of live portfolio
+  Employer stock >15% of live portfolio
+  No protection designation + cash holdings exist
+  Monthly invested < target * 0.8
+  INR weakened >3% vs EUR in 90 days + India >20%
+  Vesting event within 30 days
+
+Prompt: local aggregated data only, no web search.
+Be specific - use actual numbers.
+Do not recommend specific assets.
+Show the picture - user decides action.
+Output: { headline, body, action | null }
+
+---
+
+### Insight 3 - FIRE Trajectory Change
+
+Trigger: projected FIRE year shifts >6 months vs last month
+Both directions trigger - good news too.
+Source:  local FIRE engine + Claude for narrative
+Cost:    ~0.002 EUR per call
+
+Context includes:
+  previousProjectedYear, currentProjectedYear
+  shiftMonths, direction (earlier/later)
+  spendChangePct, investmentChangePct, portfolioChangePct
+
+Output: { headline, body, action | null }
+Explain what caused the shift.
+What would reverse it.
+Max 10 word headline, 40 word body.
+
+---
+
+### Insight 4 - Investment Opportunity
+
+Trigger: savingsRate >20% AND investment_transfer < target * 0.8
+Source:  local calculation only
+Cost:    ZERO - fully templated, no Claude call
+
+Template:
+  headline: {amount} uninvested this month
+  body: Your {bucket} bucket is furthest from target.
+        See suggested instruments to put this to work.
+  action: VIEW_SUGGESTIONS  -> opens InstrumentSuggestionSheet
+
+---
+
+### Insight 5 - Monthly Review
+
+Trigger: first app open of new calendar month
+Minimum: 3 months spend + portfolio data
+Source:  rich Claude API call, structured JSON output
+Cost:    ~0.008 EUR per call (largest prompt)
+Cache:   entire calendar month - never regenerates mid-month
+Location: Insights tab (MonthlyReviewSheet)
+          Portfolio + Home surface review-ready link
+
+Context sent to Claude (pcts only, no absolute values):
+  Portfolio allocation by bucket
+  Spend last month vs 3-month average
+  FIRE progress and projection
+  Protection coverage months
+  Investment plan gap
+
+JSON response shape:
+{
+  whereYouStand: string,
+  howMoneyIsWorking: {
+    growth: string,
+    stability: string,
+    locked: string,
+    protection: string,
+  },
+  thisMonthsPriority: {
+    headline: string,
+    reasoning: string,
+    bucketTarget: GROWTH | STABILITY | LOCKED | null,
+  },
+  fireUpdate: {
+    headline: string,
+    detail: string,
+  },
+  nextMonthWatchlist: string[],    // 2-3 items max
+}
+
+Prompt rules:
+  Specific - use the data, not generalities.
+  Never recommend specific funds by name.
+  Category-level guidance only.
+  Warm but direct - no jargon.
+  If data insufficient for a section: say so honestly.
+
+---
+
+### Cache management
+
+MARKET_EVENT_ALERT:     expires 24 hours
+PORTFOLIO_HEALTH:       expires when holdings data changes
+FIRE_TRAJECTORY:        expires when FIRE inputs change
+INVESTMENT_OPPORTUNITY: expires when investment_transfer changes
+MONTHLY_REVIEW:         expires at start of next calendar month
+
+triggerHash: hash the data that triggers each insight.
+On bucket reassign: invalidate PORTFOLIO_HEALTH immediately.
+On new CSV upload: invalidate relevant insights.
 ## Price Refresh Services
 
-### Auto-refresh trigger
-On every app open. Background, non-blocking.
-
-### Alpha Vantage (stocks/ETFs)
-```
-Base URL: https://www.alphavantage.co/query
-Function: GLOBAL_QUOTE for individual stocks
-          TIME_SERIES_DAILY for history (v2)
-Key: Required — free tier 25 calls/day
-Rate limit carefully — batch calls
-```
-
-### AMFI NAV Feed (Indian MFs — no key needed)
-```
-URL: https://www.amfiindia.com/spages/NAVAll.txt
-Format: Pipe-delimited
-Update: Daily after 6pm IST
-Parse: schemeCode → NAV mapping
-Match CAMS fund names to AMFI scheme codes
-Cache: 24 hours (only update daily)
-```
-
-### CoinGecko (crypto — no key needed)
-```
-URL: https://api.coingecko.com/api/v3/simple/price
-Params: ids=[coin-id]&vs_currencies=eur,inr,usd
-Free tier: 10-50 calls/min
-```
-
-### ExchangeRate-API (FX rates)
-```
-URL: https://open.er-api.com/v6/latest/{base}
-No key for basic usage
-Base: user's display currency
-Cache: 1 hour
-```
-
-### Finnhub (news + prices)
-```
-Base URL: https://finnhub.io/api/v1
-News: /company-news?symbol={ticker}&from={date}&to={date}
-Key: Required — free tier 60 calls/min
-Use for Portfolio Pulse on Home screen
-Filter: only tickers user actually holds
-Max 5 news items, most recent first
-```
-
----
-
-## AI Insights (Claude API)
-
-### Privacy rules (non-negotiable)
-```typescript
-// Model: claude-sonnet-4-20250514
-// max_tokens: 500 per insight
-// Cache insights: 24 hours (don't regenerate on every open)
-// Cost control: max 1 API call per insight type per day
-
-// NEVER send to API:
-//   Raw transaction descriptions
-//   Account numbers (even masked)
-//   Exact portfolio values (use % ranges instead)
-//   Any PII
-
-// ALWAYS send as aggregated context:
-//   Spend category totals as % of income
-//   Portfolio allocation % by risk tier
-//   Portfolio allocation % by geography
-//   Savings rate (current + 3-month trend)
-//   FIRE progress %
-//   Concentration flags (boolean — is employer stock >20%?)
-//   User geography profile (lives in NL, assets in IN + EU)
-```
-
-### The 10 Insight Types
-```typescript
-type InsightType =
-  | 'SPEND_ANOMALY'           // unusual spend vs personal baseline
-  | 'CONCENTRATION_RISK'      // single stock/geography overweight
-  | 'MF_OVERLAP'              // Indian MF category overlap
-  | 'CURRENCY_RISK'           // INR weakening impact on position
-  | 'SAVINGS_TRAJECTORY'      // savings rate trend (improving/declining)
-  | 'ALLOCATION_DRIFT'        // portfolio drifted from target
-  | 'VESTING_ALERT'           // upcoming vest + concentration impact
-  | 'SPEND_TO_INVEST_RATIO'   // are savings actually being invested?
-  | 'EMERGENCY_FUND'          // months of expenses covered by liquid cash
-  | 'FIRE_TRAJECTORY'         // has projected FIRE date moved?
-
-// Each insight has:
-interface Insight {
-  type: InsightType
-  priority: 'HIGH' | 'MEDIUM' | 'LOW'
-  headline: string            // max 10 words
-  body: string                // max 40 words
-  action?: string             // optional — one suggested next step
-  dataPoints: string[]        // what triggered this insight
-  generatedAt: Date
-  expiresAt: Date             // 24 hours default
-}
-```
-
-### Insight Generation Rules
-```typescript
-// Generate insights in priority order.
-// Only generate if sufficient data exists.
-// Never fabricate — if data is insufficient, say so.
-
-// SPEND_ANOMALY triggers when:
-//   Any category >150% of that category's 3-month average
-//   Minimum 2 months of data required
-
-// CONCENTRATION_RISK triggers when:
-//   Single stock > 15% of liquid portfolio
-//   Single geography > 75%
-//   Always check employer stock first — most common
-
-// MF_OVERLAP triggers when:
-//   User holds >2 Indian MFs in same AMFI category
-//   v1: category-level detection only
-
-// CURRENCY_RISK triggers when:
-//   INR has weakened >3% vs EUR in rolling 90 days
-//   AND user has >20% of portfolio in India
-
-// SAVINGS_TRAJECTORY triggers when:
-//   Savings rate has declined >5% for 2 consecutive months
-//   OR savings rate has improved >10% (positive insight)
-
-// ALLOCATION_DRIFT triggers when:
-//   Any risk tier is >10% off target
-//   e.g. HIGH at 32% vs 20% target = 12% drift → flag
-
-// VESTING_ALERT triggers when:
-//   Vesting event within 30 days
-//   AND employer stock would exceed 20% post-vest
-
-// SPEND_TO_INVEST_RATIO triggers when:
-//   Savings rate > 20% BUT investment_transfer < 10% of income
-//   "You're saving but not investing — cash is losing to inflation"
-
-// EMERGENCY_FUND triggers when:
-//   Liquid cash < 3 months of monthly expenses
-//   Flag gently — this is a safety net question
-
-// FIRE_TRAJECTORY triggers when:
-//   Projected FIRE year has shifted by >1 year vs last month
-//   Either direction — good news too
-```
-
-### AI Prompt Structure
-```typescript
-// System prompt (constant):
-const INSIGHT_SYSTEM_PROMPT = `
-You are a financial analysis engine for a personal finance app.
-You provide clear, specific, actionable insights.
-You never give investment advice or tell users what to do.
-You surface facts and patterns — the user decides action.
-Respond in 1-2 sentences maximum.
-Be direct. No filler words.
-`
-
-// User prompt example (SPEND_ANOMALY):
-const buildSpendAnomalyPrompt = (data: InsightContext) => `
-User profile: Indian professional living in ${data.country}.
-This month's spend breakdown (% of income):
-${JSON.stringify(data.spendByCategory)}
-3-month average breakdown:
-${JSON.stringify(data.spendByCategory3mAvg)}
-Savings rate: ${data.savingsRate}%
-
-Identify the most significant spend anomaly this month.
-Write one insight headline (max 10 words) and one body sentence (max 40 words).
-Format: {"headline": "...", "body": "...", "action": "..."}
-`
-```
-
----
+Alpha Vantage: stocks/ETFs, key required, 25 calls/day free
+AMFI NAV: amfiindia.com/spages/NAVAll.txt, no key, cache 24h
+CoinGecko: crypto, no key, 10-50 calls/min
+ExchangeRate: open.er-api.com, no key basic, cache 1h
+Finnhub: news + prices, key required, 60/min, Home Pulse only
 
 ## What You Must NOT Build
-```
-[NOT YOURS] Any UI component or screen layout
-[NOT YOURS] Navigation or routing
-[NOT YOURS] Authentication or session management
-[NOT YOURS] Storage encryption (that's Team Member 1)
-[V2]        ML-based spend categorisation
-[V2]        Tax calculations (capture fields only)
-[V2]        Open banking data source
-[V2]        Historical performance charts data
-```
 
----
+[NOT YOURS] UI, navigation, auth, storage encryption
+[NOT YOURS] Coverage score (removed V1)
+[NOT YOURS] Property equity (out of scope V1)
+[V2] ML categorisation, tax calc, open banking
+[V2] Dynamic fund feeds, Supabase Edge Functions
+[V2] Historical performance charts
+[NEVER] Buy/sell recommendations, regulated advice, affiliate links
 
 ## Your Output Files
-```
-/types/asset.ts                     Asset interface + AssetType enum
-/types/liability.ts                 Liability interface + LiabilityType enum
-/types/transaction.ts               Transaction interface + SpendCategory enum
-/types/dataSource.ts                DataSource interface
-/types/insight.ts                   Insight interface + InsightType enum
-/services/dataSource.ts             Abstract DataSource interface
-/services/csvDataSource.ts          CSVDataSource implementation
-/services/universalParser.ts        Column detection + confidence scoring
-                                    Known format fingerprints
-                                    Amount format detection (EU vs standard)
-                                    Debit/credit pattern detection
-/services/priceRefresh.ts           Orchestrates all price API calls
-/services/amfiNavFeed.ts            AMFI NAV feed parser + cache
-/services/fxRefresh.ts              ExchangeRate-API + 1hr cache
-/services/portfolioCalc.ts          Position, allocation, coverage score,
-                                    concentration risk flags,
-                                    liquid/illiquid split
-/services/savingsRate.ts            Savings rate formula + trend tracking
-/services/spendCategoriser.ts       Keyword → category (multilingual)
-/services/fireEngine.ts             FIRE number, projection, sensitivity
-/services/aiInsights.ts             Claude API integration, all 10 insight types
-/store/portfolioStore.ts            Assets + liabilities (Zustand)
-/store/spendStore.ts                Transactions (Zustand)
-/hooks/usePortfolio.ts              Portfolio data shaped for UI
-/hooks/useSpend.ts                  Spend data shaped for UI
-```
+
+/types/asset.ts
+/types/liability.ts
+/types/transaction.ts
+/types/dataSource.ts
+/types/insight.ts
+/types/portfolio.ts              NEW
+/types/investmentPlan.ts         NEW
+/services/dataSource.ts
+/services/csvDataSource.ts
+/services/universalParser.ts
+/services/salarySlipParser.ts    NEW - Dutch + Indian formats
+/services/priceRefresh.ts
+/services/amfiNavFeed.ts
+/services/fxRefresh.ts
+/services/portfolioCalc.ts       UPDATED
+/services/savingsRate.ts
+/services/spendCategoriser.ts
+/services/fireEngine.ts
+/services/aiInsights.ts          UPDATED - full 5-insight engine
+/services/budgetCap.ts           NEW - client-side token tracking
+/store/portfolioStore.ts         UPDATED
+/store/spendStore.ts
+/hooks/usePortfolio.ts           UPDATED
+/hooks/useSpend.ts
+/hooks/useInvestmentPlan.ts      NEW
