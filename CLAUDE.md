@@ -117,24 +117,23 @@ ASSET TYPES (financial instruments only):
   employer_stock    RSUs/ESPP (Morgan Stanley — highest conc. risk)
   crypto            Cryptocurrency (CoinGecko)
   alternative       Crowdcube/Seedrs/angel (illiquid, manual)
-  property_equity   Estimated equity in primary residence
-                    (manual, illiquid, clearly labelled)
   cash              Savings accounts, current accounts
 
 NEVER BUILD:
-  Physical assets (car, art, jewellery, watches) — out of scope forever
+  Property equity — different valuation methods per market, deferred to v2
+  Physical assets (car, art, jewellery, gold, watches) — never
 
 LIQUID vs ILLIQUID:
-  Liquid:   indian_mf, indian_equity, nre_nro, eu_brokerage,
-            employer_stock, crypto, cash
-  Illiquid: alternative, property_equity
+  Liquid:   indian_mf, indian_equity, nre_nro, ppf_epf,
+            eu_brokerage, employer_stock, crypto, cash
+  Illiquid: alternative (Crowdcube/Seedrs/angel only)
 
 DISPLAY RULE:
   Always show liquid and illiquid separately.
   Never combine into one number without distinction.
 
 LIABILITY TYPES:
-  mortgage          Property loan
+  mortgage          Property loan (the debt, not the asset)
   personal_loan     Personal/consumer loan
   car_loan          Vehicle financing
   student_loan      Education loan
@@ -144,7 +143,7 @@ LIABILITY TYPES:
 
 FINANCIAL POSITION FORMULA:
   financialPosition = liquidAssets + illiquidAssets - liabilities
-  NOT net worth. Property equity is optional illiquid context.
+  Clean and honest. No property estimates. No guesswork.
 ```
 
 ---

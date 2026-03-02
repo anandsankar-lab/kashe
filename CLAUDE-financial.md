@@ -243,8 +243,9 @@ type RiskTier = 'MEDIUM' | 'HIGH' | 'CASH_LOW'
 //            blue chip direct equity
 // HIGH:      Small/mid cap MFs, sector funds, individual stocks,
 //            employer stock (single stock = high risk),
-//            crypto, Crowdcube/Seedrs, angel investments,
+//            crypto, Crowdcube/Seedrs/angel investments,
 //            leveraged products
+//            NOTE: property_equity removed from scope (v2)
 
 // Default target allocation:
 // 60% MEDIUM / 20% HIGH / 20% CASH_LOW
@@ -302,10 +303,10 @@ ASSET_TYPE_WARN = 0.65       // 65% in one type — flag
 const ASSET_TYPES = [
   'indian_mf', 'indian_equity', 'nre_nro',
   'ppf_epf', 'eu_brokerage', 'employer_stock',
-  'crypto', 'alternative', 'property_equity',
+  'crypto', 'alternative',
   'mortgage', 'other_loans', 'credit_card'
 ]
-const ASSET_TYPES_TOTAL = 12
+const ASSET_TYPES_TOTAL = 11   // property_equity removed (v2)
 coverageScore = (assetTypesAdded / ASSET_TYPES_TOTAL) * 100
 ```
 
@@ -386,9 +387,9 @@ interface FIREResult {
 // ✓ Liquid investment portfolio
 // ✓ Cash savings
 // ✓ Indian MFs and Demat
-// ✗ Primary residence (flag: "excluded — illiquid")
 // ✗ Employer stock unvested (flag: "excluded — not yet yours")
-// ✗ Crowdcube/Seedrs (flag: "excluded — illiquid")
+// ✗ Crowdcube/Seedrs/angel (flag: "excluded — illiquid")
+// ✗ Property equity — not in scope (v2)
 // User can manually override inclusions
 
 // FIRE NUMBER FORMULA:
