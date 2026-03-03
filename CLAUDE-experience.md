@@ -1,7 +1,7 @@
 # Kāshe — CLAUDE-experience.md
 *Team Member 2: Experience & Delight*
 *Read CLAUDE.md first, then this file.*
-*Last updated: March 2026 — Portfolio screen spec added*
+*Last updated: March 2026 — Insights screen + FIRE planner spec added*
 
 ---
 
@@ -17,12 +17,12 @@ You consume data via hooks and props — you never fetch directly.
 ```
 Design system     Implement tokens from CLAUDE.md exactly
 UI components     All reusable components in /components
-Screen layouts    All 4 tabs + onboarding + settings
+Screen layouts    All 4 tabs + onboarding + settings + FIRE planner
 Navigation        Expo Router setup + bottom tab bar
 Animations        Micro-interactions, price ticks, transitions
 Empty states      Blurred ghost pattern on every screen
 Dark/light mode   Both modes on every single component
-Data viz          Progress bars, allocation bars, coverage scores
+Data viz          Progress bars, allocation bars, FIRE slider
 ```
 
 ---
@@ -32,7 +32,7 @@ Every screen and every card must have an empty state.
 Never show a financial number as zero.
 
 ```
-Structure:
+STANDARD PATTERN:
   Full-screen blurred ghost (realistic mock data)
   + Frosted card centred over blur:
       Kāshe asterisk (slow pulse animation)
@@ -45,12 +45,30 @@ Android: Semi-transparent overlay (#111110 at 70% opacity)
 Mock data: always import from /constants/mockData.ts
            Never generate random numbers — fixed constants only
            Mock data must look like a real, plausible user
+
+EXCEPTIONS (do not use blurred ghost for these):
+
+  InsightsEmptyInsightState — "no active insight"
+    Data exists, nothing to flag right now.
+    NOT a full empty state. Clean quiet card instead.
+    Kāshe asterisk (small, static)
+    "Nothing needs your attention right now."
+    "Checked X hours ago" (textDim, small)
+    This is silence from a trusted advisor — it is good news.
+
+  FIRE planner — not set up yet
+    FIRE has no meaningful populated ghost to blur.
+    Clean prompt card instead.
+    One input shown immediately to lower activation energy.
+    "Your FIRE number starts here"
+    See FIRETeaserCard and FIREPlannerScreen specs below.
 ```
 
 ---
 
 ## The Kāshe Asterisk Component
-The brand mark. Used in loading states, empty states, onboarding.
+The brand mark. Used in loading states, empty states, onboarding,
+and as a subtle signal on AI-generated content.
 
 ```
 Structure: 6-point asterisk SVG
@@ -61,6 +79,7 @@ Animations:
   Idle/empty:  Opacity pulse 0.4 → 1.0 → 0.4, 2s loop
   Loading:     Slow rotation, 8s full turn
   Success:     Brief scale-up (1.0 → 1.2 → 1.0, 300ms)
+  Static:      No animation — used in insight cards (small size)
 ```
 
 ---
@@ -78,6 +97,7 @@ Correct uses:
   Section separator between Growth / Stability / Locked
   in Portfolio screen
   Between Live and Locked columns in Portfolio totals card
+  Between sections in Monthly Review sheet
 
 Incorrect uses:
   Random decorative lines between cards
@@ -104,7 +124,7 @@ interface UniversalAddSheetProps {
 // Five options always present — context changes emphasis only:
 // 💳  Upload bank statement
 // 📈  Upload portfolio CSV
-// 📄  Upload salary slip          ← NEW V1
+// 📄  Upload salary slip
 // ✋  Add manually
 // 👤  Add a profile
 
@@ -186,15 +206,15 @@ LAYOUT (top to bottom):
 [FIRE Progress]
   Single progress bar, acid green fill
   "X% to FIRE" label
-  "Projected: 2041" in secondary text
-  Tap → navigates to Insights tab
+  "Projected: 2036" in secondary text
+  Tap → navigates to /app/insights/fire.tsx directly
   Visible with manual inputs only — no upload required
 
 [Monthly Review Ready] ← conditional
   Only shown when a new monthly review is available
   "Your March review is ready →"
   Accent colour, DM Sans medium
-  Tap → Insights tab, MonthlyReviewSheet opens
+  Tap → Insights tab, MonthlyReviewSheet opens immediately
   Hidden once user has viewed the review
 
 [Coverage Score]
@@ -390,28 +410,31 @@ RULES:
 ## Insight Detail Sheet
 ```
 Component: InsightDetailSheet.tsx
-Trigger: Tap insight card in Zone 2 of Spend screen
+Shared between: Spend screen, Portfolio screen, Insights tab
+Trigger: Tap insight card anywhere in the app
 
 LAYOUT (bottom sheet):
   Kāshe asterisk (small, static)
+  Insight type label (label style, textDim, uppercase)
+    e.g. "MARKET EVENT" / "PORTFOLIO HEALTH" / "SPEND ANOMALY"
   Insight headline (Syne, heading size)
   Full insight body (DM Sans, up to 80 words)
   Data points that triggered it (dim, small text)
     e.g. "Eating out: €340 this month vs €160 average"
-  Optional action suggestion (textSecondary)
-  [Dismiss] text link at bottom
-
-RULES:
-  Same 24-hour dismiss behaviour as inline card
-  No navigation to external content from this sheet
+  Source citation (MARKET_EVENT only)
+  Forum signal summary (MARKET_EVENT only, if present)
+  Action suggestion (textSecondary, optional)
+  [View holding →] deep link where relevant → HoldingDetailScreen
+  [View in Insights →] text link → Insights tab
+  [Dismiss] text link, bottom → 24-hour dismiss
 ```
 
 ---
 
-## Budget Suggestion Screen (Onboarding — screen 7)
+## Budget Suggestion Screen (Onboarding — screen 8)
 ```
 Appears:   After first successful CSV upload in onboarding
-Position:  Between First Payoff (screen 6) and Portfolio Teaser (screen 8)
+Position:  Between First Payoff (screen 7) and Portfolio Teaser (screen 9)
 Skippable: Always — user never forced to set budgets
 
 CONTENT:
@@ -435,7 +458,7 @@ CONTENT:
 RULES:
   Only shown if ≥1 month of spend data imported successfully
   investment_transfer and transfer never shown in this list
-  If user skipped upload in screen 5: this screen skipped entirely
+  If user skipped upload in screen 6: this screen skipped entirely
 ```
 
 ---
@@ -567,7 +590,7 @@ MARKET EVENT INSIGHT (highest priority):
     LOW confidence: dim note "Limited sources available"
     MEDIUM/HIGH: no indicator (clean)
   Dismiss: swipe left or tap × → hidden 24 hours
-  Tap → PortfolioInsightDetailSheet
+  Tap → InsightDetailSheet (shared component)
 
 ALL OTHER INSIGHTS:
   Same visual, no source citation line
@@ -690,11 +713,9 @@ LAYOUT (bottom sheet, scrollable):
 RULES:
   No affiliate links. Ever.
   Links open in in-app browser
-  Framing B throughout: "worth exploring" language
+  Framing: "worth exploring" language throughout
   Static curated list — not dynamically fetched
   Updated manually by PM quarterly
-  External links: AMFI, Groww, Zerodha Coin,
-                  justETF, Morningstar, DeGiro ETF list
 ```
 
 ### Zone 4 — Holdings List
@@ -865,18 +886,9 @@ PROTECTION HOLDING (additional section):
 
 ```
 COMPONENT: PortfolioInsightDetailSheet
-TRIGGER: Tap insight card in Zone 2
-
-LAYOUT (bottom sheet):
-  Kāshe asterisk (small, static)
-  Insight headline (Syne, heading size)
-  Full insight body (DM Sans, up to 80 words)
-  Data points that triggered insight (dim, small)
-  Source citation (for market event insights)
-  Forum signal summary (if present)
-  Action suggestion (textSecondary, optional)
-  [View holding →] deep link where relevant
-  [Dismiss] text link, bottom
+NOTE: Now superseded by shared InsightDetailSheet.tsx
+      Use InsightDetailSheet with appropriate props.
+      See Insight Detail Sheet spec above.
 ```
 
 ### Portfolio Empty State
@@ -908,22 +920,563 @@ Never a full empty state — just bucket-level nudges.
 No coverage score — removed from V1.
 ```
 
-### Screen Transitions
+---
+
+## Insights Screen — Full Spec
+
+**Route:** `/app/(tabs)/insights.tsx`
+**Job:** "Show me whether my financial life is on track —
+and what, if anything, I should do about it."
+
+### What Anand is asking
+When Anand opens this screen, he is asking one of three things
+depending on the day:
+- "Is my FIRE date still 2036, or did something shift?" (planning)
+- "Is there anything I should know or do right now?" (advisory)
+- "How did my financial month actually go?" (reflection)
+
+The screen must serve all three without making any feel secondary.
+
+### Structure
+Scrollable page. No fixed zones. Everything stacks vertically.
+No fixed header zone — Insights is not list-heavy enough to need one.
+
 ```
-Between tabs:         Slide (standard Expo Router tab behaviour)
-Push navigation:      Slide left (standard)
-Bottom sheets:        Slide up from bottom, 300ms ease-out
-Sheet dismiss:        Slide down, 250ms ease-in
-Number updates:       Gentle tick animation on change
-Progress bar fill:    Animate on mount, 600ms ease-out
+[InsightsHeader]
+[InsightsActiveInsightCard]    ← conditional
+[MonthlyReviewCard]            ← always present
+[FIRETeaserCard]               ← always present
+[PastReviewsList]              ← conditional (≥2 past reviews)
+```
+
+### InsightsHeader
+
+```
+COMPONENT: InsightsHeader
+
+Left:   "Insights" (Syne 700, heading style)
+Right:  [+] button with notification dot
+
+No month selector — Insights is not time-bounded.
+```
+
+### InsightsActiveInsightCard
+
+```
+COMPONENT: InsightsActiveInsightCard
+
+Conditional — only renders when an active insight exists.
+If no insight: renders InsightsEmptyInsightState instead.
+
+When visible:
+  Kāshe asterisk (small, static — not pulsing)
+  Insight type label (label style, textDim, uppercase)
+    e.g. "MARKET EVENT" / "PORTFOLIO HEALTH" / "FIRE UPDATE"
+  Headline (Syne 700, textPrimary, max 10 words)
+  Body (DM Sans, textSecondary, max 40 words)
+
+  MARKET_EVENT only — source + confidence:
+    "via Reuters · 3 hours ago" (textDim, small)
+    LOW confidence: dim note "Limited sources available"
+    MEDIUM/HIGH: no indicator shown
+
+  MARKET_EVENT only — forum signal (when meaningful):
+    "⚡ Stocktwits 68% bearish · r/stocks mixed"
+    textDim, small
+    Only when institutional/retail sentiment diverges
+
+  [See full insight →] DM Sans medium, accent colour
+    → opens InsightDetailSheet
+
+  Dismiss: swipe left or tap ×
+    → hidden for 24 hours
+    → InsightsEmptyInsightState renders in its place
+
+PRIORITY ORDER (one shown at a time — locked):
+  MARKET_EVENT_ALERT > PORTFOLIO_HEALTH >
+  FIRE_TRAJECTORY > INVESTMENT_OPPORTUNITY
+
+INVESTMENT_OPPORTUNITY renders slightly differently:
+  No asterisk — this is templated, not AI-generated
+  Label: "OPPORTUNITY" (label style, textDim)
+  [Explore options →] → InstrumentSuggestionSheet
+```
+
+### InsightsEmptyInsightState
+
+```
+COMPONENT: InsightsEmptyInsightState
+
+Renders in place of InsightsActiveInsightCard
+when no current insight is active.
+
+NOT a full empty state. NOT a blurred ghost.
+The rest of the screen renders normally around it.
+
+Simple card:
+  Kāshe asterisk (small, static — not pulsing)
+  "Nothing needs your attention right now."
+  DM Sans, textSecondary
+  "Checked [X] hours ago" textDim, small
+
+DESIGN INTENT:
+  This is a trusted advisor being quiet.
+  Silence should feel like a green light, not a broken feature.
+  No CTA. No encouragement to "add more data."
+  Just honest stillness.
+```
+
+### MonthlyReviewCard
+
+```
+COMPONENT: MonthlyReviewCard
+
+Always present on Insights screen.
+Four states:
+
+STATE 1 — Review available, not yet viewed:
+  4px left border in accent colour (#C8F04A)
+  Label: "MONTHLY REVIEW" (label style, textDim)
+  Headline: "Your [Month] review is ready"
+    Syne 700, textPrimary
+  Subtext: "Generated [date]" textDim, small
+  [Read your [Month] review →] accent button
+  → opens MonthlyReviewSheet
+
+STATE 2 — Review available, already viewed:
+  No accent border
+  Label: "MONTHLY REVIEW" (label style, textDim)
+  "[Month] review" textPrimary, DM Sans medium
+  [Open →] text link, textSecondary
+  → opens MonthlyReviewSheet
+
+STATE 3 — Review not yet available (< 3 months data):
+  Label: "MONTHLY REVIEW" (label style, textDim)
+  "Available once you have 3 months of data"
+  textSecondary, DM Sans
+  No CTA — nothing to tap
+
+STATE 4 — Some data exists, insufficient for review:
+  Label: "MONTHLY REVIEW" (label style, textDim)
+  "Add more data to unlock monthly reviews"
+  textSecondary, DM Sans
+  "[+ Upload bank statement]" text link → universal add sheet
+```
+
+### MonthlyReviewSheet
+
+```
+COMPONENT: MonthlyReviewSheet
+TRIGGER: Tap MonthlyReviewCard (any state with CTA)
+         Also triggered on Insights tab arrival when
+         navigation param openReview=true is passed
+         (from "Your March review is ready →" on Home)
+
+Full-height bottom sheet, scrollable
+
+HEADER:
+  "[Month Year] Review" (Syne 700, heading)
+  "Generated [date]" (textDim, small)
+  Dismiss handle (top centre)
+
+SECTIONS (maps directly to Claude JSON response):
+
+  1. WHERE YOU STAND
+     Label: "WHERE YOU STAND" (label style, uppercase, textDim)
+     Body: whereYouStand string from Claude
+     DM Sans, textPrimary
+
+  ā macron rule
+
+  2. HOW YOUR MONEY IS WORKING
+     Label: "HOW YOUR MONEY IS WORKING" (label style, textDim)
+     Four sub-rows:
+       Growth / Stability / Locked / Protection
+       Each: bucket name (textSecondary, DM Sans medium)
+             + Claude's one-line assessment (textPrimary, DM Sans)
+
+  ā macron rule
+
+  3. THIS MONTH'S PRIORITY
+     Label: "THIS MONTH'S PRIORITY" (label style, textDim)
+     Headline (Syne 700, textPrimary)
+     Reasoning (DM Sans, textSecondary)
+     Bucket pill (if bucketTarget set):
+       GROWTH / STABILITY / LOCKED pill, accent colour
+       Tappable → navigates to Portfolio screen,
+                  bucket section highlighted
+
+  ā macron rule
+
+  4. FIRE UPDATE
+     Label: "FIRE UPDATE" (label style, textDim)
+     Headline (Syne 700, textPrimary)
+     Detail (DM Sans, textSecondary)
+     Only renders if FIRE planner is set up
+     If not set up:
+       "Set up your FIRE planner to unlock this"
+       text link → /app/insights/fire.tsx
+
+  ā macron rule
+
+  5. NEXT MONTH — WATCH FOR
+     Label: "NEXT MONTH — WATCH FOR" (label style, textDim)
+     2–3 items (DM Sans, textPrimary)
+     Simple dot markers (·), no icons
+
+FOOTER (always visible, pinned, not scrollable):
+  "Generated by Kāshe AI · Based on your data only ·
+   Not financial advice"
+  DM Sans, textDim, very small, centred
+  [Close] text link above disclaimer
+```
+
+### FIRETeaserCard
+
+```
+COMPONENT: FIRETeaserCard
+
+Always present on Insights screen.
+Opens FIRE Planner detail screen — it is not the planner itself.
+
+STATE 1 — FIRE not set up:
+  Label: "FINANCIAL INDEPENDENCE" (label style, textDim)
+  "When could you stop working?"
+  Syne 700, textPrimary
+  "Set up your FIRE planner to find out."
+  DM Sans, textSecondary
+  [Set up FIRE planner →] accent button
+  → navigates to /app/insights/fire.tsx
+
+STATE 2 — FIRE set up, projection exists:
+  Label: "FINANCIAL INDEPENDENCE" (label style, textDim)
+  Projected year: Syne 800, very large, textPrimary
+    e.g. "2036"
+  Progress bar (acid green fill, 600ms ease-out on mount)
+    Width = currentPortfolio / FIRENumber as percentage
+  "X% of your FIRE number" DM Sans, textSecondary
+  "€X,XXX to go" DM Sans, textDim, small
+  [Open FIRE planner →] text link, textSecondary
+  → navigates to /app/insights/fire.tsx
+```
+
+### PastReviewsList
+
+```
+COMPONENT: PastReviewsList
+
+Conditional — only renders when ≥2 past reviews exist.
+If <2: section does not render at all. No placeholder.
+
+Header row:
+  "Past reviews" (DM Sans 500, textSecondary, label style)
+
+Each row:
+  Month + Year (DM Sans medium, textPrimary)
+    e.g. "February 2026"
+  Chevron right
+  Tap → opens MonthlyReviewSheet for that month
+
+RULES:
+  Last 12 months only (rolling — oldest drops as new arrives)
+  Current month's review lives in MonthlyReviewCard above —
+    NOT duplicated here
+  [V2]: Year-end wrapped built from this 12-month archive
+    Trigger: first app open of January each year
+    Uses all 12 monthly reviews as source material
+```
+
+### Insights Screen — Empty State
+
+```
+FULL EMPTY STATE (no data, FIRE not set up):
+  Full-screen blurred ghost of populated Insights screen
+  Mock data: realistic insight card + FIRE projection 2036
+             + Monthly Review card (State 2)
+             + one past review row
+  Fixed constants from /constants/mockData.ts
+
+  Frosted card centred:
+    Kāshe asterisk (slow pulse)
+    "Your financial picture, interpreted"
+    [+ Upload bank statement] accent button
+    "Set up FIRE planner instead" text link, textSecondary
+    → /app/insights/fire.tsx (FIRE works without any upload)
+
+PARTIAL STATE (1–2 months of data):
+  InsightsActiveInsightCard: may render if PORTFOLIO_HEALTH
+    or INVESTMENT_OPPORTUNITY triggered (no history needed)
+    MARKET_EVENT_ALERT: always renders if triggered (time-based)
+    FIRE_TRAJECTORY: never renders (needs 3+ months)
+    If nothing triggered: InsightsEmptyInsightState renders
+  MonthlyReviewCard: State 3 or 4 — not yet available
+  FIRETeaserCard: always renders
+  PastReviewsList: hidden (< 2 reviews)
 ```
 
 ---
 
-## Onboarding Stack (9 screens, linear, runs once)
+## FIRE Planner Screen — Full Spec
+
+**Route:** `/app/insights/fire.tsx`
+**Job:** "Let me model my path to financial independence —
+and adjust the levers until the numbers feel possible."
+
+This is the flight simulator, not the report card.
+Anand is the pilot. Show the trajectory, then let him adjust it.
+
+### Structure
+
 ```
-Screen 7 (Budget Suggestion) added after first spec session.
-Only appears if upload succeeded in screen 5. Otherwise skipped.
+[FIREPlannerHeader]
+[FIREHouseholdToggle]      ← household / individual selector
+[FIRESliderHero]           ← the main interaction
+[FIREInputsCard]           ← collapsible on return visits
+[FIREAssumptionsCard]      ← always visible, never hidden
+[FIREProfileSelector]      ← only when individual mode active
+```
+
+### FIREPlannerHeader
+
+```
+COMPONENT: FIREPlannerHeader
+
+Back chevron (slides back to Insights tab)
+"FIRE Planner" (Syne 700, heading style)
+No [+] button — this screen is purely analytical
+```
+
+### FIREHouseholdToggle
+
+```
+COMPONENT: FIREHouseholdToggle
+
+Pill toggle, top of screen beneath header:
+  [Household]  [Individual]
+
+Default: Household
+Individual mode: FIREProfileSelector appears below inputs
+```
+
+### FIRESliderHero
+
+```
+COMPONENT: FIRESliderHero
+
+The primary interaction. Hero element of the screen.
+
+Label:
+  "Years to financial independence"
+  DM Sans, textSecondary
+
+Large display:
+  "[X] years" (Syne 800, display size, textPrimary)
+  "That's [year]" (DM Sans, textSecondary, beneath)
+  e.g. "12 years" / "That's 2038"
+
+Slider:
+  Range: 5 → 30 years, 1-year steps
+  Accent green fill on active (left) portion
+  Thumb: circle, accent green fill, 24px
+  Updates projection output in real time on drag
+  Smooth animation as numbers update (gentle tick)
+
+Projection output (updates live with slider):
+  Primary line:
+    "You'd need to save [€X/month]"
+    Syne 800, textPrimary
+  Secondary line:
+    "to retire in [year] with [€X/month] to live on"
+    DM Sans, textSecondary
+
+Current trajectory indicator (if data available):
+  "At your current pace: [year]"
+  textDim, DM Sans, small
+  Shown only if investment_transfer data exists
+  A dot marker on the slider track at the current pace year
+
+Mortgage step-down annotation (conditional):
+  Only shown if a mortgage exists in liabilities AND
+  its end date falls within the projection window
+  Displayed as a subtle note beneath the projection output:
+    "Your mortgage ends in [year] — this reduces your
+     required monthly spend by ~€[X] from that point"
+    textDim, DM Sans, small
+  The FIRE engine accounts for this automatically in calc
+```
+
+### FIREInputsCard
+
+```
+COMPONENT: FIREInputsCard
+
+Collapsible card.
+Expanded by default on first visit.
+Collapsed by default on return visits (show summary line).
+
+Collapsed summary line:
+  "€[portfolio] portfolio · €[savings]/mo savings ·
+   [age] years old" textSecondary, DM Sans, small
+  Chevron to expand
+
+Expanded:
+
+  FIELD: Current portfolio value
+    Label: "Current portfolio value"
+    Value: Syne font, large, editable inline
+    Pre-filled from portfolio total if data exists
+    Dim note: "From your portfolio" or "Enter manually"
+    Currency symbol prefix (base currency)
+
+  FIELD: Monthly savings / investments
+    Label: "Monthly savings"
+    Pre-filled from average investment_transfer last 3 months
+    Dim note: "Based on your last 3 months" or "Enter manually"
+
+  FIELD: Target monthly spend in retirement
+    Label: "Monthly spend in retirement"
+    Pre-filled from average monthly spend last 3 months
+    Editable — user may want to adjust down
+    Dim note: "Based on your last 3 months of spending"
+
+  FIELD: Current age
+    Label: "Your age"
+    Pre-filled from onboarding
+    Editable
+
+  FIELD: Expected annual return
+    Label: "Expected annual return"
+    Default: 7%
+    Editable. Shows: "7% (conservative blended default)"
+    User can tap to edit
+
+  FIELD: Inflation rate
+    Label: "Inflation rate"
+    Default: country-based from /constants/fireDefaults.ts
+    Shows: "3.0% (Netherlands default)"
+    Editable
+
+  [Recalculate] accent button
+    Enabled only when any field value has changed
+    Slider hero updates in real time on drag —
+    [Recalculate] only needed after input field edits
+```
+
+### FIREAssumptionsCard
+
+```
+COMPONENT: FIREAssumptionsCard
+
+Always visible. Never collapsible.
+Transparency is non-negotiable.
+
+"These projections are based on:"
+DM Sans, textSecondary
+
+Bullet list (DM Sans, textDim, small):
+  · 4% safe withdrawal rate (Bengen rule)
+  · [X]% expected annual return
+  · [X]% annual inflation ([country] default)
+  · Primary residence excluded from FIRE number
+  · Unvested employer stock excluded
+  · Crowdcube and angel investments excluded
+  · FIRE number = target monthly spend × 300
+
+"Projections are estimates, not guarantees."
+DM Sans, textDim, small
+```
+
+### FIREProfileSelector
+
+```
+COMPONENT: FIREProfileSelector
+RENDERS: Only when Individual toggle is active
+
+Profile list (radio select):
+  ○ [Household name] (default, Household)
+  ○ [Owner name] (OWNER)
+  ○ [Managed profile name] (MANAGED)
+    Dim note: "Using assets managed under this profile"
+  ○ [Partner name] (PARTNER — V2, shown greyed out)
+    Dim note: "[V2] — requires couple sync"
+
+Selecting a profile recalculates the FIRE projection
+using only that profile's assets.
+```
+
+### FIRE Screen — Empty / First Launch State
+
+```
+Not set up (no inputs entered, no age from onboarding):
+  No blurred ghost — FIRE has no meaningful ghost to show.
+  Clean, low-friction prompt instead.
+
+  Kāshe asterisk (slow pulse, medium size)
+  "Your FIRE number starts here"
+  Syne 700, textPrimary
+
+  One field shown immediately (lowest barrier to entry):
+    "Monthly spend in retirement"
+    Large editable field, Syne font
+    Dim placeholder: "€3,000"
+
+  Beneath field:
+    "Start with one number. We'll calculate the rest."
+    DM Sans, textDim, small
+
+  [Start calculating →] accent button
+    On tap: reveals full FIREInputsCard (expanded)
+            with this field pre-filled
+
+DESIGN INTENT:
+  One question. One number. No intimidation.
+  The slider appears once Anand has entered enough to calculate.
+```
+
+---
+
+## Insights Screen — V1 / V2 / Never
+
+```
+V1:
+  Scrollable page structure
+  InsightsActiveInsightCard (all 4 insight types)
+  InsightsEmptyInsightState ("nothing needs attention")
+  MonthlyReviewCard (all 4 states)
+  MonthlyReviewSheet (full Claude-generated review)
+  FIRETeaserCard (both states)
+  FIRE Planner detail screen (/app/insights/fire.tsx)
+  FIRESliderHero (5–30 year range, real-time)
+  FIREInputsCard (6 inputs, collapsible)
+  FIREAssumptionsCard (always visible)
+  FIREProfileSelector (household / individual)
+  PastReviewsList (last 12 months)
+  Mortgage step-down in FIRE projection
+  InsightDetailSheet (shared, used across all screens)
+
+[V2]:
+  Year-end wrapped (built from 12-month review archive)
+  FIRE projection comparison vs same time last year
+  Partner FIRE view (requires couple sync)
+  Push notification when FIRE date shifts >6 months
+  Conversational advisor ("ask Kāshe anything")
+  Historical insight log beyond monthly reviews
+  FIRE "what if" scenarios (job change, windfall, etc.)
+
+[NEVER]:
+  Specific fund or stock recommendations
+  Buy/sell signals
+  Regulated financial advice
+  Affiliate links of any kind
+  Guarantee language on projections
+```
+
+---
+
+## Onboarding Stack — 10 Screens (updated)
+
+```
+Screen 4 (Age) is new. Budget Suggestion is screen 8.
 
 1. Welcome
    Kāshe asterisk (large, pulsing)
@@ -940,33 +1493,55 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
    Base currency auto-selected from country
    User can override currency
 
-4. Teach [+]
+4. Age  ← NEW
+   "How old are you?"
+   Large number input, Syne font
+   [Continue →] accent button
+   [Skip for now] text link, textSecondary
+   Dim note: "Used for your FIRE projection only"
+   If skipped: FIRE planner prompts for age on first open
+
+5. Teach [+]
    Static illustration showing [+] button
    "This button is how you add everything"
    [Got it →]
 
-5. First Add (Guided)
+6. First Add (Guided)
    Universal Add Sheet with isOnboarding=true
    Tooltip on bank statement option
    User uploads or skips
 
-6. First Payoff
+7. First Payoff
    If data uploaded: real Home screen preview
    If skipped: full ghost empty state
 
-7. Budget Suggestion  ← conditional
+8. Budget Suggestion  ← conditional
+   Only shown if screen 6 upload succeeded
    See Budget Suggestion Screen spec above
-   Only shown if screen 5 upload succeeded
 
-8. Portfolio Teaser
+9. Portfolio Teaser
    Blurred portfolio ghost
    "Your investments, one view"
    [+ Add your investments]
 
-9. Complete
-   "Kāshe is ready."
-   "Tap [+] anytime to add more"
-   [Go to Kāshe →] → loads main app
+10. Complete
+    "Kāshe is ready."
+    "Tap [+] anytime to add more"
+    [Go to Kāshe →] → loads main app
+```
+
+---
+
+## Screen Transitions
+```
+Between tabs:         Slide (standard Expo Router tab behaviour)
+Push navigation:      Slide left (standard)
+Back navigation:      Slide right
+Bottom sheets:        Slide up from bottom, 300ms ease-out
+Sheet dismiss:        Slide down, 250ms ease-in
+Number updates:       Gentle tick animation on change
+Progress bar fill:    Animate on mount, 600ms ease-out
+FIRE slider:          Smooth real-time update, no animation lag
 ```
 
 ---
@@ -977,21 +1552,24 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
 [NOT YOURS] Salary slip parsing logic (Team Member 3)
 [NOT YOURS] API calls (price refresh, news, FX, AI)
 [NOT YOURS] Authentication or storage
-[NOT YOURS] Financial calculations (savings rate, FIRE, etc)
+[NOT YOURS] Financial calculations (savings rate, FIRE math, etc)
 [NOT YOURS] Zustand store definitions
 [NOT YOURS] TypeScript type definitions for data models
 [NOT YOURS] Coverage score (removed from V1)
 [NOT YOURS] Property equity UI (out of scope V1)
+[NOT YOURS] fireDefaults.ts (Team Member 3 owns constants)
 ```
 
 ---
 
 ## Your Output Files
+
 ```
 /constants/colours.ts
 /constants/typography.ts
 /constants/spacing.ts
-/constants/mockData.ts
+/constants/mockData.ts           include Insights mock data
+
 /components/ui/
   Button.tsx
   Card.tsx
@@ -1000,12 +1578,15 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
   Badge.tsx
   ProgressBar.tsx
   Divider.tsx
+
 /components/shared/
   UniversalAddSheet.tsx
   EmptyState.tsx
   KasheAsterisk.tsx
   MacronRule.tsx
   NotificationDot.tsx
+  InsightDetailSheet.tsx         SHARED — used by Spend, Portfolio, Insights
+
 /components/home/
   PositionHeroCard.tsx
   SpendSnapshot.tsx
@@ -1013,9 +1594,9 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
   PortfolioPulse.tsx
   SegregationToggle.tsx
   FIREProgress.tsx
-  CoverageCard.tsx          REMOVED — do not build
   SavingsRateBadge.tsx
-  MonthlyReviewLink.tsx     NEW — conditional link to monthly review
+  MonthlyReviewLink.tsx
+
 /components/spend/
   SpendScreenHeader.tsx
   SpendSummaryStrip.tsx
@@ -1025,11 +1606,10 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
   SpendTransactionRow.tsx
   TransactionEditSheet.tsx
   SpendBudgetSheet.tsx
-  InsightDetailSheet.tsx
+
 /components/portfolio/
   PortfolioTotalsCard.tsx
   PortfolioInsightStrip.tsx
-  PortfolioInsightDetailSheet.tsx
   InvestmentPlanCard.tsx
   InvestmentPlanExpanded.tsx
   SalaryContributionRow.tsx
@@ -1040,45 +1620,40 @@ Only appears if upload succeeded in screen 5. Otherwise skipped.
   BucketReassignSheet.tsx
   LockedProjectionCard.tsx
   ProtectionStatusCard.tsx
+
+/components/insights/
+  InsightsHeader.tsx
+  InsightsActiveInsightCard.tsx
+  InsightsEmptyInsightState.tsx
+  MonthlyReviewCard.tsx
+  MonthlyReviewSheet.tsx
+  FIRETeaserCard.tsx
+  PastReviewsList.tsx
+
+/components/fire/
+  FIRESliderHero.tsx
+  FIREInputsCard.tsx
+  FIREAssumptionsCard.tsx
+  FIREProfileSelector.tsx
+  FIREHouseholdToggle.tsx
+
 /app/(tabs)/index.tsx
 /app/(tabs)/spend.tsx
-/app/spend/[category].tsx
 /app/(tabs)/portfolio.tsx
-/app/portfolio/[holdingId].tsx
 /app/(tabs)/insights.tsx
+/app/spend/[category].tsx
+/app/portfolio/[holdingId].tsx
+/app/insights/fire.tsx           NEW SCREEN
 /app/onboarding/
+  index.tsx
+  household.tsx
+  location.tsx
+  age.tsx                        NEW SCREEN
+  teach.tsx
+  first-add.tsx
+  payoff.tsx
+  budget-suggest.tsx
+  portfolio-teaser.tsx
+  complete.tsx
 /app/settings/index.tsx
-```
-
----
-
-## V1 / V2 / Never — Portfolio Screen
-```
-V1:
-  All zones above
-  Growth / Stability / Locked taxonomy
-  Protection designation
-  Investment plan (Level 3 — category guidance)
-  Salary slip upload + pension detection prompt
-  Locked holding projections (where calculable)
-  AI insight strip (market events + portfolio health)
-  Monthly review link (review lives in Insights tab)
-  Instrument suggestion sheet (static curated list)
-  BucketReassignSheet
-
-[V2]:
-  Specific fund recommendations by name
-  Dynamic fund data from external APIs
-  Performance charts per holding
-  Tax gain/loss harvesting surface
-  Conversational advisor chat
-  Push notifications for market events
-
-[NEVER]:
-  Property equity (V1 — may revisit in V2)
-  Physical assets (car, gold, art, jewellery)
-  Regulated financial advice
-  Specific buy/sell recommendations without legal wrapper
-  Affiliate links of any kind
-  Coverage score
 ```

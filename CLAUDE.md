@@ -84,6 +84,7 @@ Household
     ├── id, name, type, householdId
     ├── googleAuthId   (null for MANAGED profiles)
     ├── baseCountry, baseCurrency
+    ├── age            (captured in onboarding, used for FIRE calc)
     └── Assets[]
 
 PROFILE TYPES:
@@ -260,7 +261,9 @@ MACRON RULE (ā):
     - Between assets and liabilities in Position hero
     - Active tab indicator in bottom nav
     - Progress bar fill
-    - Between India / Europe sections in Portfolio
+    - Between Growth / Stability / Locked sections in Portfolio
+    - Between Live and Locked columns in Portfolio totals card
+    - Between sections in Monthly Review sheet
   Never used as pure decoration
 ```
 
@@ -282,6 +285,17 @@ Structure:
 iOS:     @react-native-community/blur (BlurView)
 Android: Semi-transparent overlay (#111110 at 70% opacity)
 Mock data: always from /constants/mockData.ts — fixed constants only
+
+EXCEPTION — Insights screen "no active insight" state:
+  Not a full blurred ghost. A clean quiet card instead.
+  "Nothing needs your attention right now."
+  This is intentional — silence is the message.
+  See CLAUDE-experience.md for InsightsEmptyInsightState spec.
+
+EXCEPTION — FIRE planner not set up:
+  Not a blurred ghost — FIRE has no populated state to mirror.
+  Clean prompt card instead. One input shown immediately.
+  "Your FIRE number starts here" — lowers activation energy.
 ```
 
 ---
@@ -334,68 +348,99 @@ Team Member 3 — Financial Intelligence → CLAUDE-financial.md
 ```
 /app
   /(tabs)
-    index.tsx           Home
-    spend.tsx           Spend
-    portfolio.tsx       Portfolio
-    insights.tsx        Insights
+    index.tsx              Home
+    spend.tsx              Spend
+    portfolio.tsx          Portfolio
+    insights.tsx           Insights
   /onboarding
-    index.tsx           Welcome + Google OAuth
-    household.tsx       Single or couple?
-    location.tsx        Country + base currency
-    teach.tsx           Introduce [+] gesture
-    first-add.tsx       Guided universal add sheet
-    payoff.tsx          First data view (real or ghost)
-    budget-suggest.tsx  Budget suggestion (conditional — upload only)
+    index.tsx              Welcome + Google OAuth
+    household.tsx          Single or couple?
+    location.tsx           Country + base currency
+    age.tsx                Current age (NEW — between location + teach)
+    teach.tsx              Introduce [+] gesture
+    first-add.tsx          Guided universal add sheet
+    payoff.tsx             First data view (real or ghost)
+    budget-suggest.tsx     Budget suggestion (conditional — upload only)
     portfolio-teaser.tsx
-    complete.tsx        Tap [+] anytime → main app
+    complete.tsx           Tap [+] anytime → main app
+  /insights
+    fire.tsx               FIRE Planner detail screen (NEW)
+  /spend
+    [category].tsx         Spend category detail
+  /portfolio
+    [holdingId].tsx        Holding detail
   /settings
     index.tsx
 
 /components
-  /ui                   Button, Card, Typography, Avatar,
-                        Badge, ProgressBar, Divider
-  /home                 PositionHeroCard, SpendSnapshot,
-                        FIREProgress, CoverageCard,
-                        SavingsRateBadge, MarketsStrip,
-                        PortfolioPulse, SegregationToggle
-  /spend                (specced in Spend screen session)
-  /portfolio            (specced in Portfolio screen session)
-  /insights             (specced in Insights screen session)
-  /shared               UniversalAddSheet, EmptyState,
-                        KasheAsterisk, MacronRule,
-                        NotificationDot
+  /ui                      Button, Card, Typography, Avatar,
+                           Badge, ProgressBar, Divider
+  /home                    PositionHeroCard, SpendSnapshot,
+                           FIREProgress, SavingsRateBadge,
+                           MarketsStrip, PortfolioPulse,
+                           SegregationToggle, MonthlyReviewLink
+  /spend                   SpendScreenHeader, SpendSummaryStrip,
+                           SpendInsightStrip, SpendCategoryList,
+                           SpendCategoryRow, SpendTransactionRow,
+                           TransactionEditSheet, SpendBudgetSheet,
+                           InsightDetailSheet
+  /portfolio               PortfolioTotalsCard, PortfolioInsightStrip,
+                           PortfolioInsightDetailSheet,
+                           InvestmentPlanCard, InvestmentPlanExpanded,
+                           SalaryContributionRow, AllocationSuggestionRow,
+                           InstrumentSuggestionSheet, PortfolioSectionHeader,
+                           PortfolioHoldingRow, BucketReassignSheet,
+                           LockedProjectionCard, ProtectionStatusCard
+  /insights                InsightsHeader, InsightsActiveInsightCard,
+                           InsightsEmptyInsightState, InsightDetailSheet,
+                           MonthlyReviewCard, MonthlyReviewSheet,
+                           FIRETeaserCard, PastReviewsList
+  /fire                    FIRESliderHero, FIREInputsCard,
+                           FIREAssumptionsCard, FIREProfileSelector
+  /shared                  UniversalAddSheet, EmptyState,
+                           KasheAsterisk, MacronRule,
+                           NotificationDot
 
 /constants
-  colours.ts            All colour tokens (both modes)
-  typography.ts         All type styles
-  spacing.ts            Spacing scale
-  featureFlags.ts       FREE / FREEMIUM / PREMIUM gates
-  mockData.ts           Fixed mock data for empty states
+  colours.ts               All colour tokens (both modes)
+  typography.ts            All type styles
+  spacing.ts               Spacing scale
+  featureFlags.ts          FREE / FREEMIUM / PREMIUM gates
+  mockData.ts              Fixed mock data for empty states
+  fireDefaults.ts          Country-based inflation defaults (NEW)
+                           NL: 3.0%  IN: 5.0%  UK: 3.0%
+                           US: 3.0%  Other: 3.5%
 
 /hooks
   useColorScheme.ts
   usePortfolio.ts
   useSpend.ts
   useHousehold.ts
+  useInsights.ts           (NEW — insight state, monthly review)
+  useFirePlanner.ts        (NEW — FIRE calc inputs/outputs)
+  useInvestmentPlan.ts
 
 /services
-  dataSource.ts         Abstract DataSource interface
-  csvDataSource.ts      Smart universal CSV parser (v1)
-  universalParser.ts    Column detection + confidence scoring
-  priceRefresh.ts       Orchestrates all price API calls
-  fxRefresh.ts          Exchange rate refresh
-  amfiNavFeed.ts        Indian MF NAV feed
-  portfolioCalc.ts      Position, allocation, coverage score
-  savingsRate.ts        Savings rate formula
-  spendCategoriser.ts   Transaction to category mapping
-  fireEngine.ts         FIRE calculator + projections
-  aiInsights.ts         Claude API integration
+  dataSource.ts            Abstract DataSource interface
+  csvDataSource.ts         Smart universal CSV parser (v1)
+  universalParser.ts       Column detection + confidence scoring
+  salarySlipParser.ts      Dutch + Indian salary slip parser
+  priceRefresh.ts          Orchestrates all price API calls
+  fxRefresh.ts             Exchange rate refresh
+  amfiNavFeed.ts           Indian MF NAV feed
+  portfolioCalc.ts         Position, allocation, bucket assignment
+  savingsRate.ts           Savings rate formula
+  spendCategoriser.ts      Transaction to category mapping
+  fireEngine.ts            FIRE calculator + projections
+  aiInsights.ts            Claude API — full 5-insight engine
+  budgetCap.ts             Client-side token usage enforcement
 
 /store
-  householdStore.ts     Profiles + auth state
-  portfolioStore.ts     Assets + liabilities
-  spendStore.ts         Transactions
-  uiStore.ts            Loading, error, modal states
+  householdStore.ts        Profiles + auth state
+  portfolioStore.ts        Assets + liabilities
+  spendStore.ts            Transactions
+  insightsStore.ts         (NEW — insight cache, monthly review cache)
+  uiStore.ts               Loading, error, modal states
 
 /types
   asset.ts
@@ -404,6 +449,9 @@ Team Member 3 — Financial Intelligence → CLAUDE-financial.md
   profile.ts
   dataSource.ts
   insight.ts
+  portfolio.ts
+  investmentPlan.ts
+  fire.ts                  (NEW — FIRE inputs, outputs, assumptions)
 
 /docs
   kashe-prd-complete.md
@@ -420,7 +468,24 @@ Smart universal CSV parser — works with any bank worldwide
 Local-first storage — privacy by architecture
 Google OAuth only — no passwords ever
 4 tabs: Home / Spend / Portfolio / Insights
-FIRE calculator lives in Insights tab
+FIRE calculator lives in Insights tab (/app/insights/fire.tsx)
+FIRE is not first-class on Insights — teaser card only,
+  full experience is a dedicated detail screen
+FIRE works from day one with manual inputs only — no upload needed
+FIRE is household-level by default, switchable to individual
+FIRE mortgage step-down: if mortgage end date exists in liabilities,
+  monthly spend drops automatically at that date in projections
+Age captured in onboarding (screen 4 — between Location and Teach)
+Inflation defaults are country-based, not hardcoded globally
+  NL 3.0% / IN 5.0% / UK 3.0% / US 3.0% / Other 3.5%
+  Stored in /constants/fireDefaults.ts. Always shown, always overridable.
+Monthly Review: generated once per calendar month, cached entire month,
+  never regenerated mid-month, lives in Insights tab
+Past reviews: last 12 months archived — foundation for V2 year-end wrapped
+Insight strip on Portfolio: doorbell. Insights tab: the room.
+  Insights tab goes deeper, never just repeats the strip.
+"Nothing needs your attention right now" is a valid, intentional state
+  on the Insights screen — silence from a trusted advisor is good news
 Acid green #C8F04A — brand accent, used sparingly
 DataSource abstraction — CSVDataSource v1, open banking v2
 featureFlag system — freemium ready, don't gate in v1
@@ -430,6 +495,25 @@ investment_transfer is NOT spend — excluded from savings rate
 Liquid and illiquid always shown separately — never combined
 Blurred ghost empty states — invitations not errors
 Both dark and light mode on every single component from day one
+```
+
+---
+
+## Onboarding Stack — 10 Screens (updated)
+```
+Screen 4 (Age) added. Budget Suggestion remains conditional.
+
+1. Welcome          Kāshe asterisk + Google OAuth
+2. Household        Single or couple?
+3. Location         Country + base currency
+4. Age              "How old are you?" — number input, skippable
+                    Skippable: FIRE asks on first open if skipped
+5. Teach [+]        Static illustration, introduce the gesture
+6. First Add        Guided universal add sheet (isOnboarding=true)
+7. First Payoff     Real data OR blurred ghost
+8. Budget Suggest   Conditional — only if screen 6 upload succeeded
+9. Portfolio Teaser Blurred ghost + [+ Add investments]
+10. Complete        "Tap [+] anytime to add more" → main app
 ```
 
 ---
@@ -445,6 +529,11 @@ Both dark and light mode on every single component from day one
 [V2]    Couple sync backend (Supabase)
 [V2]    ML-based spend categorisation
 [V2]    Historical portfolio performance charts
+[V2]    Year-end wrapped (built from 12-month review archive)
+[V2]    FIRE comparison vs same time last year
+[V2]    Partner FIRE view (requires couple sync)
+[V2]    Conversational advisor / ask Kāshe anything
+[V2]    Historical insight log beyond monthly reviews
 [NEVER] Physical assets (car, art, jewellery, watches)
 [NEVER] Tax filing or tax calculations
 [NEVER] Money transfers or payments
@@ -453,6 +542,9 @@ Both dark and light mode on every single component from day one
 [NEVER] Generic market news feed
 [NEVER] Gamification (badges, streaks, scores)
 [NEVER] Business or company finances
+[NEVER] Specific buy/sell recommendations
+[NEVER] Regulated financial advice
+[NEVER] Affiliate links of any kind
 ```
 
 ---
