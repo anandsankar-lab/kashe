@@ -1,39 +1,25 @@
-import { View, useColorScheme } from 'react-native';
+import { ScrollView, useColorScheme } from 'react-native';
 import colours from '../../constants/colours';
-import Spacing from '../../constants/spacing';
-import TypographyText from '../../components/ui/Typography';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import KasheAsterisk from '../../components/shared/KasheAsterisk';
-import MacronRule from '../../components/shared/MacronRule';
+import PositionHeroCard from '../../components/home/PositionHeroCard';
 
 export default function HomeScreen() {
   const isDark = useColorScheme() === 'dark';
 
   return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: isDark ? colours.backgroundDark : colours.background,
-        padding: Spacing.xxl,
-        gap: Spacing.lg,
-      }}
+    <ScrollView
+      style={{ flex: 1, backgroundColor: isDark ? colours.backgroundDark : colours.background }}
+      contentContainerStyle={{ paddingTop: 60, paddingBottom: 32 }}
     >
-      <KasheAsterisk size={48} animated />
-
-      <TypographyText variant="heading">Kāshe</TypographyText>
-
-      <MacronRule style={{ marginVertical: Spacing.sm }} />
-
-      <TypographyText variant="body" color={colours.textSecondary}>
-        Your money. Both worlds.
-      </TypographyText>
-
-      <Card style={{ width: '100%', marginTop: Spacing.lg }}>
-        <Button label="Get started" variant="primary" onPress={() => {}} />
-      </Card>
-    </View>
+      <PositionHeroCard
+        position={450200}
+        savingsRate={45}
+        monthDelta={2340}
+        ytdDelta={18400}
+        liquidAssets={380200}
+        illiquidAssets={120000}
+        liabilities={50000}
+        currency="€"
+      />
+    </ScrollView>
   );
 }
