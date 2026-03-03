@@ -1,27 +1,31 @@
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
-import { colours } from '../../constants/colours';
+import colours from '../../constants/colours';
 
-export default function TabsLayout() {
+export default function TabLayout() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
+
+  const bg = isDark ? colours.backgroundDark : colours.background;
+  const border = isDark ? colours.borderDark : colours.border;
+  const inactive = isDark ? colours.textDim : colours.textSecondary;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colours.accent,
-        tabBarInactiveTintColor: colours.textSecondary,
+        tabBarInactiveTintColor: inactive,
         tabBarStyle: {
-          backgroundColor: isDark ? colours.surfaceDark : colours.surface,
-          borderTopColor: isDark ? colours.borderDark : colours.border,
+          backgroundColor: bg,
+          borderTopColor: border,
           borderTopWidth: 1,
         },
         tabBarLabelStyle: {
           fontFamily: 'DMSans_500Medium',
           fontSize: 11,
-          letterSpacing: 0.8,
           textTransform: 'uppercase',
+          letterSpacing: 0.8,
         },
       }}
     >

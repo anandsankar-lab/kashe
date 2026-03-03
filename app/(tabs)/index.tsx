@@ -1,10 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { useColorScheme } from 'react-native';
-import { colours } from '../../constants/colours';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import colours from '../../constants/colours';
 
 export default function HomeScreen() {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const isDark = useColorScheme() === 'dark';
 
   return (
     <View
@@ -25,7 +23,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: 'DMSans_500Medium',
     fontSize: 16,
   },
 });
