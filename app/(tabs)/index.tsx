@@ -3,12 +3,20 @@ import colours from '../../constants/colours';
 import PositionHeroCard from '../../components/home/PositionHeroCard';
 import SpendSnapshot from '../../components/home/SpendSnapshot';
 import MarketsStrip from '../../components/home/MarketsStrip';
+import PortfolioPulse from '../../components/home/PortfolioPulse';
+import FIREProgress from '../../components/home/FIREProgress';
 
 const MARKETS_DATA = [
   { label: 'S&P 500', value: '5,234', change: 0.4 },
   { label: 'NIFTY 50', value: '22,147', change: -0.8 },
   { label: 'EUR/INR', value: '89.24', change: -0.3 },
   { label: 'Gold', value: '2,041', change: 1.2 },
+];
+
+const PULSE_DATA = [
+  { ticker: 'VWRL', change: 1.2, headline: 'Global markets rally on Fed pause' },
+  { ticker: 'INFY', change: -0.8, headline: 'Q3 margins under pressure' },
+  { ticker: 'PPFCF', change: 2.1, headline: 'Flexi cap inflows hit 6-month high' },
 ];
 
 export default function HomeScreen() {
@@ -31,6 +39,8 @@ export default function HomeScreen() {
       />
       <SpendSnapshot spent={2847} budget={4500} currency="€" />
       <MarketsStrip items={MARKETS_DATA} />
+      <PortfolioPulse items={PULSE_DATA} />
+      <FIREProgress percentage={63} projectedYear={2036} isSetUp={true} />
     </ScrollView>
   );
 }
