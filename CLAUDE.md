@@ -57,7 +57,9 @@ Storage:        react-native-encrypted-storage
                 (iOS Keychain / Android Keystore — AES-256)
 Auth:           Google OAuth only via expo-auth-session
                 No passwords. Ever.
-Fonts:          Expo Google Fonts — Syne + DM Sans
+Fonts:          Expo Google Fonts — Space Grotesk + Inter
+                Space Grotesk: display numbers, headings
+                Inter: body, labels, captions, all UI text
 Blur:           @react-native-community/blur (iOS)
                 Semi-transparent overlay fallback (Android)
 Analytics:      PostHog (anonymised only, no PII)
@@ -193,7 +195,7 @@ See CLAUDE-financial.md for full parser spec.
 // Light mode
 background:     '#F5F4F0'   // warm off-white
 surface:        '#FFFFFF'
-border:         '#E8E8E3'
+border:         '#EEEEEA'   // softened — barely-there borders
 textPrimary:    '#1A1A18'
 textSecondary:  '#8A8A85'
 textDim:        '#C4C4BF'
@@ -201,7 +203,7 @@ textDim:        '#C4C4BF'
 // Dark mode
 backgroundDark: '#111110'   // warm near-black
 surfaceDark:    '#1C1C1A'
-borderDark:     '#2A2A28'
+borderDark:     '#252523'   // softened dark border
 // Text colours are the same in both modes
 
 // Brand (same in both modes)
@@ -209,19 +211,43 @@ accent:         '#C8F04A'   // acid green — use sparingly
 danger:         '#FF5C5C'
 warning:        '#FFB547'
 success:        '#C8F04A'   // same as accent
+
+// Hero card tokens (always dark — both light and dark mode)
+// The Position Hero Card is intentionally always dark.
+// It is the one premium moment on the screen.
+heroGradientStart:  '#1E1E1B'
+heroGradientEnd:    '#131311'
+heroTextPrimary:    '#F5F4F0'
+heroTextSecondary:  'rgba(245, 244, 240, 0.55)'
+heroTextDim:        'rgba(245, 244, 240, 0.35)'
+heroAccent:         '#C8F04A'
+heroBorder:         'rgba(200, 240, 74, 0.2)'
+heroDanger:         '#FF8080'  // softened danger on dark bg
 ```
 
 ### Typography
 ```typescript
-// Syne: display, numbers, headings
-// DM Sans: body, labels, captions
+// Space Grotesk: display numbers, headings
+// Inter: body, labels, captions, all UI text
+// Tight kerning throughout — Apple-esque, precise
 
-display:    { fontFamily: 'Syne_800ExtraBold', letterSpacing: -1.5 }
-heading:    { fontFamily: 'Syne_700Bold' }
-body:       { fontFamily: 'DMSans_400Regular' }
-bodyMedium: { fontFamily: 'DMSans_500Medium' }
-label:      { fontFamily: 'DMSans_500Medium',
-              textTransform: 'uppercase', letterSpacing: 0.8 }
+display:      { fontFamily: 'SpaceGrotesk_700Bold',
+                letterSpacing: -1.5 }
+heading:      { fontFamily: 'SpaceGrotesk_600SemiBold',
+                letterSpacing: -0.5 }
+headingLarge: { fontFamily: 'SpaceGrotesk_700Bold',
+                letterSpacing: -0.8 }
+body:         { fontFamily: 'Inter_400Regular',
+                letterSpacing: -0.2 }
+bodyMedium:   { fontFamily: 'Inter_500Medium',
+                letterSpacing: -0.2 }
+label:        { fontFamily: 'Inter_500Medium',
+                textTransform: 'uppercase',
+                letterSpacing: 0.8, fontSize: 11 }
+caption:      { fontFamily: 'Inter_400Regular',
+                letterSpacing: -0.1, fontSize: 12 }
+mono:         { fontFamily: 'SpaceGrotesk_400Regular',
+                letterSpacing: -0.3 }
 ```
 
 ### Spacing (4px base grid)
@@ -232,7 +258,9 @@ lg: 16, xl: 20,  xxl: 24,  xxxl: 32
 
 ### Border Radius
 ```typescript
-card: 16,  input: 12,  pill: 999,  small: 8
+card: 16,   hero: 24,   input: 12,
+pill: 999,  small: 8
+// Hero card uses 24 — slightly more generous, more premium
 ```
 
 ### Motion
@@ -249,14 +277,44 @@ No shadows:       Borders only — flat design throughout
 ## Brand Elements
 ```
 LOGO MARK:
-  6-point asterisk
-  5 strokes: #8A8A85 (textSecondary)
+  6-point asterisk SVG
+  5 strokes: #8A8A85 (grey — intentional, not textSecondary token)
   1 stroke (the k): #C8F04A (accent)
   Animation: opacity pulse 0.4 to 1.0 to 0.4, 2s loop
              On loading: slow 8s rotation
 
+DIRECTIONAL ASTERISK SYSTEM:
+  The asterisk does meaningful work throughout the app.
+  It is never just decoration.
+
+  direction="up":
+    Top stroke + k-stroke: #C8F04A (accent)
+    All others: #C4C4BF (textDim)
+  direction="down":
+    Bottom stroke: #FF5C5C (danger)
+    All others: #C4C4BF (textDim)
+    k-stroke: #C4C4BF (dimmed when direction=down)
+  direction="neutral" (default):
+    k-stroke: #C8F04A
+    All others: #C4C4BF
+
+  Used instead of ↑↓ arrows everywhere in the app.
+  Size 11-12 inline with text. Size 14+ in headings.
+
+HERO CARD WATERMARK:
+  Large background asterisk behind Position hero card.
+  Size: 200x200, positioned top-right, offset -45/-45
+  so it bleeds off the card edge (partially clipped).
+  Opacity: 0.07
+  All 6 strokes: #C8F04A
+  strokeWidth: 14, strokeLinecap: round
+  pointerEvents: none — purely decorative
+  overflow: hidden on card clips it cleanly.
+  This is the brand mark living inside the premium moment.
+
 MACRON RULE (ā):
   1px horizontal line in accent colour (#C8F04A)
+  On hero card: 'rgba(200, 240, 74, 0.2)' — dimmed on dark bg
   Used ONLY as a meaningful divider:
     - Between assets and liabilities in Position hero
     - Active tab indicator in bottom nav
@@ -487,6 +545,22 @@ Insight strip on Portfolio: doorbell. Insights tab: the room.
 "Nothing needs your attention right now" is a valid, intentional state
   on the Insights screen — silence from a trusted advisor is good news
 Acid green #C8F04A — brand accent, used sparingly
+Typography: Space Grotesk (display/numbers) + Inter (body/UI)
+  Tight kerning throughout — Apple-esque, precise, modern
+  Space Grotesk 700 for numbers, 600 for headings
+  Inter 500 for labels/medium, 400 for body/captions
+Hero card always dark — both light and dark mode
+  Position Hero Card uses dark gradient (#1E1E1B → #131311)
+  It is intentionally always dark — the one premium moment
+  No border — gradient IS the card boundary
+  borderRadius: 24 (more generous than standard 16)
+  Background asterisk watermark: large, offset top-right,
+    opacity 0.07, acid green strokes, bleeds off edge
+Directional asterisk replaces ↑↓ arrows everywhere
+  direction="up": top stroke + k-stroke in accent green
+  direction="down": bottom stroke in danger red
+  direction="neutral": k-stroke in accent, rest grey
+  This is an ownable, distinctive design detail
 DataSource abstraction — CSVDataSource v1, open banking v2
 featureFlag system — freemium ready, don't gate in v1
 Household + Managed profiles — covers couples + parents
