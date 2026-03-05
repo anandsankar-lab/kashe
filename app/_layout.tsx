@@ -1,17 +1,19 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Platform, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import {
-  useFonts,
-  Syne_700Bold,
-  Syne_800ExtraBold,
-} from '@expo-google-fonts/syne';
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+  useFonts as useSpaceGroteskFonts,
+} from '@expo-google-fonts/space-grotesk';
 import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-} from '@expo-google-fonts/dm-sans';
+  Inter_400Regular,
+  Inter_500Medium,
+  useFonts as useInterFonts,
+} from '@expo-google-fonts/inter';
 import colours from '../constants/colours';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,12 +22,13 @@ export default function RootLayout() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
 
-  const [fontsLoaded] = useFonts({
-    Syne_700Bold,
-    Syne_800ExtraBold,
-    DMSans_400Regular,
-    DMSans_500Medium,
+  const [spaceGroteskLoaded] = useSpaceGroteskFonts({
+    SpaceGrotesk_400Regular,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
   });
+  const [interFontsLoaded] = useInterFonts({ Inter_400Regular, Inter_500Medium });
+  const fontsLoaded = spaceGroteskLoaded && interFontsLoaded;
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -37,7 +40,7 @@ export default function RootLayout() {
     return null;
   }
 
-  return (
+  const navigator = (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
@@ -50,4 +53,16 @@ export default function RootLayout() {
       />
     </>
   );
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', backgroundColor: colours.border }}>
+        <View style={{ width: 390, maxWidth: 390, flex: 1, overflow: 'hidden' }}>
+          {navigator}
+        </View>
+      </View>
+    );
+  }
+
+  return navigator;
 }

@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import colours from '../../constants/colours';
 
 interface HomeHeaderProps {
@@ -34,9 +34,7 @@ export default function HomeHeader({
   onAvatarPress,
   onAddPress,
 }: HomeHeaderProps) {
-  const isDark = useColorScheme() === 'dark';
   const initial = name.charAt(0).toUpperCase();
-
   const dotColor = notificationType === 'red' ? colours.danger : colours.warning;
 
   return (
@@ -54,9 +52,9 @@ export default function HomeHeader({
       <TouchableOpacity onPress={onAvatarPress} activeOpacity={0.7}>
         <View
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
             backgroundColor: colours.accent,
             alignItems: 'center',
             justifyContent: 'center',
@@ -64,9 +62,9 @@ export default function HomeHeader({
         >
           <Text
             style={{
-              fontFamily: 'Syne_700Bold',
+              fontFamily: 'SpaceGrotesk_700Bold',
               fontSize: 16,
-              color: colours.textPrimary,
+              color: '#1A1A18',
             }}
           >
             {initial}
@@ -78,8 +76,9 @@ export default function HomeHeader({
       <View style={{ alignItems: 'center' }}>
         <Text
           style={{
-            fontFamily: 'DMSans_500Medium',
-            fontSize: 15,
+            fontFamily: 'SpaceGrotesk_600SemiBold',
+            fontSize: 17,
+            letterSpacing: -0.3,
             color: colours.textPrimary,
           }}
         >
@@ -87,9 +86,9 @@ export default function HomeHeader({
         </Text>
         <Text
           style={{
-            fontFamily: 'DMSans_400Regular',
-            fontSize: 12,
-            color: colours.textDim,
+            fontFamily: 'Inter_400Regular',
+            fontSize: 13,
+            color: colours.textSecondary,
           }}
         >
           {getFormattedDate()}
@@ -104,18 +103,16 @@ export default function HomeHeader({
               width: 36,
               height: 36,
               borderRadius: 18,
-              backgroundColor: isDark ? colours.surfaceDark : colours.surface,
-              borderWidth: 1,
-              borderColor: isDark ? colours.borderDark : colours.border,
+              backgroundColor: colours.accent,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
             <Text
               style={{
-                fontFamily: 'Syne_700Bold',
+                fontFamily: 'Inter_500Medium',
                 fontSize: 20,
-                color: colours.textPrimary,
+                color: '#1A1A18',
                 lineHeight: 22,
               }}
             >

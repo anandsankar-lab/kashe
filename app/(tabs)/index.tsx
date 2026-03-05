@@ -6,6 +6,7 @@ import SpendSnapshot from '../../components/home/SpendSnapshot';
 import MarketsStrip from '../../components/home/MarketsStrip';
 import PortfolioPulse from '../../components/home/PortfolioPulse';
 import FIREProgress from '../../components/home/FIREProgress';
+import SegregationToggle from '../../components/home/SegregationToggle';
 
 const MARKETS_DATA = [
   { label: 'S&P 500', value: '5,234', change: 0.4 },
@@ -26,7 +27,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: isDark ? colours.backgroundDark : colours.background }}
-      contentContainerStyle={{ paddingBottom: 32 }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 48, gap: 14 }}
     >
       <HomeHeader
         name="Anand"
@@ -46,6 +47,7 @@ export default function HomeScreen() {
         currency="€"
       />
       <SpendSnapshot spent={2847} budget={4500} currency="€" />
+      <SegregationToggle />
       <MarketsStrip items={MARKETS_DATA} />
       <PortfolioPulse items={PULSE_DATA} />
       <FIREProgress percentage={63} projectedYear={2036} isSetUp={true} />

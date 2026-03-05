@@ -1,43 +1,52 @@
 // Kāshe typography tokens — never use raw font values in components, always import from here
 
-const Typography = {
+import { TextStyle } from 'react-native';
+
+export const Typography = {
   display: {
-    fontFamily: 'Syne_800ExtraBold',
-    fontSize: 40,
+    fontFamily: 'SpaceGrotesk_700Bold',
     letterSpacing: -1.5,
-  },
+    lineHeight: 1.1,
+  } as TextStyle,
+
   heading: {
-    fontFamily: 'Syne_700Bold',
-    fontSize: 24,
-  },
-  subheading: {
-    fontFamily: 'Syne_700Bold',
-    fontSize: 18,
-  },
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    letterSpacing: -0.5,
+  } as TextStyle,
+
+  headingLarge: {
+    fontFamily: 'SpaceGrotesk_700Bold',
+    letterSpacing: -0.8,
+  } as TextStyle,
+
   body: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 16,
-  },
+    fontFamily: 'Inter_400Regular',
+    letterSpacing: -0.2,
+  } as TextStyle,
+
   bodyMedium: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 16,
-  },
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: -0.2,
+  } as TextStyle,
+
   label: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 11,
-    textTransform: 'uppercase' as const,
+    fontFamily: 'Inter_500Medium',
+    textTransform: 'uppercase',
     letterSpacing: 0.8,
-  },
+    fontSize: 11,
+  } as TextStyle,
+
   caption: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13,
-  },
-  number: {
-    fontFamily: 'Syne_800ExtraBold',
-    fontSize: 32,
-    letterSpacing: -1,
-  },
-} as const;
+    fontFamily: 'Inter_400Regular',
+    letterSpacing: -0.1,
+    fontSize: 12,
+  } as TextStyle,
+
+  mono: {
+    fontFamily: 'SpaceGrotesk_400Regular',
+    letterSpacing: -0.3,
+  } as TextStyle,
+};
 
 export type TypographyVariant = keyof typeof Typography;
 

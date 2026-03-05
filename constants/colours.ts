@@ -21,6 +21,18 @@ const colours = {
   danger: '#FF5C5C',
   warning: '#FFB547',
   success: '#C8F04A',        // same as accent
+
+  // Hero card gradient (dark, premium — always dark in both modes)
+  heroGradientStart: '#1C1C1A',
+  heroGradientEnd: '#111110',
+  heroGradientTint: 'rgba(200, 240, 74, 0.06)',
+
+  // Hero card text (always light — card is always dark)
+  heroTextPrimary: '#F5F4F0',
+  heroTextSecondary: 'rgba(245, 244, 240, 0.6)',
+  heroTextDim: 'rgba(245, 244, 240, 0.35)',
+  heroAccent: '#C8F04A',
+  heroBorder: 'rgba(200, 240, 74, 0.15)',
 } as const;
 
 export default colours;

@@ -11,7 +11,7 @@ type Props = {
 };
 
 const labelStyle: TextStyle = {
-  fontFamily: 'DMSans_500Medium',
+  fontFamily: 'Inter_500Medium',
   fontSize: 16,
 };
 

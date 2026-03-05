@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, View, useColorScheme } from 'react-native';
+import { Animated, View, Text, useColorScheme } from 'react-native';
 import Card from '../ui/Card';
-import TypographyText from '../ui/Typography';
 import colours from '../../constants/colours';
 
 type Props = {
@@ -35,27 +34,64 @@ export default function SpendSnapshot({ spent, budget, currency = '€' }: Props
   const trackColour = isDark ? colours.borderDark : colours.border;
 
   return (
-    <Card style={{ marginHorizontal: 16, marginTop: 12 }}>
-      {/* Row 1 */}
+    <Card>
+      {/* Row 1: label + budget */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <TypographyText variant="label" color={colours.textSecondary}>
+        <Text
+          style={{
+            fontFamily: 'Inter_500Medium',
+            fontSize: 11,
+            letterSpacing: 0.8,
+            textTransform: 'uppercase',
+            color: colours.textSecondary,
+          }}
+        >
           Spend this month
-        </TypographyText>
+        </Text>
         {budget > 0 && (
-          <TypographyText variant="caption" color={colours.textDim}>
+          <Text
+            style={{
+              fontFamily: 'Inter_400Regular',
+              fontSize: 12,
+              color: colours.textDim,
+            }}
+          >
             of {currency}{budget.toLocaleString()} budget
-          </TypographyText>
+          </Text>
         )}
       </View>
 
-      {/* Row 2 — Progress bar */}
+      {/* Row 2: amount + percentage */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <Text
+          style={{
+            fontFamily: 'SpaceGrotesk_600SemiBold',
+            fontSize: 20,
+            color: colours.textPrimary,
+          }}
+        >
+          {currency}{spent.toLocaleString()} spent
+        </Text>
+        <Text
+          style={{
+            fontFamily: 'Inter_500Medium',
+            fontSize: 13,
+            color: colours.textSecondary,
+          }}
+        >
+          {Math.round(ratio * 100)}%
+        </Text>
+      </View>
+
+      {/* Row 3: progress bar */}
       <View
         style={{
           height: 6,
           borderRadius: 999,
           backgroundColor: trackColour,
           overflow: 'hidden',
-          marginBottom: 10,
+          marginTop: 10,
+          marginBottom: 0,
         }}
       >
         <Animated.View
@@ -69,16 +105,6 @@ export default function SpendSnapshot({ spent, budget, currency = '€' }: Props
             }),
           }}
         />
-      </View>
-
-      {/* Row 3 */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <TypographyText variant="bodyMedium" color={colours.textPrimary}>
-          {currency}{spent.toLocaleString()} spent
-        </TypographyText>
-        <TypographyText variant="caption" color={colours.textDim}>
-          {Math.round(ratio * 100)}%
-        </TypographyText>
       </View>
     </Card>
   );

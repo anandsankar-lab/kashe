@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated, useColorScheme } from 'react-native';
+import Card from '../ui/Card';
 import colours from '../../constants/colours';
-import Typography from '../../constants/typography';
 
 type Props = {
   percentage: number;
@@ -20,7 +20,7 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
     Animated.timing(fillAnim, {
       toValue: (percentage / 100) * trackWidth,
       duration: 600,
-      easing: (t) => 1 - Math.pow(1 - t, 3), // ease-out cubic
+      easing: (t) => 1 - Math.pow(1 - t, 3),
       useNativeDriver: false,
     }).start();
   }, [isSetUp, trackWidth, percentage]);
@@ -30,25 +30,41 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
   const borderColour = isDark ? colours.borderDark : colours.border;
 
   return (
-    <View style={{ marginHorizontal: 16, marginTop: 12 }}>
-      {/* Row 1 */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-        <Text style={[Typography.label, { color: colours.textSecondary }]}>
+    <Card style={{ padding: 16 }}>
+      {/* Top row */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text
+          style={{
+            fontFamily: 'Inter_500Medium',
+            fontSize: 11,
+            letterSpacing: 0.8,
+            textTransform: 'uppercase',
+            color: colours.textSecondary,
+          }}
+        >
           Financial Independence
         </Text>
-        <Text style={[Typography.caption, { color: colours.textDim }]}>
+        <Text
+          style={{
+            fontFamily: 'SpaceGrotesk_700Bold',
+            fontSize: 22,
+            letterSpacing: -0.5,
+            color: colours.textPrimary,
+          }}
+        >
           {projectedYear}
         </Text>
       </View>
 
-      {/* Row 2 — animated progress bar */}
+      {/* Animated progress bar */}
       <View
         style={{
           height: 6,
           backgroundColor: borderColour,
           borderRadius: 999,
           overflow: 'hidden',
-          marginBottom: 8,
+          marginTop: 12,
+          marginBottom: 10,
         }}
         onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
       >
@@ -62,12 +78,18 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
         />
       </View>
 
-      {/* Row 3 — tappable */}
+      {/* Bottom row */}
       <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        <Text style={[Typography.caption, { color: colours.textDim }]}>
+        <Text
+          style={{
+            fontFamily: 'Inter_400Regular',
+            fontSize: 13,
+            color: colours.textSecondary,
+          }}
+        >
           {percentage}% to FIRE
         </Text>
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 }

@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontFamily: 'DMSans_500Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 16,
   },
 });

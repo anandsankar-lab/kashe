@@ -2,6 +2,7 @@ import { View, Text, useColorScheme } from 'react-native';
 import colours from '../../constants/colours';
 import Typography from '../../constants/typography';
 import Card from '../ui/Card';
+import KasheAsterisk from '../shared/KasheAsterisk';
 
 type PulseItem = {
   ticker: string;
@@ -22,7 +23,7 @@ export default function PortfolioPulse({ items }: Props) {
   const borderColour = isDark ? colours.borderDark : colours.border;
 
   return (
-    <Card style={{ marginHorizontal: 16, marginTop: 12 }} padded>
+    <Card padded>
       <Text style={[Typography.label, { color: colours.textSecondary, marginBottom: 4 }]}>
         Portfolio Pulse
       </Text>
@@ -30,8 +31,7 @@ export default function PortfolioPulse({ items }: Props) {
       {displayItems.map((item, index) => {
         const isLast = index === displayItems.length - 1;
         const changeColour = item.change >= 0 ? colours.accent : colours.danger;
-        const changePrefix = item.change >= 0 ? '↑' : '↓';
-        const changeText = `${changePrefix} ${Math.abs(item.change).toFixed(1)}%`;
+        const direction = item.change >= 0 ? 'up' : 'down';
 
         return (
           <View
@@ -39,7 +39,7 @@ export default function PortfolioPulse({ items }: Props) {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              paddingVertical: 10,
+              paddingVertical: 14,
               borderBottomWidth: isLast ? 0 : 1,
               borderBottomColor: borderColour,
             }}
@@ -48,51 +48,40 @@ export default function PortfolioPulse({ items }: Props) {
             <View>
               <Text
                 style={{
-                  fontFamily: 'DMSans_500Medium',
-                  fontSize: 13,
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontSize: 14,
                   color: colours.textPrimary,
                 }}
               >
                 {item.ticker}
               </Text>
-              <Text
-                style={{
-                  fontFamily: 'DMSans_400Regular',
-                  fontSize: 13,
-                  color: changeColour,
-                }}
-              >
-                {changeText}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <KasheAsterisk size={11} direction={direction} />
+                <Text
+                  style={{
+                    fontFamily: 'Inter_500Medium',
+                    fontSize: 13,
+                    color: changeColour,
+                  }}
+                >
+                  {Math.abs(item.change).toFixed(1)}%
+                </Text>
+              </View>
             </View>
 
-            {/* Spacer */}
-            <View style={{ flex: 1 }} />
-
-            {/* Right: headline + chevron */}
+            {/* Right: headline */}
             <Text
-              style={[
-                Typography.caption,
-                {
-                  color: colours.textSecondary,
-                  textAlign: 'right',
-                  maxWidth: 200,
-                  flexShrink: 1,
-                },
-              ]}
+              style={{
+                fontFamily: 'Inter_400Regular',
+                fontSize: 13,
+                color: colours.textSecondary,
+                textAlign: 'right',
+                flex: 1,
+                marginLeft: 12,
+              }}
               numberOfLines={2}
             >
               {item.headline}
-            </Text>
-            <Text
-              style={{
-                color: colours.textDim,
-                marginLeft: 8,
-                fontSize: 16,
-                fontFamily: 'DMSans_400Regular',
-              }}
-            >
-              ›
             </Text>
           </View>
         );

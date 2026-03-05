@@ -16,8 +16,9 @@ export default function Card({ children, style, padded = true }: Props) {
         {
           backgroundColor: isDark ? colours.surfaceDark : colours.surface,
           borderWidth: 1,
-          borderColor: isDark ? colours.borderDark : colours.border,
+          borderColor: isDark ? '#252523' : '#EEEEEA',
           borderRadius: 16,
+          overflow: 'hidden',
           ...(padded ? { padding: 20 } : {}),
         },
         style,
