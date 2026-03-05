@@ -4,6 +4,7 @@ import Card from '../ui/Card';
 import colours from '../../constants/colours';
 import Typography from '../../constants/typography';
 import Spacing, { borderRadius } from '../../constants/spacing';
+import RedactedNumber from '../shared/RedactedNumber';
 
 type ViewMode = 'risk' | 'vehicle' | 'geography';
 
@@ -83,9 +84,10 @@ function AnimatedBar({ pct, colour, viewKey }: AnimatedBarProps) {
 interface ViewProps {
   viewKey: string;
   trackColor: string;
+  isRedacted?: boolean;
 }
 
-function RiskView({ viewKey, trackColor }: ViewProps) {
+function RiskView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
   return (
     <View style={{ gap: Spacing.lg }}>
       {RISK_DATA.map(item => {
@@ -93,11 +95,7 @@ function RiskView({ viewKey, trackColor }: ViewProps) {
         const barColour = getRiskBarColour(item.actual, item.target);
         const isOver = diff > VARIANCE_THRESHOLD;
         const isUnder = diff < -VARIANCE_THRESHOLD;
-        const varianceText = isOver
-          ? `\u26A0 Overweight ${item.label} by ${diff}%`
-          : isUnder
-          ? `\u26A0 Underweight ${item.label} by ${Math.abs(diff)}%`
-          : null;
+        const hasVariance = isOver || isUnder;
         const varianceColour = isOver ? colours.warning : colours.textDim;
 
         return (
@@ -112,9 +110,13 @@ function RiskView({ viewKey, trackColor }: ViewProps) {
               <Text style={[Typography.label, { color: colours.textSecondary }]}>
                 {item.label}
               </Text>
-              <Text style={[Typography.caption, { color: colours.textSecondary }]}>
-                {item.actual}%
-              </Text>
+              {isRedacted ? (
+                <RedactedNumber length={2} style={{ fontSize: 12 }} />
+              ) : (
+                <Text style={[Typography.caption, { color: colours.textSecondary }]}>
+                  {item.actual}%
+                </Text>
+              )}
             </View>
             <View
               style={{
@@ -125,29 +127,45 @@ function RiskView({ viewKey, trackColor }: ViewProps) {
               }}
             >
               {/* Ghost target bar */}
-              <View
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  height: BAR_HEIGHT,
-                  width: `${item.target}%`,
-                  backgroundColor: colours.textSecondary,
-                  borderRadius: borderRadius.pill,
-                  opacity: 0.2,
-                }}
-              />
+              {!isRedacted && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    height: BAR_HEIGHT,
+                    width: `${item.target}%`,
+                    backgroundColor: colours.textSecondary,
+                    borderRadius: borderRadius.pill,
+                    opacity: 0.2,
+                  }}
+                />
+              )}
               {/* Actual bar */}
-              <AnimatedBar pct={item.actual} colour={barColour} viewKey={viewKey} />
+              <AnimatedBar pct={isRedacted ? 40 : item.actual} colour={barColour} viewKey={viewKey} />
             </View>
-            {varianceText !== null && (
+            {!isRedacted && hasVariance && (
               <Text
                 style={[
                   Typography.caption,
                   { color: varianceColour, marginTop: Spacing.xs },
                 ]}
               >
-                {varianceText}
+                {isOver
+                  ? `⚠ Overweight ${item.label} by ${diff}%`
+                  : `⚠ Underweight ${item.label} by ${Math.abs(diff)}%`}
+              </Text>
+            )}
+            {isRedacted && hasVariance && (
+              <Text
+                style={[
+                  Typography.caption,
+                  { color: varianceColour, marginTop: Spacing.xs },
+                ]}
+              >
+                {isOver
+                  ? `⚠ Overweight ${item.label} by XX%`
+                  : `⚠ Underweight ${item.label} by XX%`}
               </Text>
             )}
           </View>
@@ -157,7 +175,7 @@ function RiskView({ viewKey, trackColor }: ViewProps) {
   );
 }
 
-function VehicleView({ viewKey, trackColor }: ViewProps) {
+function VehicleView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
   return (
     <View style={{ gap: Spacing.md }}>
       {VEHICLE_DATA.map(item => (
@@ -172,9 +190,13 @@ function VehicleView({ viewKey, trackColor }: ViewProps) {
             <Text style={[Typography.caption, { color: colours.textPrimary }]}>
               {item.label}
             </Text>
-            <Text style={[Typography.caption, { color: colours.textSecondary }]}>
-              {item.pct}%
-            </Text>
+            {isRedacted ? (
+              <RedactedNumber length={2} style={{ fontSize: 12 }} />
+            ) : (
+              <Text style={[Typography.caption, { color: colours.textSecondary }]}>
+                {item.pct}%
+              </Text>
+            )}
           </View>
           <View
             style={{
@@ -184,7 +206,7 @@ function VehicleView({ viewKey, trackColor }: ViewProps) {
               overflow: 'hidden',
             }}
           >
-            <AnimatedBar pct={item.pct} colour={colours.accent} viewKey={viewKey} />
+            <AnimatedBar pct={isRedacted ? 40 : item.pct} colour={colours.accent} viewKey={viewKey} />
           </View>
         </View>
       ))}
@@ -192,7 +214,7 @@ function VehicleView({ viewKey, trackColor }: ViewProps) {
   );
 }
 
-function GeographyView({ viewKey, trackColor }: ViewProps) {
+function GeographyView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
   return (
     <View style={{ gap: Spacing.md }}>
       {GEOGRAPHY_DATA.map(item => (
@@ -207,9 +229,13 @@ function GeographyView({ viewKey, trackColor }: ViewProps) {
             <Text style={[Typography.caption, { color: colours.textPrimary }]}>
               {item.flag} {item.label}
             </Text>
-            <Text style={[Typography.caption, { color: colours.textSecondary }]}>
-              {item.pct}%
-            </Text>
+            {isRedacted ? (
+              <RedactedNumber length={2} style={{ fontSize: 12 }} />
+            ) : (
+              <Text style={[Typography.caption, { color: colours.textSecondary }]}>
+                {item.pct}%
+              </Text>
+            )}
           </View>
           <View
             style={{
@@ -219,7 +245,7 @@ function GeographyView({ viewKey, trackColor }: ViewProps) {
               overflow: 'hidden',
             }}
           >
-            <AnimatedBar pct={item.pct} colour={colours.accent} viewKey={viewKey} />
+            <AnimatedBar pct={isRedacted ? 40 : item.pct} colour={colours.accent} viewKey={viewKey} />
           </View>
         </View>
       ))}
@@ -227,7 +253,11 @@ function GeographyView({ viewKey, trackColor }: ViewProps) {
   );
 }
 
-export default function SegregationToggle() {
+type SegregationToggleProps = {
+  isRedacted?: boolean;
+};
+
+export default function SegregationToggle({ isRedacted = false }: SegregationToggleProps) {
   const [view, setView] = useState<ViewMode>('risk');
   const isDark = useColorScheme() === 'dark';
 
@@ -279,9 +309,9 @@ export default function SegregationToggle() {
       </View>
 
       {/* View content */}
-      {view === 'risk' && <RiskView viewKey={view} trackColor={trackColor} />}
-      {view === 'vehicle' && <VehicleView viewKey={view} trackColor={trackColor} />}
-      {view === 'geography' && <GeographyView viewKey={view} trackColor={trackColor} />}
+      {view === 'risk' && <RiskView viewKey={view} trackColor={trackColor} isRedacted={isRedacted} />}
+      {view === 'vehicle' && <VehicleView viewKey={view} trackColor={trackColor} isRedacted={isRedacted} />}
+      {view === 'geography' && <GeographyView viewKey={view} trackColor={trackColor} isRedacted={isRedacted} />}
     </Card>
   );
 }

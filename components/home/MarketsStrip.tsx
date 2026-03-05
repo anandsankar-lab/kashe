@@ -1,6 +1,7 @@
 import { ScrollView, Text, View, useColorScheme } from 'react-native';
 import KasheAsterisk from '../shared/KasheAsterisk';
 import colours from '../../constants/colours';
+import RedactedNumber from '../shared/RedactedNumber';
 
 type MarketItem = {
   label: string;
@@ -10,9 +11,10 @@ type MarketItem = {
 
 type Props = {
   items: MarketItem[];
+  isRedacted?: boolean;
 };
 
-function MarketItemView({ label, change }: MarketItem) {
+function MarketItemView({ label, change, isRedacted }: MarketItem & { isRedacted?: boolean }) {
   const isDark = useColorScheme() === 'dark';
 
   const changeColour =
@@ -44,20 +46,24 @@ function MarketItemView({ label, change }: MarketItem) {
         {label}
       </Text>
       <KasheAsterisk size={11} direction={direction} />
-      <Text
-        style={{
-          fontFamily: 'Inter_500Medium',
-          fontSize: 13,
-          color: changeColour,
-        }}
-      >
-        {Math.abs(change).toFixed(1)}%
-      </Text>
+      {isRedacted ? (
+        <RedactedNumber length={2} style={{ fontSize: 13 }} />
+      ) : (
+        <Text
+          style={{
+            fontFamily: 'Inter_500Medium',
+            fontSize: 13,
+            color: changeColour,
+          }}
+        >
+          {Math.abs(change).toFixed(1)}%
+        </Text>
+      )}
     </View>
   );
 }
 
-export default function MarketsStrip({ items }: Props) {
+export default function MarketsStrip({ items, isRedacted = false }: Props) {
   return (
     <ScrollView
       horizontal={true}
@@ -71,7 +77,7 @@ export default function MarketsStrip({ items }: Props) {
       }}
     >
       {items.map((item) => (
-        <MarketItemView key={item.label} {...item} />
+        <MarketItemView key={item.label} {...item} isRedacted={isRedacted} />
       ))}
     </ScrollView>
   );

@@ -2,15 +2,17 @@ import { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated, useColorScheme } from 'react-native';
 import Card from '../ui/Card';
 import colours from '../../constants/colours';
+import RedactedNumber from '../shared/RedactedNumber';
 
 type Props = {
   percentage: number;
   projectedYear: number;
   isSetUp: boolean;
   onPress?: () => void;
+  isRedacted?: boolean;
 };
 
-export default function FIREProgress({ percentage, projectedYear, isSetUp, onPress }: Props) {
+export default function FIREProgress({ percentage, projectedYear, isSetUp, onPress, isRedacted = false }: Props) {
   const isDark = useColorScheme() === 'dark';
   const [trackWidth, setTrackWidth] = useState(0);
   const fillAnim = useRef(new Animated.Value(0)).current;
@@ -18,12 +20,12 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
   useEffect(() => {
     if (!isSetUp || trackWidth === 0) return;
     Animated.timing(fillAnim, {
-      toValue: (percentage / 100) * trackWidth,
+      toValue: isRedacted ? 0 : (percentage / 100) * trackWidth,
       duration: 600,
       easing: (t) => 1 - Math.pow(1 - t, 3),
       useNativeDriver: false,
     }).start();
-  }, [isSetUp, trackWidth, percentage]);
+  }, [isSetUp, trackWidth, percentage, isRedacted]);
 
   if (!isSetUp) return null;
 
@@ -44,16 +46,20 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
         >
           Financial Independence
         </Text>
-        <Text
-          style={{
-            fontFamily: 'SpaceGrotesk_700Bold',
-            fontSize: 22,
-            letterSpacing: -0.5,
-            color: colours.textPrimary,
-          }}
-        >
-          {projectedYear}
-        </Text>
+        {isRedacted ? (
+          <RedactedNumber length={4} style={{ fontSize: 22 }} />
+        ) : (
+          <Text
+            style={{
+              fontFamily: 'SpaceGrotesk_700Bold',
+              fontSize: 22,
+              letterSpacing: -0.5,
+              color: colours.textPrimary,
+            }}
+          >
+            {projectedYear}
+          </Text>
+        )}
       </View>
 
       {/* Animated progress bar */}
@@ -80,15 +86,24 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
 
       {/* Bottom row */}
       <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        <Text
-          style={{
-            fontFamily: 'Inter_400Regular',
-            fontSize: 13,
-            color: colours.textSecondary,
-          }}
-        >
-          {percentage}% to FIRE
-        </Text>
+        {isRedacted ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <RedactedNumber length={2} style={{ fontSize: 13 }} />
+            <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: colours.textSecondary }}>
+              % to FIRE
+            </Text>
+          </View>
+        ) : (
+          <Text
+            style={{
+              fontFamily: 'Inter_400Regular',
+              fontSize: 13,
+              color: colours.textSecondary,
+            }}
+          >
+            {percentage}% to FIRE
+          </Text>
+        )}
       </TouchableOpacity>
     </Card>
   );

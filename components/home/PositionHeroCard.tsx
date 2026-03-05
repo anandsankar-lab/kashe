@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Line } from 'react-native-svg';
 import MacronRule from '../shared/MacronRule';
 import KasheAsterisk from '../shared/KasheAsterisk';
+import RedactedNumber from '../shared/RedactedNumber';
 
 type Props = {
   position: number;
@@ -20,6 +21,7 @@ type Props = {
   illiquidAssets: number;
   liabilities: number;
   currency?: string;
+  isRedacted?: boolean;
 };
 
 function getPositionFontSize(value: number): number {
@@ -54,6 +56,7 @@ export default function PositionHeroCard({
   illiquidAssets,
   liabilities,
   currency = '€',
+  isRedacted = false,
 }: Props) {
   const [expanded, setExpanded] = React.useState(false);
   const [contentHeight, setContentHeight] = React.useState(0);
@@ -136,31 +139,39 @@ export default function PositionHeroCard({
               paddingVertical: 5,
             }}
           >
-            <Text
-              style={{
-                fontFamily: 'Inter_500Medium',
-                fontSize: 13,
-                color: '#C8F04A',
-              }}
-            >
-              {savingsRate}%
-            </Text>
+            {isRedacted ? (
+              <RedactedNumber length={2} style={{ fontSize: 12 }} />
+            ) : (
+              <Text
+                style={{
+                  fontFamily: 'Inter_500Medium',
+                  fontSize: 13,
+                  color: '#C8F04A',
+                }}
+              >
+                {savingsRate}%
+              </Text>
+            )}
           </View>
         </View>
 
         {/* Row 2: Position number */}
-        <Text
-          style={{
-            fontFamily: 'SpaceGrotesk_700Bold',
-            fontSize: getPositionFontSize(position),
-            letterSpacing: -2,
-            color: '#F5F4F0',
-            marginTop: 16,
-            marginBottom: 6,
-          }}
-        >
-          {currency}{formatNumber(position)}
-        </Text>
+        {isRedacted ? (
+          <RedactedNumber length={6} style={{ fontSize: 46, marginTop: 16, marginBottom: 6 }} />
+        ) : (
+          <Text
+            style={{
+              fontFamily: 'SpaceGrotesk_700Bold',
+              fontSize: getPositionFontSize(position),
+              letterSpacing: -2,
+              color: '#F5F4F0',
+              marginTop: 16,
+              marginBottom: 6,
+            }}
+          >
+            {currency}{formatNumber(position)}
+          </Text>
+        )}
 
         {/* Row 3: Deltas */}
         <View
@@ -171,35 +182,49 @@ export default function PositionHeroCard({
             marginBottom: 20,
           }}
         >
-          <KasheAsterisk size={11} direction={deltaDirection(monthDelta)} />
-          <Text
-            style={{
-              fontFamily: 'Inter_400Regular',
-              fontSize: 13,
-              color: 'rgba(245, 244, 240, 0.55)',
-            }}
-          >
-            {currency}{formatNumber(monthDelta)} this month
-          </Text>
-          <Text
-            style={{
-              fontFamily: 'Inter_400Regular',
-              fontSize: 13,
-              color: 'rgba(245, 244, 240, 0.3)',
-            }}
-          >
-            {' '}·{' '}
-          </Text>
-          <KasheAsterisk size={11} direction={deltaDirection(ytdDelta)} />
-          <Text
-            style={{
-              fontFamily: 'Inter_400Regular',
-              fontSize: 13,
-              color: 'rgba(245, 244, 240, 0.55)',
-            }}
-          >
-            {currency}{formatNumber(ytdDelta)} YTD
-          </Text>
+          <KasheAsterisk size={11} direction={isRedacted ? 'neutral' : deltaDirection(monthDelta)} />
+          {isRedacted ? (
+            <RedactedNumber length={4} style={{ fontSize: 13 }} />
+          ) : (
+            <Text
+              style={{
+                fontFamily: 'Inter_400Regular',
+                fontSize: 13,
+                color: 'rgba(245, 244, 240, 0.55)',
+              }}
+            >
+              {currency}{formatNumber(monthDelta)} this month
+            </Text>
+          )}
+          {!isRedacted && (
+            <Text
+              style={{
+                fontFamily: 'Inter_400Regular',
+                fontSize: 13,
+                color: 'rgba(245, 244, 240, 0.3)',
+              }}
+            >
+              {' '}·{' '}
+            </Text>
+          )}
+          {!isRedacted && <KasheAsterisk size={11} direction={deltaDirection(ytdDelta)} />}
+          {isRedacted ? (
+            <>
+              <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(245, 244, 240, 0.3)' }}>{' '}·{' '}</Text>
+              <KasheAsterisk size={11} direction="neutral" />
+              <RedactedNumber length={4} style={{ fontSize: 13 }} />
+            </>
+          ) : (
+            <Text
+              style={{
+                fontFamily: 'Inter_400Regular',
+                fontSize: 13,
+                color: 'rgba(245, 244, 240, 0.55)',
+              }}
+            >
+              {currency}{formatNumber(ytdDelta)} YTD
+            </Text>
+          )}
         </View>
 
         {/* MacronRule divider */}

@@ -3,6 +3,7 @@ import colours from '../../constants/colours';
 import Typography from '../../constants/typography';
 import Card from '../ui/Card';
 import KasheAsterisk from '../shared/KasheAsterisk';
+import RedactedNumber from '../shared/RedactedNumber';
 
 type PulseItem = {
   ticker: string;
@@ -12,9 +13,10 @@ type PulseItem = {
 
 type Props = {
   items: PulseItem[];
+  isRedacted?: boolean;
 };
 
-export default function PortfolioPulse({ items }: Props) {
+export default function PortfolioPulse({ items, isRedacted = false }: Props) {
   const isDark = useColorScheme() === 'dark';
 
   if (!items || items.length === 0) return null;
@@ -57,15 +59,19 @@ export default function PortfolioPulse({ items }: Props) {
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                 <KasheAsterisk size={11} direction={direction} />
-                <Text
-                  style={{
-                    fontFamily: 'Inter_500Medium',
-                    fontSize: 13,
-                    color: changeColour,
-                  }}
-                >
-                  {Math.abs(item.change).toFixed(1)}%
-                </Text>
+                {isRedacted ? (
+                  <RedactedNumber length={2} style={{ fontSize: 13 }} />
+                ) : (
+                  <Text
+                    style={{
+                      fontFamily: 'Inter_500Medium',
+                      fontSize: 13,
+                      color: changeColour,
+                    }}
+                  >
+                    {Math.abs(item.change).toFixed(1)}%
+                  </Text>
+                )}
               </View>
             </View>
 
