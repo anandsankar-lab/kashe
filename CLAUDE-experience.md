@@ -28,11 +28,13 @@ Data viz          Progress bars, allocation bars, coverage scores
 ---
 
 ## The Empty State Pattern
+```
 EMPTY STATE PATTERN — LOCKED (March 2026)
-
 CONCEPT: Redacted ghost screen, not blurred overlay.
 Numbers replaced with XXXXX. Screen fully scrollable.
 User sees the structure of their data before acting.
+Like a bank statement with sensitive data redacted —
+the structure is honest, the numbers are private.
 
 IMPLEMENTATION:
   RedactedNumber component:
@@ -41,30 +43,61 @@ IMPLEMENTATION:
     Renders 'X'.repeat(length)
     SpaceGrotesk_700Bold, color textDim (#C4C4BF)
     letterSpacing: 2
+    Match fontSize of whatever number it replaces.
 
-  All Home components accept isRedacted?: boolean.
-  When true: replace every number with RedactedNumber.
-  Progress bar fills: set to 0 when isRedacted.
-  MonthlyReviewLink: return null when isRedacted.
+  isRedacted prop pattern:
+    Every component that shows numbers accepts
+    isRedacted?: boolean
+    When true: replace every number with RedactedNumber
+    Progress bar fills: set to 0 when isRedacted
+    MonthlyReviewLink: return null when isRedacted
+
+  Screen opacity: 0.5 on the children container
+  Intentionally muted — ghost, not live screen
 
 FLOATING PILL (always visible in empty state):
   '+ Connect your data'
-  Acid green (#C8F04A), pill shape, borderRadius 999
-  Positioned absolute, bottom 24, centered
-  KasheAsterisk size 14 + SpaceGrotesk_600SemiBold text
+  Position: absolute, bottom 24, centered, zIndex 10
+  Acid green (#C8F04A), borderRadius 999
+  paddingHorizontal 24, paddingVertical 14
+  KasheAsterisk size 14 + SpaceGrotesk_600SemiBold
+  color: '#1A1A18' (dark text on green)
 
 INVITATION SHEET (on pill tap or redacted number tap):
   Slides up from bottom, 350ms ease-out
-  Drag handle top centre
-  KasheAsterisk animated
-  Headline + description + CTA button + secondary link
-  Dismisses on scrim tap or action
+  Dark scrim behind sheet (rgba 0,0,0,0.4)
+  Drag handle top centre (36px wide, 4px tall, textDim)
+  KasheAsterisk animated (size 28)
+  Headline (SpaceGrotesk_700Bold, 22px)
+  Description: "Upload your bank statement or portfolio
+  CSV to unlock your real position, spending patterns,
+  and personalised insights."
+  CTA Button (primary variant, full width)
+  Secondary text link (Inter_400, textSecondary)
+  Dismiss: tap scrim or complete action
 
-MONTHLY REVIEW LOGIC (locked decision):
-  Always shows previous month's review.
+EXCEPTIONS — do not use this pattern for:
+  InsightsEmptyInsightState — "no active insight"
+    Data exists, nothing to flag right now.
+    NOT a full empty state. Clean quiet card instead.
+    Kāshe asterisk (small, static)
+    "Nothing needs your attention right now."
+    "Checked X hours ago" (textDim, small)
+    This is silence from a trusted advisor — it is good news.
+
+  FIRE planner — not set up yet
+    FIRE has no meaningful populated ghost to show.
+    Clean prompt card instead.
+    One input shown immediately to lower activation energy.
+    "Your FIRE number starts here"
+    See FIRETeaserCard and FIREPlannerScreen specs below.
+
+MONTHLY REVIEW LOGIC — LOCKED:
+  MonthlyReviewLink always shows previous month's review.
   Never waits for end of current month.
-  isVisible=true when previous month review exists.
-  isRedacted=true hides it in empty state.
+  isVisible=true whenever a previous month review exists.
+  isRedacted=true hides the component in empty state.
+```
 
 ---
 
