@@ -28,24 +28,43 @@ Data viz          Progress bars, allocation bars, coverage scores
 ---
 
 ## The Empty State Pattern
-Every screen and every card must have an empty state.
-Never show a financial number as zero.
+EMPTY STATE PATTERN — LOCKED (March 2026)
 
-```
-Structure:
-  Full-screen blurred ghost (realistic mock data)
-  + Frosted card centred over blur:
-      Kāshe asterisk (slow pulse animation)
-      One headline — what this screen shows when populated
-      One [+] CTA button in accent colour
-      One secondary text link (optional)
+CONCEPT: Redacted ghost screen, not blurred overlay.
+Numbers replaced with XXXXX. Screen fully scrollable.
+User sees the structure of their data before acting.
 
-iOS:     @react-native-community/blur (BlurView)
-Android: Semi-transparent overlay (#111110 at 70% opacity)
-Mock data: always import from /constants/mockData.ts
-           Never generate random numbers — fixed constants only
-           Mock data must look like a real, plausible user
-```
+IMPLEMENTATION:
+  RedactedNumber component:
+    /components/shared/RedactedNumber.tsx
+    Props: length (default 6), style, onPress
+    Renders 'X'.repeat(length)
+    SpaceGrotesk_700Bold, color textDim (#C4C4BF)
+    letterSpacing: 2
+
+  All Home components accept isRedacted?: boolean.
+  When true: replace every number with RedactedNumber.
+  Progress bar fills: set to 0 when isRedacted.
+  MonthlyReviewLink: return null when isRedacted.
+
+FLOATING PILL (always visible in empty state):
+  '+ Connect your data'
+  Acid green (#C8F04A), pill shape, borderRadius 999
+  Positioned absolute, bottom 24, centered
+  KasheAsterisk size 14 + SpaceGrotesk_600SemiBold text
+
+INVITATION SHEET (on pill tap or redacted number tap):
+  Slides up from bottom, 350ms ease-out
+  Drag handle top centre
+  KasheAsterisk animated
+  Headline + description + CTA button + secondary link
+  Dismisses on scrim tap or action
+
+MONTHLY REVIEW LOGIC (locked decision):
+  Always shows previous month's review.
+  Never waits for end of current month.
+  isVisible=true when previous month review exists.
+  isRedacted=true hides it in empty state.
 
 ---
 
