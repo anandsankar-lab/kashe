@@ -1,5 +1,6 @@
 import { ScrollView, useColorScheme } from 'react-native';
 import colours from '../../constants/colours';
+import HomeHeader from '../../components/home/HomeHeader';
 import PositionHeroCard from '../../components/home/PositionHeroCard';
 import SpendSnapshot from '../../components/home/SpendSnapshot';
 import MarketsStrip from '../../components/home/MarketsStrip';
@@ -25,8 +26,15 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: isDark ? colours.backgroundDark : colours.background }}
-      contentContainerStyle={{ paddingTop: 60, paddingBottom: 32 }}
+      contentContainerStyle={{ paddingBottom: 32 }}
     >
+      <HomeHeader
+        name="Anand"
+        hasNotification={false}
+        notificationType={null}
+        onAvatarPress={() => {}}
+        onAddPress={() => {}}
+      />
       <PositionHeroCard
         position={450200}
         savingsRate={45}
