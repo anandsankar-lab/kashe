@@ -1,8 +1,27 @@
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { useState } from 'react';
+import { View, StyleSheet, useColorScheme } from 'react-native';
 import colours from '../../constants/colours';
+import SpendScreenHeader from '../../components/spend/SpendScreenHeader';
 
 export default function SpendScreen() {
   const isDark = useColorScheme() === 'dark';
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const currentMonth = new Date();
+  const currentMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const canGoNext = selectedMonth < currentMonthStart;
+
+  function handlePreviousMonth() {
+    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  }
+
+  function handleNextMonth() {
+    if (!canGoNext) return;
+    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  }
 
   return (
     <View
@@ -11,7 +30,15 @@ export default function SpendScreen() {
         { backgroundColor: isDark ? colours.backgroundDark : colours.background },
       ]}
     >
-      <Text style={[styles.label, { color: colours.textSecondary }]}>Spend</Text>
+      <SpendScreenHeader
+        selectedMonth={selectedMonth}
+        onPreviousMonth={handlePreviousMonth}
+        onNextMonth={handleNextMonth}
+        canGoNext={canGoNext}
+        onAddPress={() => {}}
+        onBudgetsPress={() => {}}
+        notificationDot={null}
+      />
     </View>
   );
 }
@@ -19,11 +46,5 @@ export default function SpendScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 16,
   },
 });
