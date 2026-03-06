@@ -1,6 +1,7 @@
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colours from '../../constants/colours';
+import AppHeader from '../shared/AppHeader';
 
 interface SpendScreenHeaderProps {
   selectedMonth: Date;
@@ -10,10 +11,62 @@ interface SpendScreenHeaderProps {
   onAddPress: () => void;
   onBudgetsPress: () => void;
   notificationDot?: 'amber' | 'red' | null;
+  onAvatarPress: () => void;
+  avatarInitial: string;
 }
 
 function formatMonth(date: Date): string {
   return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+function DotsButton({ onPress }: { onPress: () => void }) {
+  const isDark = useColorScheme() === 'dark';
+  const bg = isDark ? colours.borderDark : colours.border;
+
+  return (
+    <TouchableOpacity
+      style={[styles.iconButton, { backgroundColor: bg }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+    >
+      <Text style={[styles.overflowDots, { color: colours.textSecondary }]}>···</Text>
+    </TouchableOpacity>
+  );
+}
+
+function PlusButton({
+  onPress,
+  dot,
+}: {
+  onPress: () => void;
+  dot?: 'amber' | 'red' | null;
+}) {
+  const isDark = useColorScheme() === 'dark';
+  const bgColor = isDark ? colours.backgroundDark : colours.background;
+  const dotColor = dot === 'red' ? colours.danger : colours.warning;
+
+  return (
+    <View>
+      <TouchableOpacity
+        style={[styles.iconButton, { backgroundColor: colours.accent }]}
+        onPress={onPress}
+        activeOpacity={0.8}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      >
+        <Text style={styles.addPlus}>+</Text>
+      </TouchableOpacity>
+
+      {dot != null && (
+        <View
+          style={[
+            styles.notificationDot,
+            { backgroundColor: dotColor, borderColor: bgColor },
+          ]}
+        />
+      )}
+    </View>
+  );
 }
 
 export default function SpendScreenHeader({
@@ -24,59 +77,29 @@ export default function SpendScreenHeader({
   onAddPress,
   onBudgetsPress,
   notificationDot,
+  onAvatarPress,
+  avatarInitial,
 }: SpendScreenHeaderProps) {
-  const isDark = useColorScheme() === 'dark';
-  const insets = useSafeAreaInsets();
-
-  const overflowBg = isDark ? colours.borderDark : colours.border;
-  const chevronColor = isDark ? colours.textSecondary : colours.textSecondary;
+  const chevronColor = colours.textSecondary;
   const chevronDisabledColor = colours.textDim;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-      {/* Row 1 — Title + action buttons */}
-      <View style={styles.row1}>
-        <Text style={styles.title}>Spend</Text>
+    <View>
+      <AppHeader
+        title="Spend"
+        showGreeting={false}
+        onAvatarPress={onAvatarPress}
+        avatarInitial={avatarInitial}
+        rightActions={
+          <>
+            <DotsButton onPress={onBudgetsPress} />
+            <PlusButton onPress={onAddPress} dot={notificationDot} />
+          </>
+        }
+      />
 
-        <View style={styles.actions}>
-          {/* Overflow / budgets button */}
-          <TouchableOpacity
-            style={[styles.iconButton, { backgroundColor: overflowBg }]}
-            onPress={onBudgetsPress}
-            activeOpacity={0.7}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          >
-            <Text style={[styles.overflowDots, { color: colours.textSecondary }]}>···</Text>
-          </TouchableOpacity>
-
-          {/* Add button with optional notification dot */}
-          <View>
-            <TouchableOpacity
-              style={[styles.iconButton, { backgroundColor: colours.accent }]}
-              onPress={onAddPress}
-              activeOpacity={0.8}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
-              <Text style={styles.addPlus}>+</Text>
-            </TouchableOpacity>
-
-            {notificationDot != null && (
-              <View
-                style={[
-                  styles.notificationDot,
-                  {
-                    backgroundColor:
-                      notificationDot === 'red' ? colours.danger : colours.warning,
-                  },
-                ]}
-              />
-            )}
-          </View>
-        </View>
-      </View>
-
-      {/* Row 2 — Month selector */}
-      <View style={styles.row2}>
+      {/* Month selector — screen-specific, below AppHeader */}
+      <View style={styles.monthRow}>
         <TouchableOpacity
           onPress={onPreviousMonth}
           activeOpacity={0.6}
@@ -105,26 +128,6 @@ export default function SpendScreenHeader({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  row1: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 28,
-    letterSpacing: -0.8,
-    color: colours.textPrimary,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   iconButton: {
     width: 36,
     height: 36,
@@ -151,15 +154,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -1,
     right: -1,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 2,
   },
-  row2: {
+  monthRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
+    paddingHorizontal: 24,
+    paddingBottom: 12,
   },
   chevron: {
     fontFamily: 'Inter_400Regular',
