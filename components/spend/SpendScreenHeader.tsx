@@ -4,19 +4,11 @@ import colours from '../../constants/colours';
 import AppHeader from '../shared/AppHeader';
 
 interface SpendScreenHeaderProps {
-  selectedMonth: Date;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
-  canGoNext: boolean;
   onAddPress: () => void;
   onBudgetsPress: () => void;
   notificationDot?: 'amber' | 'red' | null;
   onAvatarPress: () => void;
   avatarInitial: string;
-}
-
-function formatMonth(date: Date): string {
-  return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 }
 
 function DotsButton({ onPress }: { onPress: () => void }) {
@@ -70,60 +62,25 @@ function PlusButton({
 }
 
 export default function SpendScreenHeader({
-  selectedMonth,
-  onPreviousMonth,
-  onNextMonth,
-  canGoNext,
   onAddPress,
   onBudgetsPress,
   notificationDot,
   onAvatarPress,
   avatarInitial,
 }: SpendScreenHeaderProps) {
-  const chevronColor = colours.textSecondary;
-  const chevronDisabledColor = colours.textDim;
-
   return (
-    <View>
-      <AppHeader
-        title="Spend"
-        showGreeting={false}
-        onAvatarPress={onAvatarPress}
-        avatarInitial={avatarInitial}
-        rightActions={
-          <>
-            <DotsButton onPress={onBudgetsPress} />
-            <PlusButton onPress={onAddPress} dot={notificationDot} />
-          </>
-        }
-      />
-
-      {/* Month selector — screen-specific, below AppHeader */}
-      <View style={styles.monthRow}>
-        <TouchableOpacity
-          onPress={onPreviousMonth}
-          activeOpacity={0.6}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={[styles.chevron, { color: chevronColor }]}>‹</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.monthLabel, { color: colours.textPrimary }]}>
-          {formatMonth(selectedMonth)}
-        </Text>
-
-        <TouchableOpacity
-          onPress={onNextMonth}
-          activeOpacity={canGoNext ? 0.6 : 1}
-          disabled={!canGoNext}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={[styles.chevron, { color: canGoNext ? chevronColor : chevronDisabledColor }]}>
-            ›
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    <AppHeader
+      title="Spend"
+      showGreeting={false}
+      onAvatarPress={onAvatarPress}
+      avatarInitial={avatarInitial}
+      rightActions={
+        <>
+          <DotsButton onPress={onBudgetsPress} />
+          <PlusButton onPress={onAddPress} dot={notificationDot} />
+        </>
+      }
+    />
   );
 }
 
@@ -158,22 +115,5 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     borderWidth: 2,
-  },
-  monthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 12,
-  },
-  chevron: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 22,
-    lineHeight: 26,
-  },
-  monthLabel: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
-    fontSize: 16,
-    letterSpacing: -0.3,
   },
 });
