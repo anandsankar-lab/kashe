@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, View, Text, useColorScheme } from 'react-native';
+import { Animated, View, Text } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import Card from '../ui/Card';
 import colours from '../../constants/colours';
 import RedactedNumber from '../shared/RedactedNumber';
@@ -12,7 +13,7 @@ type Props = {
 };
 
 export default function SpendSnapshot({ spent, budget, currency = '€', isRedacted = false }: Props) {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
   const animatedWidth = useRef(new Animated.Value(0)).current;
 
   const ratio = budget > 0 ? spent / budget : 0;
@@ -33,7 +34,7 @@ export default function SpendSnapshot({ spent, budget, currency = '€', isRedac
     }).start();
   }, [pct, isRedacted]);
 
-  const trackColour = isDark ? colours.borderDark : colours.border;
+  const trackColour = theme.border;
 
   return (
     <Card>

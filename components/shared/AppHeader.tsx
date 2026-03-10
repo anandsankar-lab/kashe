@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 
 interface AppHeaderProps {
   title?: string;
@@ -41,9 +41,8 @@ export default function AppHeader({
   notificationDot = null,
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
-  const isDark = useColorScheme() === 'dark';
-  const bgColor = isDark ? colours.backgroundDark : colours.background;
-  const dotColor = notificationDot === 'red' ? colours.danger : colours.warning;
+  const theme = useTheme();
+  const dotColor = notificationDot === 'red' ? theme.danger : theme.warning;
 
   return (
     <View
@@ -63,7 +62,7 @@ export default function AppHeader({
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: colours.accent,
+              backgroundColor: theme.accent,
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -72,7 +71,7 @@ export default function AppHeader({
               style={{
                 fontFamily: 'SpaceGrotesk_600SemiBold',
                 fontSize: 16,
-                color: '#1A1A18',
+                color: theme.textOnAccent,
               }}
             >
               {avatarInitial}
@@ -90,7 +89,7 @@ export default function AppHeader({
                 borderRadius: 4,
                 backgroundColor: dotColor,
                 borderWidth: 2,
-                borderColor: bgColor,
+                borderColor: theme.background,
               }}
             />
           )}
@@ -106,7 +105,7 @@ export default function AppHeader({
                 fontFamily: 'SpaceGrotesk_600SemiBold',
                 fontSize: 16,
                 letterSpacing: -0.3,
-                color: colours.textPrimary,
+                color: theme.textPrimary,
                 textAlign: 'center',
               }}
             >
@@ -116,7 +115,7 @@ export default function AppHeader({
               style={{
                 fontFamily: 'Inter_400Regular',
                 fontSize: 13,
-                color: colours.textSecondary,
+                color: theme.textSecondary,
                 textAlign: 'center',
               }}
             >
@@ -129,7 +128,7 @@ export default function AppHeader({
               fontFamily: 'SpaceGrotesk_700Bold',
               fontSize: 22,
               letterSpacing: -0.5,
-              color: colours.textPrimary,
+              color: theme.textPrimary,
               textAlign: 'left',
             }}
           >

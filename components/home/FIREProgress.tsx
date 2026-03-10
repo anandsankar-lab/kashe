@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import Card from '../ui/Card';
 import colours from '../../constants/colours';
 import RedactedNumber from '../shared/RedactedNumber';
@@ -13,7 +14,7 @@ type Props = {
 };
 
 export default function FIREProgress({ percentage, projectedYear, isSetUp, onPress, isRedacted = false }: Props) {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
   const [trackWidth, setTrackWidth] = useState(0);
   const fillAnim = useRef(new Animated.Value(0)).current;
 
@@ -29,7 +30,7 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
 
   if (!isSetUp) return null;
 
-  const borderColour = isDark ? colours.borderDark : colours.border;
+  const borderColour = theme.border;
 
   return (
     <Card style={{ padding: 16 }}>

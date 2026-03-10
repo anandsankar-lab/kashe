@@ -1,17 +1,17 @@
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
-import colours from '../../constants/colours';
+import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function PortfolioScreen() {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: isDark ? colours.backgroundDark : colours.background },
+        { backgroundColor: theme.background },
       ]}
     >
-      <Text style={[styles.label, { color: colours.textSecondary }]}>Portfolio</Text>
+      <Text style={[styles.label, { color: theme.textSecondary }]}>Portfolio</Text>
     </View>
   );
 }

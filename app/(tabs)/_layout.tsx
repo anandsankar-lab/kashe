@@ -1,25 +1,19 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function TabLayout() {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
-
-  const bg = isDark ? colours.backgroundDark : colours.background;
-  const border = isDark ? colours.borderDark : colours.border;
-  const inactive = isDark ? colours.textDim : colours.textSecondary;
+  const theme = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colours.accent,
-        tabBarInactiveTintColor: inactive,
+        tabBarActiveTintColor: theme.accent,
+        tabBarInactiveTintColor: theme.textDim,
         tabBarStyle: {
-          backgroundColor: bg,
-          borderTopColor: border,
+          backgroundColor: theme.background,
+          borderTopColor: theme.border,
           borderTopWidth: 1,
         },
         tabBarLabelStyle: {
@@ -38,7 +32,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
               size={24}
-              color={focused ? colours.accent : inactive}
+              color={focused ? theme.accent : theme.textDim}
             />
           ),
         }}
@@ -51,7 +45,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? 'card' : 'card-outline'}
               size={24}
-              color={focused ? colours.accent : inactive}
+              color={focused ? theme.accent : theme.textDim}
             />
           ),
         }}
@@ -64,7 +58,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? 'pie-chart' : 'pie-chart-outline'}
               size={24}
-              color={focused ? colours.accent : inactive}
+              color={focused ? theme.accent : theme.textDim}
             />
           ),
         }}
@@ -77,7 +71,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? 'bulb' : 'bulb-outline'}
               size={24}
-              color={focused ? colours.accent : inactive}
+              color={focused ? theme.accent : theme.textDim}
             />
           ),
         }}

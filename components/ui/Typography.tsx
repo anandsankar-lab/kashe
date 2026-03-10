@@ -1,6 +1,6 @@
-import { Text, TextStyle, useColorScheme } from 'react-native';
+import { Text, TextStyle } from 'react-native';
 import Typography, { TypographyVariant } from '../../constants/typography';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 
 type Props = {
   variant: TypographyVariant;
@@ -10,11 +10,10 @@ type Props = {
 };
 
 export default function TypographyText({ variant, color, style, children }: Props) {
-  const isDark = useColorScheme() === 'dark';
-  const defaultColor = isDark ? colours.textPrimary : colours.textPrimary;
+  const theme = useTheme();
 
   return (
-    <Text style={[Typography[variant], { color: color ?? defaultColor }, style]}>
+    <Text style={[Typography[variant], { color: color ?? theme.textPrimary }, style]}>
       {children}
     </Text>
   );

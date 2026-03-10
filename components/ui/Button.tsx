@@ -1,5 +1,5 @@
 import { TouchableOpacity, Text, ViewStyle, TextStyle } from 'react-native';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 
 type Variant = 'primary' | 'secondary' | 'text';
 
@@ -16,12 +16,14 @@ const labelStyle: TextStyle = {
 };
 
 export default function Button({ label, onPress, variant = 'primary', disabled = false }: Props) {
+  const theme = useTheme();
+
   const containerStyle: ViewStyle = {
     opacity: disabled ? 0.4 : 1,
     alignItems: 'center',
     justifyContent: 'center',
     ...(variant === 'primary' && {
-      backgroundColor: colours.accent,
+      backgroundColor: theme.accent,
       borderRadius: 999,
       paddingVertical: 14,
       paddingHorizontal: 16,
@@ -29,7 +31,7 @@ export default function Button({ label, onPress, variant = 'primary', disabled =
     ...(variant === 'secondary' && {
       backgroundColor: 'transparent',
       borderWidth: 1,
-      borderColor: colours.accent,
+      borderColor: theme.accent,
       borderRadius: 999,
       paddingVertical: 14,
       paddingHorizontal: 16,
@@ -37,7 +39,7 @@ export default function Button({ label, onPress, variant = 'primary', disabled =
   };
 
   const textColor =
-    variant === 'primary' ? colours.textPrimary : colours.accent;
+    variant === 'primary' ? theme.textOnAccent : theme.accent;
 
   return (
     <TouchableOpacity style={containerStyle} onPress={onPress} disabled={disabled} activeOpacity={0.8}>

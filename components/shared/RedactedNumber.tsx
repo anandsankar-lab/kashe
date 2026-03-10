@@ -1,5 +1,5 @@
 import { TouchableOpacity, View, Text, StyleProp, TextStyle } from 'react-native';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 
 interface RedactedNumberProps {
   style?: StyleProp<TextStyle>;
@@ -8,12 +8,14 @@ interface RedactedNumberProps {
 }
 
 export default function RedactedNumber({ style, length = 6, onPress }: RedactedNumberProps) {
+  const theme = useTheme();
+
   const text = (
     <Text
       style={[
         {
           fontFamily: 'SpaceGrotesk_700Bold',
-          color: colours.textDim,
+          color: theme.textDim,
           letterSpacing: 2,
         },
         style,

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import colours from '../../constants/colours';
 import AppHeader from '../shared/AppHeader';
 
@@ -18,8 +19,8 @@ function PlusButton({
   onPress: () => void;
   dot: 'amber' | 'red' | null;
 }) {
-  const isDark = useColorScheme() === 'dark';
-  const bgColor = isDark ? colours.backgroundDark : colours.background;
+  const theme = useTheme();
+  const bgColor = theme.background;
   const dotColor = dot === 'red' ? colours.danger : colours.warning;
 
   return (
@@ -43,7 +44,7 @@ function PlusButton({
             style={{
               fontFamily: 'SpaceGrotesk_600SemiBold',
               fontSize: 20,
-              color: '#1A1A18',
+              color: colours.textOnAccent,
               lineHeight: 24,
             }}
           >

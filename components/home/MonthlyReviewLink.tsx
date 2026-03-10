@@ -1,4 +1,5 @@
-import { TouchableOpacity, View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import colours from '../../constants/colours';
 
 interface MonthlyReviewLinkProps {
@@ -11,7 +12,7 @@ interface MonthlyReviewLinkProps {
 export default function MonthlyReviewLink({ month, isVisible, isRedacted, onPress }: MonthlyReviewLinkProps) {
   if (!isVisible || isRedacted) return null;
 
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -19,8 +20,8 @@ export default function MonthlyReviewLink({ month, isVisible, isRedacted, onPres
         style={[
           styles.container,
           {
-            backgroundColor: isDark ? colours.surfaceDark : colours.surface,
-            borderColor: isDark ? colours.borderDark : colours.border,
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
           },
         ]}
       >

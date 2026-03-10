@@ -4,9 +4,8 @@ import {
   TouchableOpacity,
   View,
   Text,
-  useColorScheme,
 } from 'react-native';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 import KasheAsterisk from './KasheAsterisk';
 import Button from '../ui/Button';
 
@@ -18,6 +17,10 @@ interface EmptyStateProps {
   secondaryLabel?: string;
   onSecondary?: () => void;
   headline: string;
+  invitationHeadline: string;
+  invitationDescription: string;
+  invitationCtaLabel: string;
+  invitationSecondaryLabel?: string;
 }
 
 export default function EmptyState({
@@ -28,8 +31,12 @@ export default function EmptyState({
   secondaryLabel,
   onSecondary,
   headline,
+  invitationHeadline,
+  invitationDescription,
+  invitationCtaLabel,
+  invitationSecondaryLabel,
 }: EmptyStateProps) {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
   const [sheetVisible, setSheetVisible] = useState(false);
   const sheetAnim = useRef(new Animated.Value(0)).current;
 
@@ -75,7 +82,7 @@ export default function EmptyState({
           bottom: 24,
           alignSelf: 'center',
           zIndex: 10,
-          backgroundColor: colours.accent,
+          backgroundColor: theme.accent,
           borderRadius: 999,
           paddingHorizontal: 24,
           paddingVertical: 14,
@@ -89,11 +96,11 @@ export default function EmptyState({
           style={{
             fontFamily: 'SpaceGrotesk_600SemiBold',
             fontSize: 15,
-            color: '#1A1A18',
+            color: theme.textOnAccent,
             letterSpacing: -0.3,
           }}
         >
-          + Connect your data
+          {ctaLabel}
         </Text>
       </TouchableOpacity>
 
@@ -126,14 +133,14 @@ export default function EmptyState({
           <Animated.View
             style={{
               transform: [{ translateY }],
-              backgroundColor: isDark ? colours.surfaceDark : colours.surface,
+              backgroundColor: theme.surface,
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               paddingHorizontal: 28,
               paddingTop: 12,
               paddingBottom: 40,
               borderTopWidth: 1,
-              borderColor: isDark ? '#2A2A28' : colours.border,
+              borderColor: theme.border,
             }}
           >
             {/* Drag handle */}
@@ -142,7 +149,7 @@ export default function EmptyState({
                 width: 36,
                 height: 4,
                 borderRadius: 2,
-                backgroundColor: colours.textDim,
+                backgroundColor: theme.textDim,
                 alignSelf: 'center',
                 marginBottom: 24,
               }}
@@ -158,11 +165,11 @@ export default function EmptyState({
                 fontSize: 22,
                 letterSpacing: -0.8,
                 textAlign: 'center',
-                color: colours.textPrimary,
+                color: theme.textPrimary,
                 marginBottom: 10,
               }}
             >
-              {headline}
+              {invitationHeadline}
             </Text>
 
             <Text
@@ -171,16 +178,16 @@ export default function EmptyState({
                 fontSize: 14,
                 letterSpacing: -0.2,
                 textAlign: 'center',
-                color: colours.textSecondary,
+                color: theme.textSecondary,
                 lineHeight: 22,
                 marginBottom: 24,
               }}
             >
-              {'Upload your bank statement or portfolio CSV\nto unlock your real position, spending patterns,\nand personalised insights.'}
+              {invitationDescription}
             </Text>
 
             <Button
-              label={ctaLabel}
+              label={invitationCtaLabel}
               variant="primary"
               onPress={() => {
                 hideSheet();
@@ -188,7 +195,7 @@ export default function EmptyState({
               }}
             />
 
-            {secondaryLabel && onSecondary && (
+            {invitationSecondaryLabel && onSecondary && (
               <TouchableOpacity
                 onPress={() => {
                   hideSheet();
@@ -200,12 +207,12 @@ export default function EmptyState({
                   style={{
                     fontFamily: 'Inter_400Regular',
                     fontSize: 14,
-                    color: colours.textSecondary,
+                    color: theme.textSecondary,
                     textAlign: 'center',
                     marginTop: 16,
                   }}
                 >
-                  {secondaryLabel}
+                  {invitationSecondaryLabel}
                 </Text>
               </TouchableOpacity>
             )}

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Animated, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import Card from '../ui/Card';
 import colours from '../../constants/colours';
 import Typography from '../../constants/typography';
@@ -259,15 +260,13 @@ type SegregationToggleProps = {
 
 export default function SegregationToggle({ isRedacted = false }: SegregationToggleProps) {
   const [view, setView] = useState<ViewMode>('risk');
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
 
-  const selectorBg = isDark ? colours.backgroundDark : colours.background;
-  const trackColor = isDark ? colours.borderDark : colours.border;
-
-  const surfaceBg = isDark ? colours.surfaceDark : colours.surface;
+  const selectorBg = theme.background;
+  const trackColor = theme.border;
 
   return (
-    <Card style={{ backgroundColor: surfaceBg, padding: 16, borderRadius: 16 }}>
+    <Card style={{ backgroundColor: theme.surface, padding: 16, borderRadius: 16 }}>
       {/* Pill selector */}
       <View
         style={{

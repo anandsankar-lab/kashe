@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 
 interface KasheAsteriskProps {
   size?: number;
@@ -20,28 +20,31 @@ const TRIG_ANGLES_DEG = [90, 30, -30, -90, -150, 150];
 
 function getStrokeColor(
   index: number,
-  direction: 'up' | 'down' | 'neutral' | undefined
+  direction: 'up' | 'down' | 'neutral' | undefined,
+  accent: string,
+  dim: string,
+  danger: string,
 ): string {
   switch (direction) {
     case 'up':
-      // Stroke 0 (top) and Stroke 5 (k-stroke): accent; all others: textDim
-      if (index === 0 || index === 5) return colours.accent;
-      return colours.textDim;
+      if (index === 0 || index === 5) return accent;
+      return dim;
     case 'down':
-      // Stroke 3 (bottom): danger; all others: textDim (k-stroke included)
-      if (index === 3) return colours.danger;
-      return colours.textDim;
+      if (index === 3) return danger;
+      return dim;
     case 'neutral':
     default:
-      // Stroke 5 (k-stroke): accent; all others: textDim
-      if (index === 5) return colours.accent;
-      return colours.textDim;
+      if (index === 5) return accent;
+      return dim;
   }
 }
 
 function getSpokes(
   size: number,
-  direction: 'up' | 'down' | 'neutral' | undefined
+  direction: 'up' | 'down' | 'neutral' | undefined,
+  accent: string,
+  dim: string,
+  danger: string,
 ) {
   const cx = size / 2;
   const cy = size / 2;
@@ -51,8 +54,8 @@ function getSpokes(
     const rad = (deg * Math.PI) / 180;
     return {
       x2: cx + r * Math.cos(rad),
-      y2: cy - r * Math.sin(rad), // SVG y is inverted
-      color: getStrokeColor(i, direction),
+      y2: cy - r * Math.sin(rad),
+      color: getStrokeColor(i, direction, accent, dim, danger),
     };
   });
 }
@@ -62,6 +65,7 @@ export default function KasheAsterisk({
   animated: shouldAnimate = false,
   direction,
 }: KasheAsteriskProps) {
+  const theme = useTheme();
   const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -89,7 +93,7 @@ export default function KasheAsterisk({
     return () => pulse.stop();
   }, [shouldAnimate, opacity]);
 
-  const spokes = getSpokes(size, direction);
+  const spokes = getSpokes(size, direction, theme.accent, theme.textDim, theme.danger);
   const cx = size / 2;
   const cy = size / 2;
   const strokeWidth = size * 0.12;

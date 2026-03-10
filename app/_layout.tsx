@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, Platform, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   SpaceGrotesk_400Regular,
@@ -14,13 +14,12 @@ import {
   Inter_500Medium,
   useFonts as useInterFonts,
 } from '@expo-google-fonts/inter';
-import colours from '../constants/colours';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+function RootLayoutInner() {
+  const theme = useTheme();
 
   const [spaceGroteskLoaded] = useSpaceGroteskFonts({
     SpaceGrotesk_400Regular,
@@ -42,13 +41,11 @@ export default function RootLayout() {
 
   const navigator = (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: {
-            backgroundColor: isDark ? colours.backgroundDark : colours.background,
-          },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
     </>
@@ -56,7 +53,7 @@ export default function RootLayout() {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={{ flex: 1, alignItems: 'center', backgroundColor: colours.border }}>
+      <View style={{ flex: 1, alignItems: 'center', backgroundColor: theme.border }}>
         <View style={{ width: 390, maxWidth: 390, flex: 1, overflow: 'hidden' }}>
           {navigator}
         </View>
@@ -65,4 +62,12 @@ export default function RootLayout() {
   }
 
   return navigator;
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutInner />
+    </ThemeProvider>
+  );
 }

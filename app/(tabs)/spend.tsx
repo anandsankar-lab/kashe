@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { View, ScrollView, Text, StyleSheet, useColorScheme } from 'react-native';
-import colours from '../../constants/colours';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import SpendScreenHeader from '../../components/spend/SpendScreenHeader';
 import SpendHeroCard from '../../components/spend/SpendHeroCard';
+import SpendInsightStrip from '../../components/spend/SpendInsightStrip';
 import SpendCategoryList from '../../components/spend/SpendCategoryList';
-import { SpendCategory } from '../../types/spend';
+import SpendBudgetSheet from '../../components/spend/SpendBudgetSheet';
+import EmptyState from '../../components/shared/EmptyState';
+import DataSourceSheet from '../../components/shared/DataSourceSheet';
+import { SpendCategoryData, AppDataState } from '../../types/spend';
+import { MOCK_APP_STATE } from '../../constants/mockData';
+import { useDataSources } from '../../hooks/useDataSources';
 
-const mockCategories: SpendCategory[] = [
+const mockCategories: SpendCategoryData[] = [
   {
     id: 'eating_out',
     name: 'Eating out',
@@ -59,7 +65,7 @@ const mockCategories: SpendCategory[] = [
     isExcluded: false,
     isRecurring: false,
     insightLine: null,
-    ownership: 'household',
+    ownership: 'joint',
   },
   {
     id: 'subscriptions',
@@ -133,6 +139,9 @@ const mockCategories: SpendCategory[] = [
     insightLine: null,
     ownership: 'personal',
   },
+];
+
+const MOCK_TRANSFERS: SpendCategoryData[] = [
   {
     id: 'investment_transfer',
     name: 'Investments',
@@ -153,7 +162,7 @@ const mockCategories: SpendCategory[] = [
   },
   {
     id: 'transfer',
-    name: 'Transfers',
+    name: 'Family remittance',
     icon: '💸',
     amount: 500,
     currency: '€',
@@ -172,12 +181,23 @@ const mockCategories: SpendCategory[] = [
 ];
 
 export default function SpendScreen() {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
+  const [appState] = useState<AppDataState>(MOCK_APP_STATE);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [profileFilter, setProfileFilter] = useState<'household' | string>('household');
+  const [profileFilter] = useState<'household' | string>('household');
+  const [showBudgetSheet, setShowBudgetSheet] = useState(false);
+  const [showSourceSheet, setShowSourceSheet] = useState(false);
+  const [insightDismissed, setInsightDismissed] = useState(false);
+
+  const { sources } = useDataSources();
+  const hasData = appState === 'HAS_DATA';
+
+  const hasStaleData = sources.some(
+    (s) => s.type === 'SPEND' && s.status !== 'FRESH'
+  );
 
   const currentMonth = new Date();
   const currentMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -192,48 +212,93 @@ export default function SpendScreen() {
     setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   }
 
+  function handleDotsPress() {
+    if (hasStaleData) {
+      setShowSourceSheet(true);
+    } else {
+      setShowBudgetSheet(true);
+    }
+  }
+
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: isDark ? colours.backgroundDark : colours.background },
+        { backgroundColor: theme.background },
       ]}
     >
       <SpendScreenHeader
         onAddPress={() => {}}
-        onBudgetsPress={() => {}}
+        onBudgetsPress={handleDotsPress}
         notificationDot={null}
         onAvatarPress={() => console.log('Avatar pressed')}
         avatarInitial="A"
+        hasStaleData={hasStaleData && hasData}
       />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+
+      <EmptyState
+        isVisible={!hasData}
+        headline="See where your money goes"
+        ctaLabel="+ Upload bank statement"
+        secondaryLabel="Add manually instead"
+        onCta={() => console.log('Upload pressed')}
+        onSecondary={() => console.log('Manual pressed')}
+        invitationHeadline="Your spending, clearly"
+        invitationDescription="Upload a bank statement and Kāshe categorises everything automatically. Your data never leaves your device."
+        invitationCtaLabel="+ Upload bank statement"
+        invitationSecondaryLabel="Add manually instead"
       >
-        <SpendHeroCard
-          totalSpend={2847}
-          currency="€"
-          budgetAmount={4500}
-          vsLastMonth={12}
-          vs3MonthAvg={8}
-          hasMultiCurrency={true}
-          selectedMonth={selectedMonth}
-          onPreviousMonth={handlePreviousMonth}
-          onNextMonth={handleNextMonth}
-          canGoNext={canGoNext}
-          isRedacted={false}
-        />
-        <SpendCategoryList
-          categories={mockCategories}
-          onCategoryPress={(id) => console.log('Category pressed:', id)}
-          isRedacted={false}
-          profileFilter={profileFilter}
-        />
-        <Text style={[styles.transfersPlaceholder, { color: colours.textDim }]}>
-          SPEND-04 coming soon
-        </Text>
-      </ScrollView>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <SpendHeroCard
+            totalSpend={2847}
+            currency="€"
+            budgetAmount={4500}
+            vsLastMonth={12}
+            vs3MonthAvg={8}
+            hasMultiCurrency={true}
+            selectedMonth={selectedMonth}
+            onPreviousMonth={handlePreviousMonth}
+            onNextMonth={handleNextMonth}
+            canGoNext={canGoNext}
+            isRedacted={!hasData}
+          />
+          <SpendInsightStrip
+            insight={insightDismissed || !hasData ? null : {
+              headline: 'Eating out jumped this month',
+              body: 'You spent €340 on eating out — 34% above your 3-month average of €254. Mostly Thuisbezorgd and Uber Eats.',
+              categoryId: 'eating_out',
+            }}
+            onDismiss={() => setInsightDismissed(true)}
+            onPress={() => console.log('Insight pressed')}
+            isRedacted={false}
+          />
+          <SpendCategoryList
+            categories={mockCategories}
+            transferCategories={MOCK_TRANSFERS}
+            onCategoryPress={(id) => console.log('Category pressed:', id)}
+            isRedacted={!hasData}
+            profileFilter={profileFilter}
+          />
+        </ScrollView>
+      </EmptyState>
+
+      <SpendBudgetSheet
+        isVisible={showBudgetSheet}
+        onClose={() => setShowBudgetSheet(false)}
+        categories={mockCategories}
+        onSave={(budgets) => console.log('Budgets saved:', budgets)}
+      />
+
+      <DataSourceSheet
+        isVisible={showSourceSheet}
+        onClose={() => setShowSourceSheet(false)}
+        sources={sources.filter((s) => s.type === 'SPEND')}
+        onRequestUpload={(id) => console.log('Request upload', id)}
+      />
     </View>
   );
 }
@@ -247,11 +312,5 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  transfersPlaceholder: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    paddingHorizontal: 20,
-    paddingTop: 16,
   },
 });

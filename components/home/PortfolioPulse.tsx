@@ -1,4 +1,5 @@
-import { View, Text, useColorScheme } from 'react-native';
+import { View, Text } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import colours from '../../constants/colours';
 import Typography from '../../constants/typography';
 import Card from '../ui/Card';
@@ -17,12 +18,12 @@ type Props = {
 };
 
 export default function PortfolioPulse({ items, isRedacted = false }: Props) {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
 
   if (!items || items.length === 0) return null;
 
   const displayItems = items.slice(0, 5);
-  const borderColour = isDark ? colours.borderDark : colours.border;
+  const borderColour = theme.border;
 
   return (
     <Card padded>

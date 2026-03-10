@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { ScrollView, useColorScheme } from 'react-native';
-import colours from '../../constants/colours';
+import { ScrollView } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import HomeHeader from '../../components/home/HomeHeader';
 import PositionHeroCard from '../../components/home/PositionHeroCard';
-import SpendSnapshot from '../../components/home/SpendSnapshot';
+import SpendStoryCard from '../../components/home/SpendStoryCard';
 import MarketsStrip from '../../components/home/MarketsStrip';
 import PortfolioPulse from '../../components/home/PortfolioPulse';
 import FIREProgress from '../../components/home/FIREProgress';
@@ -11,6 +11,8 @@ import SegregationToggle from '../../components/home/SegregationToggle';
 import MonthlyReviewLink from '../../components/home/MonthlyReviewLink';
 import EmptyState from '../../components/shared/EmptyState';
 import RedactedNumber from '../../components/shared/RedactedNumber';
+import { MOCK_APP_STATE } from '../../constants/mockData';
+import { AppDataState } from '../../types/spend';
 
 const MARKETS_DATA = [
   { label: 'S&P 500', value: '5,234', change: 0.4 },
@@ -25,11 +27,47 @@ const PULSE_DATA = [
   { ticker: 'PPFCF', change: 2.1, headline: 'Flexi cap inflows hit 6-month high' },
 ];
 
+type EmptyStateCopy = {
+  headline: string;
+  ctaLabel: string;
+  secondaryLabel?: string;
+  invitationHeadline: string;
+  invitationDescription: string;
+  invitationCtaLabel: string;
+  invitationSecondaryLabel?: string;
+};
+
+function getEmptyStateCopy(appState: AppDataState): EmptyStateCopy {
+  if (appState === 'UNAUTHENTICATED') {
+    return {
+      headline: 'Your money. Both worlds.',
+      ctaLabel: '+ Connect your data',
+      invitationHeadline: 'Sign in to get started',
+      invitationDescription:
+        'Your financial data stays on your device. Sign in with Google to begin.',
+      invitationCtaLabel: 'Continue with Google',
+    };
+  }
+  return {
+    headline: 'Upload one statement to begin',
+    ctaLabel: '+ Upload your first statement',
+    secondaryLabel: 'Add investments manually instead',
+    invitationHeadline: 'See where last month went',
+    invitationDescription:
+      'Upload your bank statement and Kāshe shows your spending picture instantly. Your data never leaves your device.',
+    invitationCtaLabel: '+ Upload bank statement',
+    invitationSecondaryLabel: 'Add investments instead',
+  };
+}
+
 export default function HomeScreen() {
-  const isDark = useColorScheme() === 'dark';
-  const [hasData] = useState(false);
+  const theme = useTheme();
+  const [appState] = useState<AppDataState>(MOCK_APP_STATE);
   const [reviewVisible] = useState(true);
   const [reviewMonth] = useState('March');
+
+  const hasData = appState === 'HAS_DATA';
+  const copy = getEmptyStateCopy(appState);
 
   const redact = (fontSize: number, length: number = 6) => (
     <RedactedNumber
@@ -42,14 +80,18 @@ export default function HomeScreen() {
   return (
     <EmptyState
       isVisible={!hasData}
-      headline="Your financial picture"
-      ctaLabel="+ Upload bank statement"
-      secondaryLabel="Add investments manually"
+      headline={copy.headline}
+      ctaLabel={copy.ctaLabel}
+      secondaryLabel={copy.secondaryLabel}
       onCta={() => {}}
       onSecondary={() => {}}
+      invitationHeadline={copy.invitationHeadline}
+      invitationDescription={copy.invitationDescription}
+      invitationCtaLabel={copy.invitationCtaLabel}
+      invitationSecondaryLabel={copy.invitationSecondaryLabel}
     >
       <ScrollView
-        style={{ flex: 1, backgroundColor: isDark ? colours.backgroundDark : colours.background }}
+        style={{ flex: 1, backgroundColor: theme.background }}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 48, gap: 14 }}
       >
         <HomeHeader
@@ -70,7 +112,21 @@ export default function HomeScreen() {
           currency="€"
           isRedacted={!hasData}
         />
-        <SpendSnapshot spent={2847} budget={4500} currency="€" isRedacted={!hasData} />
+        <SpendStoryCard
+          totalSpend={2847}
+          currency="€"
+          vsAverage={12}
+          investedAmount={1500}
+          investmentTarget={1500}
+          topInsight={{
+            categoryName: 'Eating out',
+            vsAverage: 34,
+            topMerchant: 'Deliveroo',
+          }}
+          onSpendPress={() => console.log('→ Spend tab')}
+          onInvestPress={() => console.log('→ Portfolio tab')}
+          isRedacted={!hasData}
+        />
         <SegregationToggle isRedacted={!hasData} />
         <MarketsStrip items={MARKETS_DATA} isRedacted={!hasData} />
         <PortfolioPulse items={PULSE_DATA} isRedacted={!hasData} />

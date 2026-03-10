@@ -1,5 +1,5 @@
-import { View, ViewStyle, useColorScheme } from 'react-native';
-import colours from '../../constants/colours';
+import { View, ViewStyle } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 type Props = {
   children: React.ReactNode;
@@ -8,15 +8,15 @@ type Props = {
 };
 
 export default function Card({ children, style, padded = true }: Props) {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
 
   return (
     <View
       style={[
         {
-          backgroundColor: isDark ? colours.surfaceDark : colours.surface,
+          backgroundColor: theme.surface,
           borderWidth: 1,
-          borderColor: isDark ? '#252523' : '#EEEEEA',
+          borderColor: theme.border,
           borderRadius: 16,
           overflow: 'hidden',
           ...(padded ? { padding: 20 } : {}),

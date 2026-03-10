@@ -1,6 +1,6 @@
-import { ScrollView, Text, View, useColorScheme } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import KasheAsterisk from '../shared/KasheAsterisk';
-import colours from '../../constants/colours';
 import RedactedNumber from '../shared/RedactedNumber';
 
 type MarketItem = {
@@ -15,10 +15,10 @@ type Props = {
 };
 
 function MarketItemView({ label, change, isRedacted }: MarketItem & { isRedacted?: boolean }) {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
 
   const changeColour =
-    change > 0 ? colours.accent : change < 0 ? colours.danger : colours.textSecondary;
+    change > 0 ? theme.accent : change < 0 ? theme.danger : theme.textSecondary;
 
   const direction = change > 0 ? 'up' : change < 0 ? 'down' : 'neutral';
 
@@ -27,9 +27,9 @@ function MarketItemView({ label, change, isRedacted }: MarketItem & { isRedacted
       style={{
         paddingHorizontal: 14,
         paddingVertical: 8,
-        backgroundColor: isDark ? colours.surfaceDark : colours.surface,
+        backgroundColor: theme.surface,
         borderWidth: 1,
-        borderColor: isDark ? '#2A2A28' : '#EEEEE9',
+        borderColor: theme.border,
         borderRadius: 999,
         flexDirection: 'row',
         alignItems: 'center',
@@ -40,7 +40,7 @@ function MarketItemView({ label, change, isRedacted }: MarketItem & { isRedacted
         style={{
           fontFamily: 'Inter_500Medium',
           fontSize: 13,
-          color: colours.textPrimary,
+          color: theme.textPrimary,
         }}
       >
         {label}
