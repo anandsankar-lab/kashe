@@ -4,6 +4,7 @@ import Typography from '@/constants/typography'
 import Spacing, { borderRadius } from '@/constants/spacing'
 import AppHeader from '@/components/shared/AppHeader'
 import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
+import PortfolioSectionHeader from '@/components/portfolio/PortfolioSectionHeader'
 import { MOCK_PORTFOLIO_TOTALS } from '@/constants/mockData'
 
 function DotsButton({ onPress }: { onPress: () => void }) {
@@ -77,6 +78,30 @@ export default function PortfolioScreen() {
           totals={MOCK_PORTFOLIO_TOTALS}
           isRedacted={false}
         />
+
+        <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
+          <PortfolioSectionHeader
+            label="GROWTH"
+            total={198400}
+            currency="€"
+            isRedacted={false}
+          />
+          <View style={{ marginBottom: 16 }} />
+          <PortfolioSectionHeader
+            label="STABILITY"
+            total={65200}
+            currency="€"
+            isRedacted={false}
+          />
+          <View style={{ marginBottom: 16 }} />
+          <PortfolioSectionHeader
+            label="LOCKED"
+            total={48200}
+            currency="€"
+            isEmpty={true}
+            onAddPress={() => console.log('Add locked holding pressed')}
+          />
+        </View>
       </ScrollView>
     </View>
   )
