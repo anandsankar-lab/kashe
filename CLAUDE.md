@@ -328,30 +328,45 @@ MACRON RULE (ā):
 ---
 
 ## Empty State Pattern
+*LOCKED — March 2026. Do not revert to blurred overlay.*
 ```
 Every screen and every card must have an empty state.
 Never show a financial number as zero.
 
-Structure:
-  Full-screen blurred ghost (realistic mock data from mockData.ts)
-  + Frosted card centred over blur:
-      Kāshe asterisk (slow pulse)
-      One headline (what this screen shows when populated)
-      One [+] CTA button (accent colour)
-      Optional: one secondary text link
+PATTERN (all screens):
+  Ghost screen fully rendered at 0.5 opacity — NOT blurred.
+  All financial numbers replaced with RedactedNumber (XXXXXX).
+  Screen is fully scrollable — user sees the structure, not the data.
+  Mock data: always from /constants/mockData.ts — fixed constants only.
+  Neutral brand names only (e.g. "Supermarket", not "Albert Heijn").
 
-iOS:     @react-native-community/blur (BlurView)
-Android: Semi-transparent overlay (#111110 at 70% opacity)
-Mock data: always from /constants/mockData.ts — fixed constants only
+  FLOATING PILL (always visible, position absolute):
+    "+ Connect your data"
+    Acid green (#C8F04A), borderRadius 999
+    KasheAsterisk size 14 + SpaceGrotesk_600SemiBold
+    bottom: 24, centred, zIndex 10
+
+  INVITATION SHEET (on pill tap):
+    Slides up from bottom, 350ms ease-out
+    Dark scrim behind sheet
+    Drag handle top centre
+    KasheAsterisk (animated)
+    Headline + description + [+ Upload now] CTA + secondary text link
+    Dismisses on scrim tap or CTA/link action
+
+  isRedacted prop pattern:
+    Every financial component accepts isRedacted?: boolean
+    When true: numbers → RedactedNumber, bars → 0 width
+    Components that show no data when redacted: return null
 
 EXCEPTION — Insights screen "no active insight" state:
-  Not a full blurred ghost. A clean quiet card instead.
+  Not a full ghost. A clean quiet card instead.
   "Nothing needs your attention right now."
   This is intentional — silence is the message.
   See CLAUDE-experience.md for InsightsEmptyInsightState spec.
 
 EXCEPTION — FIRE planner not set up:
-  Not a blurred ghost — FIRE has no populated state to mirror.
+  Not a ghost — FIRE has no populated state to mirror.
   Clean prompt card instead. One input shown immediately.
   "Your FIRE number starts here" — lowers activation energy.
 ```
