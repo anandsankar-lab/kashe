@@ -1,4 +1,5 @@
 import { AppDataState, DataSource, SpendTransaction, SpendSubcategory } from '../types/spend';
+import { PortfolioHolding, PortfolioTotals, InvestmentPlan } from '../types/portfolio';
 
 export const MOCK_APP_STATE: AppDataState = 'HAS_DATA';
 // Change to 'UNAUTHENTICATED' or 'AUTHENTICATED_EMPTY' to test other states
@@ -1075,6 +1076,142 @@ export const MOCK_SUBCATEGORIES_BY_CATEGORY: Record<string, SpendSubcategory[]> 
     {
       id: 'internet', name: 'Internet', amount: 40.00, currency: 'EUR',
       transactionCount: 1, transactions: [t38],
+    },
+  ],
+};
+
+// ── PORTFOLIO MOCK DATA ───────────────────────────────────────────────────────
+
+export const MOCK_PORTFOLIO_HOLDINGS: PortfolioHolding[] = [
+  // GROWTH
+  {
+    id: 'h1',
+    name: 'VWRL — Vanguard FTSE All-World',
+    ticker: 'VWRL',
+    assetClass: 'equity',
+    assetSubtype: 'eu_etf',
+    bucket: 'GROWTH',
+    geography: 'europe',
+    currentValue: 42800,
+    currency: 'EUR',
+    valueInBaseCurrency: 42800,
+    dailyChangePercent: 1.2,
+    purchasePrice: 98.40,
+    quantity: 435,
+    lastUpdated: '2026-03-10',
+    freshnessStatus: 'fresh',
+  },
+  {
+    id: 'h2',
+    name: 'Infosys Ltd',
+    ticker: 'INFY',
+    assetClass: 'equity',
+    assetSubtype: 'in_direct_equity',
+    bucket: 'GROWTH',
+    geography: 'india',
+    currentValue: 1840000,     // INR
+    currency: 'INR',
+    valueInBaseCurrency: 19800,
+    dailyChangePercent: -0.8,
+    lastUpdated: '2026-03-10',
+    freshnessStatus: 'fresh',
+  },
+  {
+    id: 'h3',
+    name: 'Parag Parikh Flexi Cap',
+    ticker: 'PPFCF',
+    assetClass: 'equity',
+    assetSubtype: 'in_mutual_fund',
+    bucket: 'GROWTH',
+    geography: 'india',
+    currentValue: 3200000,     // INR
+    currency: 'INR',
+    valueInBaseCurrency: 34400,
+    dailyChangePercent: 2.1,
+    lastUpdated: '2026-03-10',
+    freshnessStatus: 'fresh',
+  },
+  // STABILITY
+  {
+    id: 'h4',
+    name: 'ABN Amro Current Account',
+    assetClass: 'cash',
+    assetSubtype: 'cash_general',
+    bucket: 'STABILITY',
+    geography: 'europe',
+    currentValue: 8400,
+    currency: 'EUR',
+    valueInBaseCurrency: 8400,
+    lastUpdated: '2026-03-10',
+    freshnessStatus: 'fresh',
+    isProtection: true,
+    avgMonthlySpend: 2847,
+  },
+  {
+    id: 'h5',
+    name: 'NRE Savings — HDFC',
+    assetClass: 'cash',
+    assetSubtype: 'in_nre_nro',
+    bucket: 'STABILITY',
+    geography: 'india',
+    currentValue: 1200000,     // INR
+    currency: 'INR',
+    valueInBaseCurrency: 12900,
+    lastUpdated: '2026-02-15',
+    freshnessStatus: 'amber',
+  },
+  // LOCKED
+  {
+    id: 'h6',
+    name: 'PPF Account',
+    assetClass: 'retirement',
+    assetSubtype: 'in_ppf',
+    bucket: 'LOCKED',
+    geography: 'india',
+    currentValue: 4200000,     // INR
+    currency: 'INR',
+    valueInBaseCurrency: 45200,
+    lastUpdated: '2026-01-01',
+    freshnessStatus: 'amber',
+    unlockDate: '2031-03-31',
+    lockedReason: 'PPF maturity',
+    projectedRate: 0.071,
+  },
+  {
+    id: 'h7',
+    name: 'Crowdcube — Series A',
+    assetClass: 'alternative',
+    assetSubtype: 'alternative_general',
+    bucket: 'LOCKED',
+    geography: 'europe',
+    currentValue: 3000,
+    currency: 'EUR',
+    valueInBaseCurrency: 3000,
+    lastUpdated: '2024-06-01',
+    freshnessStatus: 'stale',
+    lockedReason: 'Locked — exit event required',
+  },
+];
+
+export const MOCK_PORTFOLIO_TOTALS: PortfolioTotals = {
+  liveTotal: 115500,
+  lockedTotal: 48200,
+  combinedTotal: 163700,
+  monthlyDeltaLive: 2340,
+  baseCurrency: 'EUR',
+  lastRefreshed: '2026-03-10T08:15:00Z',
+};
+
+export const MOCK_INVESTMENT_PLAN: InvestmentPlan = {
+  monthlyTarget: 1500,
+  investedThisMonth: 920,
+  salaryContributions: [
+    {
+      id: 'sc1',
+      name: 'ABN Amro Pension',
+      amountPerMonth: 380,
+      currency: 'EUR',
+      bucket: 'LOCKED',
     },
   ],
 };
