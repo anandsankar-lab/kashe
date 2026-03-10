@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Line } from 'react-native-svg';
 import MacronRule from '../shared/MacronRule';
 import RedactedNumber from '../shared/RedactedNumber';
+import KasheAsterisk from '../shared/KasheAsterisk';
 
 interface SpendHeroCardProps {
   totalSpend: number;
@@ -304,75 +305,43 @@ export default function SpendHeroCard({
 
         {/* Section 5: Context line */}
         {vsLastMonth !== null && (
-          <Text
-            style={{
-              fontFamily: 'Inter_400Regular',
-              fontSize: 13,
-              color: '#F5F4F0',
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: 'Inter_500Medium',
-                fontSize: 13,
-                color: '#F5F4F0',
-              }}
-            >
-              {vsLastMonth > 0 ? '↑' : '↓'}{' '}
-              {isRedacted ? (
-                <RedactedNumber length={2} style={{ fontSize: 13 }} />
-              ) : (
-                `${Math.abs(vsLastMonth)}%`
-              )}
-              {' '}
-            </Text>
-            <Text
-              style={{
-                fontFamily: 'Inter_400Regular',
-                fontSize: 13,
-                color: 'rgba(245, 244, 240, 0.35)',
-              }}
-            >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+            <KasheAsterisk
+              size={11}
+              direction={isRedacted ? 'neutral' : vsLastMonth > 0 ? 'up' : vsLastMonth < 0 ? 'down' : 'neutral'}
+            />
+            {isRedacted ? (
+              <RedactedNumber length={2} style={{ fontSize: 13 }} />
+            ) : (
+              <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#F5F4F0' }}>
+                {Math.abs(vsLastMonth)}%
+              </Text>
+            )}
+            <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(245, 244, 240, 0.35)' }}>
               vs last month
             </Text>
             {vs3MonthAvg !== null && (
               <>
-                <Text
-                  style={{
-                    fontFamily: 'Inter_400Regular',
-                    fontSize: 13,
-                    color: 'rgba(245, 244, 240, 0.35)',
-                  }}
-                >
-                  {'  ·  '}
+                <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(245, 244, 240, 0.35)' }}>
+                  {'·'}
                 </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter_500Medium',
-                    fontSize: 13,
-                    color: '#F5F4F0',
-                  }}
-                >
-                  {vs3MonthAvg > 0 ? '↑' : '↓'}{' '}
-                  {isRedacted ? (
-                    <RedactedNumber length={2} style={{ fontSize: 13 }} />
-                  ) : (
-                    `${Math.abs(vs3MonthAvg)}%`
-                  )}
-                  {' '}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter_400Regular',
-                    fontSize: 13,
-                    color: 'rgba(245, 244, 240, 0.35)',
-                  }}
-                >
+                <KasheAsterisk
+                  size={11}
+                  direction={isRedacted ? 'neutral' : vs3MonthAvg > 0 ? 'up' : vs3MonthAvg < 0 ? 'down' : 'neutral'}
+                />
+                {isRedacted ? (
+                  <RedactedNumber length={2} style={{ fontSize: 13 }} />
+                ) : (
+                  <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#F5F4F0' }}>
+                    {Math.abs(vs3MonthAvg)}%
+                  </Text>
+                )}
+                <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(245, 244, 240, 0.35)' }}>
                   vs 3-month avg
                 </Text>
               </>
             )}
-          </Text>
+          </View>
         )}
 
       </View>

@@ -6,18 +6,21 @@ import {
   Animated,
   Easing,
   StyleSheet,
-  useColorScheme,
+  Platform,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import KasheAsterisk from '../shared/KasheAsterisk';
 import { LinearGradient } from 'expo-linear-gradient';
 import colours from '../../constants/colours';
-import MacronRule from '../shared/MacronRule';
 import RedactedNumber from '../shared/RedactedNumber';
 import SpendCategoryRow from './SpendCategoryRow';
-import { SpendCategory, SpendCategoryId } from '../../types/spend';
+import CategoryIcon from './CategoryIcon';
+import { SpendCategoryData, SpendCategory, CATEGORY_META, OTHER_NUDGE_AMOUNT } from '../../types/spend';
 
 interface Props {
-  categories: SpendCategory[];
-  onCategoryPress: (id: SpendCategoryId) => void;
+  categories: SpendCategoryData[];
+  transferCategories?: SpendCategoryData[];
+  onCategoryPress: (id: SpendCategory) => void;
   isRedacted?: boolean;
   profileFilter: 'household' | string;
 }
@@ -25,7 +28,7 @@ interface Props {
 const COLLAPSED_COUNT = 5;
 const ROW_HEIGHT = 78; // estimated px per standard row
 
-function computeInsightLine(cat: SpendCategory): string | null {
+function computeInsightLine(cat: SpendCategoryData): string | null {
   if (cat.isMortgage) {
     return `incl. €${cat.amount.toLocaleString()} mortgage — tracked as liability`;
   }
@@ -58,17 +61,24 @@ function computeInsightLine(cat: SpendCategory): string | null {
 
 export default function SpendCategoryList({
   categories,
+  transferCategories = [],
   onCategoryPress,
   isRedacted = false,
 }: Props) {
-  const isDark = useColorScheme() === 'dark';
+  const theme = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const peekOpacityAnim = useRef(new Animated.Value(0.35)).current;
   const slidingHeightAnim = useRef(new Animated.Value(0)).current;
 
-  // Step 1: Filter excluded
-  const nonExcluded = categories.filter((c) => !c.isExcluded);
+  // Step 1: Filter excluded and zero-amount non-alwaysVisible categories
+  const nonExcluded = categories.filter((c) => {
+    if (c.isExcluded) return false;
+    if (c.amount === 0) {
+      return CATEGORY_META.find((m) => m.id === c.id)?.alwaysVisible === true;
+    }
+    return true;
+  });
 
   // Step 2: Score each category
   const scored = nonExcluded.map((cat) => ({
@@ -150,12 +160,12 @@ export default function SpendCategoryList({
     }
   }
 
-  const borderColor = isDark ? colours.borderDark : colours.border;
-  const surfaceColor = isDark ? colours.surfaceDark : colours.surface;
+  const borderColor = theme.border;
+  const surfaceColor = theme.surface;
 
-  const fadeColors: readonly [string, string] = isDark
-    ? ['rgba(17, 17, 16, 0)', '#111110']
-    : ['rgba(245, 244, 240, 0)', '#F5F4F0'];
+  const fadeColors: readonly [string, string] = theme.isDark
+    ? ['rgba(17, 17, 16, 0)', theme.background]
+    : ['rgba(245, 244, 240, 0)', theme.background];
 
   function renderSeparator(key?: string) {
     return (
@@ -163,6 +173,41 @@ export default function SpendCategoryList({
         key={key}
         style={{ height: 1, backgroundColor: borderColor, marginHorizontal: 20 }}
       />
+    );
+  }
+
+  function renderCategoryRow(cat: SpendCategoryData) {
+    if (cat.id === 'childcare' && cat.amount === 0) {
+      return (
+        <View style={styles.childcareZeroRow}>
+          <View style={styles.iconWrapper}>
+            <CategoryIcon categoryId={cat.id} size={22} color={colours.textDim} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.childcareZeroName, { color: colours.textSecondary }]}>
+              {cat.name}
+            </Text>
+            <Text style={[styles.childcareZeroNote, { color: colours.textDim }]}>
+              No spend this month
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <SpendCategoryRow
+          category={cat}
+          onPress={() => onCategoryPress(cat.id)}
+          isRedacted={isRedacted}
+        />
+        {cat.id === 'other' && cat.amount >= OTHER_NUDGE_AMOUNT && (
+          <Text style={[styles.otherNudge, { color: colours.textDim }]}>
+            Tap to recategorise
+          </Text>
+        )}
+      </>
     );
   }
 
@@ -176,11 +221,7 @@ export default function SpendCategoryList({
         {visibleRows.map((cat, index) => (
           <React.Fragment key={cat.id}>
             {index > 0 && renderSeparator()}
-            <SpendCategoryRow
-              category={cat}
-              onPress={() => onCategoryPress(cat.id)}
-              isRedacted={isRedacted}
-            />
+            {renderCategoryRow(cat)}
           </React.Fragment>
         ))}
 
@@ -199,11 +240,7 @@ export default function SpendCategoryList({
         <>
           {renderSeparator('peek-sep')}
           <Animated.View style={{ opacity: peekOpacityAnim }}>
-            <SpendCategoryRow
-              category={peekRow}
-              onPress={() => onCategoryPress(peekRow.id)}
-              isRedacted={isRedacted}
-            />
+            {renderCategoryRow(peekRow)}
           </Animated.View>
         </>
       )}
@@ -214,11 +251,7 @@ export default function SpendCategoryList({
           {slidingRows.map((cat) => (
             <React.Fragment key={cat.id}>
               {renderSeparator(`sep-${cat.id}`)}
-              <SpendCategoryRow
-                category={cat}
-                onPress={() => onCategoryPress(cat.id)}
-                isRedacted={isRedacted}
-              />
+              {renderCategoryRow(cat)}
             </React.Fragment>
           ))}
         </Animated.View>
@@ -229,14 +262,19 @@ export default function SpendCategoryList({
         <View style={styles.expandButtonContainer}>
           <TouchableOpacity
             onPress={isExpanded ? handleCollapse : handleExpand}
-            style={styles.expandButton}
+            style={[
+              styles.expandButton,
+              { borderColor },
+              Platform.OS === 'web' && ({ outline: 'none' } as object),
+            ]}
             activeOpacity={0.8}
           >
-            <Text style={styles.expandButtonLabel}>
-              {isExpanded
-                ? 'Show less ↑'
-                : `Show all ${enriched.length} categories  ↓`}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.expandButtonLabel}>
+                {isExpanded ? 'Show less' : `Show all ${enriched.length} categories`}
+              </Text>
+              <KasheAsterisk size={11} direction={isExpanded ? 'up' : 'down'} />
+            </View>
           </TouchableOpacity>
         </View>
       )}
@@ -276,8 +314,85 @@ export default function SpendCategoryList({
         </TouchableOpacity>
       )}
 
-      {/* Section separator */}
-      <MacronRule style={{ marginHorizontal: 20, marginTop: 16 }} />
+      {/* Transfers section */}
+      {transferCategories.length > 0 && (
+        <>
+          {/* Neutral separator — plain border colour, not MacronRule */}
+          <View
+            style={{
+              height: 1,
+              backgroundColor: theme.border,
+              marginHorizontal: 20,
+              marginTop: 24,
+              marginBottom: 20,
+            }}
+          />
+
+          {/* Section label */}
+          <Text style={[styles.transfersLabel, { color: colours.textDim }]}>
+            TRANSFERS &amp; INVESTMENTS
+          </Text>
+
+          {/* Transfer rows */}
+          {transferCategories.map((cat, index) => {
+            const iconBg = theme.isDark
+              ? 'rgba(37,37,35,0.5)'
+              : 'rgba(238,238,234,0.5)';
+            const isLast = index === transferCategories.length - 1;
+
+            return (
+              <React.Fragment key={cat.id}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={styles.transferRow}
+                  onPress={() => onCategoryPress(cat.id)}
+                >
+                  {/* Icon */}
+                  <View style={styles.transferIconWrapper}>
+                    <CategoryIcon categoryId={cat.id} size={22} color={colours.textDim} />
+                  </View>
+
+                  {/* Name + note */}
+                  <View style={styles.transferMiddle}>
+                    <Text style={[styles.transferName, { color: colours.textSecondary }]}>
+                      {cat.name}
+                    </Text>
+                    <Text style={[styles.transferNote, { color: colours.textDim }]}>
+                      excluded from totals
+                    </Text>
+                  </View>
+
+                  {/* Amount + chevron */}
+                  <View style={styles.transferRight}>
+                    {isRedacted ? (
+                      <RedactedNumber length={4} style={styles.transferAmount} />
+                    ) : (
+                      <Text style={[styles.transferAmount, { color: colours.textSecondary }]}>
+                        {cat.currency}{cat.amount.toLocaleString()}
+                      </Text>
+                    )}
+                    <Text style={[styles.transferChevron, { color: colours.textDim }]}>›</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Separator — not after last row */}
+                {!isLast && (
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: theme.border,
+                      marginHorizontal: 20,
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+
+          {/* Bottom breathing room */}
+          <View style={{ height: 32 }} />
+        </>
+      )}
     </View>
   );
 }
@@ -305,16 +420,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   expandButton: {
-    backgroundColor: colours.accent,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 999,
   },
   expandButtonLabel: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    color: '#111110',
-    letterSpacing: -0.2,
+    fontSize: 13,
+    color: colours.textSecondary,
   },
   recurringStrip: {
     flexDirection: 'row',
@@ -349,5 +464,82 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 18,
     marginLeft: 8,
+  },
+  transfersLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  transferRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  transferIconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  transferMiddle: {
+    flex: 1,
+  },
+  transferName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+  transferNote: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  transferRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transferAmount: {
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 15,
+    letterSpacing: -0.5,
+  },
+  transferChevron: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 18,
+    marginLeft: 6,
+  },
+  childcareZeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  iconWrapper: {
+    marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  childcareZeroName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+  childcareZeroNote: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    letterSpacing: -0.1,
+    marginTop: 2,
+  },
+  otherNudge: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    letterSpacing: -0.1,
+    paddingLeft: 58,
+    paddingRight: 20,
+    marginTop: -4,
+    marginBottom: 6,
   },
 });

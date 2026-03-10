@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import colours from '../../constants/colours';
 import RedactedNumber from '../shared/RedactedNumber';
+import KasheAsterisk from '../shared/KasheAsterisk';
 
 interface SpendSummaryStripProps {
   totalSpend: number;
@@ -45,28 +46,35 @@ export default function SpendSummaryStrip({
       {vsLastMonth !== null && (
         isRedacted ? (
           <View style={styles.contextRow}>
-            <Text style={styles.contextNumber}>↑ </Text>
+            <KasheAsterisk size={11} direction="neutral" />
             <RedactedNumber length={2} style={{ fontSize: 14 }} />
-            <Text style={styles.contextDim}>% vs last month  ·  ↑ </Text>
+            <Text style={styles.contextDim}>% vs last month  ·  </Text>
+            <KasheAsterisk size={11} direction="neutral" />
             <RedactedNumber length={2} style={{ fontSize: 14 }} />
             <Text style={styles.contextDim}>% vs 3-month avg</Text>
           </View>
         ) : (
-          <Text style={styles.contextText}>
-            <Text style={styles.contextNumber}>
-              {vsLastMonth >= 0 ? '↑' : '↓'} {Math.abs(vsLastMonth)}%
+          <View style={styles.contextRow}>
+            <KasheAsterisk
+              size={11}
+              direction={vsLastMonth > 0 ? 'up' : vsLastMonth < 0 ? 'down' : 'neutral'}
+            />
+            <Text style={[styles.contextDim, { color: colours.textSecondary }]}>
+              {Math.abs(vsLastMonth)}% vs last month
             </Text>
-            <Text style={styles.contextDim}> vs last month</Text>
             {vs3MonthAvg !== null && (
               <>
                 <Text style={styles.contextDim}>  ·  </Text>
-                <Text style={styles.contextNumber}>
-                  {vs3MonthAvg >= 0 ? '↑' : '↓'} {Math.abs(vs3MonthAvg)}%
+                <KasheAsterisk
+                  size={11}
+                  direction={vs3MonthAvg > 0 ? 'up' : vs3MonthAvg < 0 ? 'down' : 'neutral'}
+                />
+                <Text style={[styles.contextDim, { color: colours.textSecondary }]}>
+                  {Math.abs(vs3MonthAvg)}% vs 3-month avg
                 </Text>
-                <Text style={styles.contextDim}> vs 3-month avg</Text>
               </>
             )}
-          </Text>
+          </View>
         )
       )}
 
@@ -115,8 +123,9 @@ const styles = StyleSheet.create({
   },
   contextRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     flexWrap: 'wrap',
+    gap: 4,
     marginTop: 6,
   },
   contextNumber: {

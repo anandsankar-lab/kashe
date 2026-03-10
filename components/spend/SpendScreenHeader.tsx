@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import colours from '../../constants/colours';
 import AppHeader from '../shared/AppHeader';
 
@@ -9,21 +10,27 @@ interface SpendScreenHeaderProps {
   notificationDot?: 'amber' | 'red' | null;
   onAvatarPress: () => void;
   avatarInitial: string;
+  hasStaleData?: boolean;
 }
 
-function DotsButton({ onPress }: { onPress: () => void }) {
-  const isDark = useColorScheme() === 'dark';
-  const bg = isDark ? colours.borderDark : colours.border;
+function DotsButton({ onPress, hasStaleData }: { onPress: () => void; hasStaleData?: boolean }) {
+  const theme = useTheme();
+  const bg = theme.border;
 
   return (
-    <TouchableOpacity
-      style={[styles.iconButton, { backgroundColor: bg }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-    >
-      <Text style={[styles.overflowDots, { color: colours.textSecondary }]}>···</Text>
-    </TouchableOpacity>
+    <View>
+      <TouchableOpacity
+        style={[styles.iconButton, { backgroundColor: bg }]}
+        onPress={onPress}
+        activeOpacity={0.7}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      >
+        <Text style={[styles.overflowDots, { color: colours.textSecondary }]}>···</Text>
+      </TouchableOpacity>
+      {hasStaleData && (
+        <View style={[styles.staleDot, { backgroundColor: colours.warning }]} />
+      )}
+    </View>
   );
 }
 
@@ -34,9 +41,9 @@ function PlusButton({
   onPress: () => void;
   dot?: 'amber' | 'red' | null;
 }) {
-  const isDark = useColorScheme() === 'dark';
-  const bgColor = isDark ? colours.backgroundDark : colours.background;
-  const dotColor = dot === 'red' ? colours.danger : colours.warning;
+  const theme = useTheme();
+  const bgColor = theme.background;
+  const dotColor = dot === 'red' ? theme.danger : theme.warning;
 
   return (
     <View>
@@ -67,6 +74,7 @@ export default function SpendScreenHeader({
   notificationDot,
   onAvatarPress,
   avatarInitial,
+  hasStaleData,
 }: SpendScreenHeaderProps) {
   return (
     <AppHeader
@@ -76,7 +84,7 @@ export default function SpendScreenHeader({
       avatarInitial={avatarInitial}
       rightActions={
         <>
-          <DotsButton onPress={onBudgetsPress} />
+          <DotsButton onPress={onBudgetsPress} hasStaleData={hasStaleData} />
           <PlusButton onPress={onAddPress} dot={notificationDot} />
         </>
       }
@@ -103,7 +111,7 @@ const styles = StyleSheet.create({
   addPlus: {
     fontFamily: 'SpaceGrotesk_600SemiBold',
     fontSize: 20,
-    color: '#1A1A18',
+    color: colours.textOnAccent,
     lineHeight: 24,
     textAlign: 'center',
   },
@@ -115,5 +123,13 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     borderWidth: 2,
+  },
+  staleDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 7,
+    height: 7,
+    borderRadius: 999,
   },
 });

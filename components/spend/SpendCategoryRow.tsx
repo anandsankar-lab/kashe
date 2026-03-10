@@ -6,28 +6,31 @@ import {
   Animated,
   Easing,
   StyleSheet,
-  useColorScheme,
+  Platform,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import { router } from 'expo-router';
 import colours from '../../constants/colours';
 import MacronRule from '../shared/MacronRule';
 import RedactedNumber from '../shared/RedactedNumber';
-import { SpendCategory } from '../../types/spend';
+import CategoryIcon from './CategoryIcon';
+import { SpendCategoryData } from '../../types/spend';
 
 interface Props {
-  category: SpendCategory;
+  category: SpendCategoryData;
   onPress: () => void;
   isRedacted?: boolean;
 }
 
 function computeBarFill(
-  category: SpendCategory,
+  category: SpendCategoryData,
   isRedacted: boolean,
-  isDark: boolean
+  border: string
 ): { fillPercent: number; fillColor: string } {
   if (isRedacted) {
     return {
       fillPercent: 0.4,
-      fillColor: isDark ? colours.borderDark : colours.border,
+      fillColor: border,
     };
   }
 
@@ -62,7 +65,11 @@ export default function SpendCategoryRow({
   onPress,
   isRedacted = false,
 }: Props) {
-  const isDark = useColorScheme() === 'dark';
+  function handlePress() {
+    onPress();
+    router.push(`/spend/${category.id}`);
+  }
+  const theme = useTheme();
   const barAnim = useRef(new Animated.Value(0)).current;
 
   const variant = category.isMortgage
@@ -71,7 +78,7 @@ export default function SpendCategoryRow({
     ? 'insight'
     : 'standard';
 
-  const { fillPercent, fillColor } = computeBarFill(category, isRedacted, isDark);
+  const { fillPercent, fillColor } = computeBarFill(category, isRedacted, theme.border);
 
   useEffect(() => {
     Animated.timing(barAnim, {
@@ -88,7 +95,7 @@ export default function SpendCategoryRow({
     outputRange: ['0%', '100%'],
   });
 
-  const trackColor = isDark ? colours.borderDark : colours.border;
+  const trackColor = theme.border;
   const nameColor =
     variant === 'mortgage' ? colours.textSecondary : colours.textPrimary;
   const amountColor =
@@ -97,12 +104,16 @@ export default function SpendCategoryRow({
     variant === 'mortgage' ? colours.textDim : colours.textSecondary;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.7}
+      style={Platform.OS === 'web' ? ({ outline: 'none' } as object) : undefined}
+    >
       {/* Row content */}
       <View style={styles.rowContent}>
         {/* Icon */}
-        <View style={styles.iconContainer}>
-          <Text style={styles.iconText}>{category.icon}</Text>
+        <View style={styles.iconWrapper}>
+          <CategoryIcon categoryId={category.id} size={22} color={colours.textSecondary} />
         </View>
 
         {/* Name */}
@@ -170,17 +181,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: 'rgba(200, 240, 74, 0.12)', // colours.accent at 12% opacity
+  iconWrapper: {
+    marginRight: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  iconText: {
-    fontSize: 18,
   },
   nameContainer: {
     flex: 1,
@@ -206,7 +210,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   insightLineContainer: {
-    paddingLeft: 68, // 20px row padding + 36px icon + 12px gap
+    paddingLeft: 58, // 20px row padding + 22px icon + 16px gap
     paddingRight: 20,
     marginTop: 4,
     marginBottom: 6,
