@@ -12,6 +12,18 @@ Before starting any session:
 3. Read the relevant skill file(s) in /docs/skills/
 4. Then and only then: write the Claude Code prompt
 
+## HOW WE WORK — THE EXACT LOOP
+
+Every ticket follows these four steps. No exceptions.
+
+1. Write the Claude Code prompt in the planning chat (Claude.ai)
+2. Paste into Claude Code in terminal → runs → preview at localhost:8081
+3. Screenshot shared back in planning chat → verified together
+4. Planning chat provides exact git commands → Anand commits
+
+MD files are updated in the planning chat and downloaded directly
+into the repo. Every commit includes code + updated MD files together.
+
 ---
 
 ## SESSIONS COMPLETE
@@ -38,7 +50,7 @@ Before starting any session:
 ✅ /components/home/FIREProgress.tsx
 
 ### Session 02 — Home Screen (Complete)
-✅ Fonts replaced: Syne + DM Sans → Space Grotesk + Inter
+✅ Fonts replaced: Syne + DM Sans → Space Grotesk + Inter (locked permanently)
 ✅ ThemeContext pattern introduced and locked
 ✅ /components/home/SegregationToggle.tsx
 ✅ /components/home/MonthlyReviewLink.tsx
@@ -48,7 +60,7 @@ Before starting any session:
 ✅ /hooks/useColors.ts
 ✅ react-native-svg, expo-linear-gradient installed
 
-### Session 03 — Spend Screen
+### Session 03 — Spend Screen (Complete)
 ✅ /types/spend.ts
 ✅ /hooks/useDataSources.ts
 ✅ /components/shared/DataSourceSheet.tsx
@@ -69,24 +81,44 @@ Before starting any session:
 
 Key commit: c68d998 [SPEND-03] Spend components — final versions post-ThemeContext migration
 
+### Session 04 — Portfolio Screen (PORT-01 complete)
+✅ /types/portfolio.ts — two-layer type system + DEFAULT_BUCKET map
+✅ /constants/mockData.ts — extended with MOCK_PORTFOLIO_HOLDINGS,
+   MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN
+✅ /components/portfolio/PortfolioTotalsCard.tsx
+✅ /app/(tabs)/portfolio.tsx — header consistent with Spend screen
+   (avatar + dots + plus buttons, clean background) + PortfolioTotalsCard
+
+PM decisions locked this session:
+- Two-layer type system: assetClass (display/grouping only) +
+  assetSubtype (drives ALL logic — buckets, lock rules, projections)
+- DEFAULT_BUCKET in /types/portfolio.ts is single source of truth
+  for bucket assignment. Never duplicated elsewhere.
+- BucketReassign entry point = HoldingDetailScreen only. No long-press on rows.
+- Relative imports only — @/ alias not used in this project.
+- MD files updated in planning chat, downloaded into repo.
+  Every commit = code + docs together.
+
 ---
 
-## CONFIRMED FILE TREE (as of Session 03 end)
+## CONFIRMED FILE TREE (as of Session 04 end)
 
 ```
 app/
   (tabs)/
     _layout.tsx
-    index.tsx          Home screen
-    spend.tsx          Spend screen
-    portfolio.tsx      Empty shell (Session 06)
-    insights.tsx       Empty shell (Session 07)
+    index.tsx          ✅ Home screen (complete)
+    spend.tsx          ✅ Spend screen (complete)
+    portfolio.tsx      🔄 In progress — header + PortfolioTotalsCard
+    insights.tsx       ⬜ Empty shell
   _layout.tsx
   spend/
-    [category].tsx     Spend category detail
+    [category].tsx     ✅ Spend category detail
+  portfolio/
+    [holdingId].tsx    ⬜ PORT-10
 
 components/
-  home/
+  home/                ✅ All complete
     FIREProgress.tsx
     HomeHeader.tsx
     MarketsStrip.tsx
@@ -96,14 +128,14 @@ components/
     SegregationToggle.tsx
     SpendSnapshot.tsx
     SpendStoryCard.tsx
-  shared/
+  shared/              ✅ All complete
     AppHeader.tsx
     DataSourceSheet.tsx
     EmptyState.tsx
-    KasheAsterisk.tsx
+    KasheAsterisk.tsx  ⚠️ k-stroke needs more prominence (fix Session 09)
     MacronRule.tsx
     RedactedNumber.tsx
-  spend/
+  spend/               ✅ All complete
     BulkTagSheet.tsx
     CategoryIcon.tsx
     SpendBudgetSheet.tsx
@@ -116,26 +148,37 @@ components/
     SpendTransactionRow.tsx
     TagFilterPills.tsx
     TransactionEditSheet.tsx
-  ui/
+  portfolio/
+    PortfolioTotalsCard.tsx    ✅ PORT-01
+    PortfolioSectionHeader.tsx ⬜ PORT-02
+    PortfolioHoldingRow.tsx    ⬜ PORT-03/04/05
+    PortfolioInsightStrip.tsx  ⬜ PORT-06
+    InvestmentPlanCard.tsx     ⬜ PORT-07
+    InstrumentSuggestionSheet.tsx ⬜ PORT-08
+    BucketReassignSheet.tsx    ⬜ PORT-09
+    LockedProjectionCard.tsx   ⬜ PORT-10
+    ProtectionStatusCard.tsx   ⬜ PORT-10
+  ui/                  ✅ All complete
     Button.tsx
     Card.tsx
     Typography.tsx
 
 constants/
-  colours.ts
-  mockData.ts
-  spacing.ts
-  typography.ts
+  colours.ts     ✅
+  mockData.ts    ✅ Includes portfolio mock data
+  spacing.ts     ✅
+  typography.ts  ✅
 
 context/
-  ThemeContext.tsx
+  ThemeContext.tsx  ✅
 
 hooks/
-  useColors.ts
-  useDataSources.ts
+  useColors.ts      ✅
+  useDataSources.ts ✅
 
 types/
-  spend.ts
+  spend.ts          ✅
+  portfolio.ts      ✅ Two-layer type system, DEFAULT_BUCKET
 
 docs/
   skills/
@@ -149,20 +192,25 @@ docs/
 
 ---
 
-## LOCKED ARCHITECTURE PRINCIPLE (March 2026)
+## LOCKED ARCHITECTURE PRINCIPLES
 
-**ThemeContext Pattern — Non-Negotiable**
-
-Every new component, screen, or service must follow this:
+### ThemeContext Pattern — Non-Negotiable
 - `useColorScheme()` called ONLY in `context/ThemeContext.tsx`
 - Raw hex values ONLY in `constants/colours.ts`
-- Every component calls `useTheme()` — no exceptions
-- No inline colour decisions
-- No `Colors.dark.X` access
-- No hardcoded hex in components
+- Every component calls `const theme = useTheme()` — no exceptions
+  Note: useTheme() returns the theme object DIRECTLY.
+  Correct:  const theme = useTheme()
+  WRONG:    const { theme } = useTheme()
+- No inline colour decisions. No Colors.dark.X. No hardcoded hex.
 
-This rule applies to ALL future sessions: Portfolio, Insights,
-FIRE, Onboarding, Settings.
+### Import Paths
+- Relative imports only. The @/ alias is NOT used in this project.
+- Check how spend.tsx imports ThemeContext and copy that pattern.
+
+### Export Pattern
+- All components use DEFAULT exports.
+  Correct:  export default function MyComponent
+  WRONG:    export function MyComponent
 
 ---
 
@@ -197,6 +245,18 @@ EXCEPTIONS:
   InsightsEmptyInsightState: clean quiet card, no ghost
   FIRE planner not set up: clean prompt card, one input shown
 
+### Portfolio Type System (March 2026 — LOCKED)
+Two-layer model:
+  assetClass   — display and grouping ONLY
+  assetSubtype — drives ALL logic (bucket defaults, lock rules,
+                 projection rates, CSV parsers)
+DEFAULT_BUCKET in /types/portfolio.ts is the single source of truth.
+Never duplicate this mapping. Both UI and services import from there.
+
+### BucketReassign Entry Point (March 2026 — LOCKED)
+Only accessible from HoldingDetailScreen [Reassign bucket] button.
+No long-press on holding rows.
+
 ### Onboarding (10 screens)
 Screen 2: "What's your name?" (not Household setup)
 Household created silently with one OWNER profile.
@@ -208,137 +268,84 @@ Screen 8: Budget Suggestion (conditional — only if upload succeeded).
 
 ## KNOWN OPEN ISSUES (log here, fix when scheduled)
 
-1. **Dutch brand names in mock data** — Fix before Session 06 starts.
+1. **Dutch brand names in mock data** — Fix before data layer session.
    Replace: Albert Heijn/Jumbo → "Supermarket",
    Thuisbezorgd → "Food Delivery App",
    Bol.com → "Online Store", NS/GVB → "Public Transport"
    File: /constants/mockData.ts
 
 2. **Category detail screen layout bug** — Large empty space between
-   month selector and tag pills. Fix in Session 09 (Polish).
+   month selector and tag pills. Fix in Settings + Polish session.
 
 3. **KasheAsterisk k-stroke** — Needs more visual prominence.
-   The acid green stroke is there but too subtle.
-   Fix in Session 08 (Onboarding/Polish).
+   Fix in Polish session.
+
+4. **Vertical MacronRule in PortfolioTotalsCard** — Currently a plain
+   View with theme.accent background instead of the MacronRule component.
+   Standardise in Polish session.
 
 ---
 
-## NEXT SESSION — Session 06: Portfolio Screen
+## NEXT — PORT-02: PortfolioSectionHeader
 
-### Before writing any code:
-1. Read this file
-2. Read /docs/skills/engineering-rules.md
-3. Read /docs/skills/design-system.md
-4. For PORT-07 (InvestmentPlanCard): also read /docs/skills/data-architecture.md
+File: /components/portfolio/PortfolioSectionHeader.tsx
+Spec: CLAUDE-experience.md → "Portfolio Screen — Full Spec" → Zone 3
 
-### Tickets in order:
 ```
-PORT-01  PortfolioTotalsCard
-         Live / Locked columns, MacronRule divider
-         Monthly delta (Live only), "Last refreshed X min ago"
+Props:
+  label: string          e.g. "GROWTH"
+  total: number
+  currency: string
+  isRedacted?: boolean
 
-PORT-02  PortfolioSectionHeader
-         GROWTH / STABILITY / LOCKED headers with section totals
-         MacronRule beneath each header
-         Empty bucket state: "No X holdings yet · [+ Add one]"
+Visual:
+  Section label: Inter 500, uppercase, letterSpacing 0.8, textSecondary
+  Section total: SpaceGrotesk_700Bold, right-aligned, textPrimary
+  MacronRule full-width beneath
+  isRedacted: total → RedactedNumber
 
+Empty bucket state (when no holdings in section):
+  "No Growth holdings yet"  Inter 400, textSecondary, small
+  "[+ Add one]" tappable    Inter 400, accent colour
+  → console.log for now
+```
+
+Before writing any code, read:
+1. This file (done)
+2. /docs/skills/engineering-rules.md
+3. /docs/skills/design-system.md
+
+---
+
+## REMAINING PORTFOLIO TICKETS
+
+```
+PORT-02  PortfolioSectionHeader          ← NEXT
 PORT-03  PortfolioHoldingRow — Live variant
-         Geography flag / name / value / bucket · geography / daily movement
-         Freshness dot (green/amber/red)
-         Tap → HoldingDetailScreen
-
 PORT-04  PortfolioHoldingRow — Locked variant
-         Lock icon / name / value / unlock date or "Outcome unknown"
-         No daily movement
-         Tap → HoldingDetailScreen
-
 PORT-05  PortfolioHoldingRow — Protection variant
-         Shield icon / name / value / "X months covered"
-         Accent if ≥3 months, warning if <3 months
-         Tap → HoldingDetailScreen
-
 PORT-06  PortfolioInsightStrip
-         Same visual pattern as SpendInsightStrip
-         Conditional — never a permanent fixture
-         Salary slip prompt (one-time, before any AI insight)
-         Dismiss: swipe left or ×, 24 hours
-
 PORT-07  InvestmentPlanCard (collapsed + expanded)
-         Collapsed: progress bar if target set, "Set a target" if not
-         Expanded: monthly target field, salary contributions,
-         remaining to allocate, allocation suggestion rows, gap analysis
-         SalaryContributionRow + AllocationSuggestionRow sub-components
-
 PORT-08  InstrumentSuggestionSheet
-         Static curated list (not dynamic, not AI-generated)
-         India + Europe grouped by geography
-         Educational framing, "worth exploring" language
-         Permanent disclaimer, no affiliate links
-
 PORT-09  BucketReassignSheet
-         3-option radio: Growth / Stability / Locked
-         System reasoning shown above options (dim, small)
-         Confirming triggers insight cache invalidation
-
 PORT-10  /app/portfolio/[holdingId].tsx
-         Live variant: hero value, daily change, details, actions
-         Locked variant: adds LockedProjectionCard + unlock info
-         Protection variant: adds ProtectionStatusCard
-         [Edit holding] / [Reassign bucket] / [Remove holding]
-
 PORT-11  Portfolio empty state
-         Uses EmptyState component (already built)
-         Mock: VWRL, Infosys, Parag Parikh MF (Growth)
-               NRE/NRO savings, current account (Stability)
-               PPF, Crowdcube investment (Locked)
-         Headline: "See your full financial picture"
-         CTA: [+ Add your first holding]
-         Secondary: "Upload a portfolio CSV instead"
 ```
 
-### File outputs for Session 06:
-```
-/types/asset.ts           NEW — Asset, AssetType, PortfolioBucket
-/types/liability.ts       NEW — Liability, LiabilityType
-/components/portfolio/
-  PortfolioTotalsCard.tsx
-  PortfolioSectionHeader.tsx
-  PortfolioHoldingRow.tsx  (handles all 3 variants via prop)
-  PortfolioInsightStrip.tsx
-  InvestmentPlanCard.tsx
-  InvestmentPlanExpanded.tsx
-  SalaryContributionRow.tsx
-  AllocationSuggestionRow.tsx
-  InstrumentSuggestionSheet.tsx
-  BucketReassignSheet.tsx
-  LockedProjectionCard.tsx
-  ProtectionStatusCard.tsx
-/app/(tabs)/portfolio.tsx  (full screen, mock data)
-/app/portfolio/[holdingId].tsx
-/constants/mockData.ts     (update: add portfolio mock data)
-```
+Full spec for all tickets: CLAUDE-experience.md → "Portfolio Screen — Full Spec"
 
 ---
 
 ## FULL REMAINING SESSION ORDER
 
 ```
-Session 06  Portfolio Screen (current — PORT-01 to PORT-11)
-Session 07  Insights Screen + FIRE Planner (INS-01 to INS-10)
-Session 08  Data Layer — services, stores, hooks (no UI)
-Session 09  Wire UI to Data Layer + fix KasheAsterisk k-stroke
-Session 10  Onboarding Stack (10 screens + UniversalAddSheet)
-Session 11  Settings + Polish
-            - /app/settings/index.tsx
-            - Fix layout bugs (category detail empty space)
-            - Notification dot logic on [+] button
-            - Profile switcher sheet
-            - Post-upload confirmation toast
-Session 12  QA + Native Build Prep
-            - Add react-native-reanimated back for native
-            - Test on real iPhone (EAS build or Xcode)
-            - Fix web vs native rendering differences
-            - Full spec compliance review
+Session 04 (cont.) — PORT-02 to PORT-11
+Session 05  Insights Screen + FIRE Planner (INS-01 to INS-10)
+Session 06  Data Layer — services, stores, hooks (no UI)
+Session 07  Wire UI to Data Layer
+Session 08  Onboarding Stack (10 screens + UniversalAddSheet)
+Session 09  Settings + Polish
+Session 10  QA + Native Build Prep
 ```
 
 ---
@@ -346,25 +353,26 @@ Session 12  QA + Native Build Prep
 ## CRITICAL RULES — QUICK REFERENCE
 
 1. `--legacy-peer-deps` on every npm install. No exceptions.
-2. Never use react-native-reanimated until Session 12.
-   Use React Native's Animated API for all animations.
-3. Never hardcode a colour. Tokens from colours.ts + useTheme() only.
-4. Every component handles dark AND light mode.
-5. Every screen has an empty state.
-6. Never show a financial number as zero. Redact instead.
-7. "Your Position" not "Net Worth." Everywhere.
-8. No new dependencies without PM approval.
-9. TypeScript strict. Zero `any` types.
-10. investment_transfer is NOT spend. Excluded from totals/savings rate.
-11. Physical assets (car, art, jewellery) — NEVER build.
-12. [V2] and [NEVER] tags — skip entirely.
-13. Commit after every ticket. Preview before committing.
-14. Space Grotesk for numbers/display. Inter for all body/UI text.
-    Never Syne or DM Sans.
-15. Hero card ALWAYS dark — both light and dark mode.
-16. Directional KasheAsterisk replaces ↑↓ arrows everywhere.
-17. Empty state = redacted ghost + floating pill. Not blurred overlay.
-18. ThemeContext pattern — useTheme() in every component, no exceptions.
+2. Never use react-native-reanimated. Animated API only.
+3. Never hardcode a colour. useTheme() only.
+4. const theme = useTheme() — NOT const { theme } = useTheme()
+5. Default exports everywhere.
+6. Relative imports everywhere. No @/ alias.
+7. Every component: dark AND light mode.
+8. Every screen: empty state.
+9. Never show a financial number as zero. Redact instead.
+10. "Your Position" not "Net Worth." Everywhere.
+11. No new dependencies without PM approval.
+12. TypeScript strict. Zero `any` types.
+13. investment_transfer is NOT spend. Excluded from totals/savings rate.
+14. Physical assets — NEVER build.
+15. [V2] and [NEVER] tags — skip entirely.
+16. Commit after every ticket. Preview before committing.
+17. Space Grotesk for numbers/display. Inter for body/UI. Never Syne/DM Sans.
+18. Hero card ALWAYS dark — both modes.
+19. Directional KasheAsterisk replaces ↑↓ arrows everywhere.
+20. Empty state = redacted ghost + floating pill. NOT blurred overlay.
+21. Every commit = code + updated MD files together.
 
 ---
 
@@ -374,6 +382,6 @@ Session 12  QA + Native Build Prep
 engineering-rules.md    Read before EVERY session
 design-system.md        Read before any UI work
 data-architecture.md    Read before PORT-07 and all data layer work
-ai-insights.md          Read before Session 07 (Insights)
+ai-insights.md          Read before Insights session
 freemium-boundaries.md  Reference for feature flag decisions
 ```
