@@ -240,6 +240,30 @@ Category icon container:
 SpendHeroCard month selector:
   Lives INSIDE the hero card — not in SpendScreenHeader
   SpendScreenHeader contains only: AppHeader row + (nothing else)
+
+PortfolioHoldingRow — SVG ICON SYSTEM (LOCKED March 2026):
+  NO emoji flags. NO text codes. NO icon container boxes.
+  SVG stroke-only icons rendered directly — same pattern as CategoryIcon.
+  All strokes: colours.textSecondary, strokeWidth 1.6, fill "none"
+  Icon size: 22 × 22, viewBox "0 0 24 24"
+
+  LIVE variant — India geography (rupee symbol):
+    Line x1="5" y1="6"  x2="19" y2="6"   (top horizontal)
+    Line x1="5" y1="11" x2="19" y2="11"  (middle horizontal)
+    Line x1="5" y1="6"  x2="5"  y2="20"  (left vertical)
+    Line x1="5" y1="11" x2="15" y2="20"  (diagonal descent)
+
+  LIVE variant — Europe/US/Global geography (trend line):
+    Polyline points="3,18 8,12 13,15 21,6"
+    Circle cx="21" cy="6" r="2" fill={colour}
+
+  LOCKED variant (padlock):
+    Rect x="5" y="11" width="14" height="10" rx="2"
+    Path d="M8 11V7a4 4 0 0 1 8 0v4"
+
+  PROTECTION variant (shield + check):
+    Path d="M12 2 L19 5 L19 12 Q19 17 12 21 Q5 17 5 12 L5 5 Z"
+    Polyline points="9,12 11,14 15,10"
 ```
 
 ---
@@ -267,7 +291,7 @@ All animations use React Native's built-in `Animated` API.
 
 ```
 Drag handle: top centre, 4px height, 40px width, borderRadius 2,
-             background: colors.border
+             background: theme.border
 Dark scrim behind sheet when open
 Dismiss on scrim tap
 [Cancel] always available as text link at bottom
@@ -288,4 +312,4 @@ Priority: Red takes over Amber — only one dot shown at a time
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 10 March 2026*
+*Last updated: 11 March 2026*

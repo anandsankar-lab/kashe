@@ -1,6 +1,6 @@
 # Kāshe — CLAUDE-state.md
 *Current build state. Read this before any new session.*
-*Last updated: 10 March 2026*
+*Last updated: 11 March 2026*
 
 ---
 
@@ -81,13 +81,22 @@ into the repo. Every commit includes code + updated MD files together.
 
 Key commit: c68d998 [SPEND-03] Spend components — final versions post-ThemeContext migration
 
-### Session 04 — Portfolio Screen (PORT-01 complete)
+### Session 04 — Portfolio Screen (PORT-01 through PORT-03 complete)
 ✅ /types/portfolio.ts — two-layer type system + DEFAULT_BUCKET map
 ✅ /constants/mockData.ts — extended with MOCK_PORTFOLIO_HOLDINGS,
    MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN
-✅ /components/portfolio/PortfolioTotalsCard.tsx
-✅ /app/(tabs)/portfolio.tsx — header consistent with Spend screen
-   (avatar + dots + plus buttons, clean background) + PortfolioTotalsCard
+✅ /components/portfolio/PortfolioTotalsCard.tsx — PORT-01
+✅ /components/portfolio/PortfolioSectionHeader.tsx — PORT-02
+   label, total, MacronRule divider, empty bucket state ("[+ Add one]")
+✅ /components/portfolio/PortfolioHoldingRow.tsx — PORT-03/04/05
+   Three variants: live / locked / protection
+   SVG icons: rupee (India), trend line (Europe/Global),
+   padlock (locked), shield+check (protection)
+   Allocation bar animated on mount (600ms ease-out)
+   Freshness dot, KasheAsterisk movement direction,
+   assetType · geography sub-label
+✅ /app/(tabs)/portfolio.tsx — header + TotalsCard + SectionHeaders
+   + HoldingRows wired with mock data
 
 PM decisions locked this session:
 - Two-layer type system: assetClass (display/grouping only) +
@@ -96,12 +105,19 @@ PM decisions locked this session:
   for bucket assignment. Never duplicated elsewhere.
 - BucketReassign entry point = HoldingDetailScreen only. No long-press on rows.
 - Relative imports only — @/ alias not used in this project.
+- colours.* for static colour values; theme.* for surface/border/background only.
+  (Same pattern as SpendCategoryRow — locked for all portfolio components.)
+- StyleSheet.create() for all styles — no inline style objects in components.
+- HoldingRow icons: SVG stroke-only, no icon container box, no emoji,
+  direct render matching CategoryIcon pattern exactly.
+- PortfolioHoldingRow assetType prop carries display label
+  (e.g. "Mutual Fund", "ETF", "Cash") — separate from geography.
 - MD files updated in planning chat, downloaded into repo.
   Every commit = code + docs together.
 
 ---
 
-## CONFIRMED FILE TREE (as of Session 04 end)
+## CONFIRMED FILE TREE (as of Session 04, PORT-03 complete)
 
 ```
 app/
@@ -109,7 +125,7 @@ app/
     _layout.tsx
     index.tsx          ✅ Home screen (complete)
     spend.tsx          ✅ Spend screen (complete)
-    portfolio.tsx      🔄 In progress — header + PortfolioTotalsCard
+    portfolio.tsx      🔄 In progress — PORT-01/02/03 wired
     insights.tsx       ⬜ Empty shell
   _layout.tsx
   spend/
@@ -149,15 +165,15 @@ components/
     TagFilterPills.tsx
     TransactionEditSheet.tsx
   portfolio/
-    PortfolioTotalsCard.tsx    ✅ PORT-01
-    PortfolioSectionHeader.tsx ⬜ PORT-02
-    PortfolioHoldingRow.tsx    ⬜ PORT-03/04/05
-    PortfolioInsightStrip.tsx  ⬜ PORT-06
-    InvestmentPlanCard.tsx     ⬜ PORT-07
-    InstrumentSuggestionSheet.tsx ⬜ PORT-08
-    BucketReassignSheet.tsx    ⬜ PORT-09
-    LockedProjectionCard.tsx   ⬜ PORT-10
-    ProtectionStatusCard.tsx   ⬜ PORT-10
+    PortfolioTotalsCard.tsx        ✅ PORT-01
+    PortfolioSectionHeader.tsx     ✅ PORT-02
+    PortfolioHoldingRow.tsx        ✅ PORT-03/04/05
+    PortfolioInsightStrip.tsx      ⬜ PORT-06
+    InvestmentPlanCard.tsx         ⬜ PORT-07
+    InstrumentSuggestionSheet.tsx  ⬜ PORT-08
+    BucketReassignSheet.tsx        ⬜ PORT-09
+    LockedProjectionCard.tsx       ⬜ PORT-10
+    ProtectionStatusCard.tsx       ⬜ PORT-10
   ui/                  ✅ All complete
     Button.tsx
     Card.tsx
@@ -201,6 +217,9 @@ docs/
   Note: useTheme() returns the theme object DIRECTLY.
   Correct:  const theme = useTheme()
   WRONG:    const { theme } = useTheme()
+- theme.* used ONLY for dynamic surface/border/background values
+- colours.* used for static colour values (textPrimary, textSecondary, accent etc)
+  This is the SpendCategoryRow pattern — all portfolio components follow it.
 - No inline colour decisions. No Colors.dark.X. No hardcoded hex.
 
 ### Import Paths
@@ -211,6 +230,10 @@ docs/
 - All components use DEFAULT exports.
   Correct:  export default function MyComponent
   WRONG:    export function MyComponent
+
+### Styling Pattern
+- StyleSheet.create() for all styles — no inline style objects in components.
+  This is the SpendCategoryRow pattern — locked for all portfolio components.
 
 ---
 
@@ -257,6 +280,15 @@ Never duplicate this mapping. Both UI and services import from there.
 Only accessible from HoldingDetailScreen [Reassign bucket] button.
 No long-press on holding rows.
 
+### PortfolioHoldingRow Icon System (March 2026 — LOCKED)
+SVG stroke-only icons. No icon container box. No emoji. No text codes.
+Direct render — same pattern as CategoryIcon in SpendCategoryRow.
+  India geography (live)    → rupee symbol SVG
+  Europe/US/Global (live)   → trend line SVG
+  locked variant            → padlock SVG
+  protection variant        → shield + checkmark SVG
+All strokes: colours.textSecondary, strokeWidth 1.6, fill none.
+
 ### Onboarding (10 screens)
 Screen 2: "What's your name?" (not Household setup)
 Household created silently with one OWNER profile.
@@ -286,45 +318,35 @@ Screen 8: Budget Suggestion (conditional — only if upload succeeded).
 
 ---
 
-## NEXT — PORT-02: PortfolioSectionHeader
+## NEXT — PORT-06: PortfolioInsightStrip
 
-File: /components/portfolio/PortfolioSectionHeader.tsx
-Spec: CLAUDE-experience.md → "Portfolio Screen — Full Spec" → Zone 3
+File: /components/portfolio/PortfolioInsightStrip.tsx
+Spec: CLAUDE-experience.md → "Portfolio Screen — Full Spec" → Zone 2
 
-```
-Props:
-  label: string          e.g. "GROWTH"
-  total: number
-  currency: string
-  isRedacted?: boolean
+Same visual pattern as SpendInsightStrip.
+Conditional — only renders when AI has something worth saying.
+Read SpendInsightStrip.tsx before writing any code.
 
-Visual:
-  Section label: Inter 500, uppercase, letterSpacing 0.8, textSecondary
-  Section total: SpaceGrotesk_700Bold, right-aligned, textPrimary
-  MacronRule full-width beneath
-  isRedacted: total → RedactedNumber
-
-Empty bucket state (when no holdings in section):
-  "No Growth holdings yet"  Inter 400, textSecondary, small
-  "[+ Add one]" tappable    Inter 400, accent colour
-  → console.log for now
-```
+Key points from spec:
+- KasheAsterisk (small, static) + insight type label (MARKET EVENT etc)
+- Headline max 10 words, body max 40 words
+- Source citation line (MARKET_EVENT only): "via Reuters · 3 hours ago"
+- Forum signal line (MARKET_EVENT only, when divergence meaningful)
+- Dismiss: swipe left or tap × → hidden 24 hours
+- Tap → InsightDetailSheet (shared component, build shell only for now)
+- Confidence indicator: LOW only (dim note), MEDIUM/HIGH clean
 
 Before writing any code, read:
 1. This file (done)
-2. /docs/skills/engineering-rules.md
-3. /docs/skills/design-system.md
+2. components/spend/SpendInsightStrip.tsx  ← primary reference
+3. CLAUDE-experience.md → Zone 2 Portfolio Insight Strip spec
 
 ---
 
 ## REMAINING PORTFOLIO TICKETS
 
 ```
-PORT-02  PortfolioSectionHeader          ← NEXT
-PORT-03  PortfolioHoldingRow — Live variant
-PORT-04  PortfolioHoldingRow — Locked variant
-PORT-05  PortfolioHoldingRow — Protection variant
-PORT-06  PortfolioInsightStrip
+PORT-06  PortfolioInsightStrip          ← NEXT
 PORT-07  InvestmentPlanCard (collapsed + expanded)
 PORT-08  InstrumentSuggestionSheet
 PORT-09  BucketReassignSheet
@@ -339,7 +361,7 @@ Full spec for all tickets: CLAUDE-experience.md → "Portfolio Screen — Full S
 ## FULL REMAINING SESSION ORDER
 
 ```
-Session 04 (cont.) — PORT-02 to PORT-11
+Session 04 (cont.) — PORT-06 to PORT-11
 Session 05  Insights Screen + FIRE Planner (INS-01 to INS-10)
 Session 06  Data Layer — services, stores, hooks (no UI)
 Session 07  Wire UI to Data Layer
@@ -354,25 +376,29 @@ Session 10  QA + Native Build Prep
 
 1. `--legacy-peer-deps` on every npm install. No exceptions.
 2. Never use react-native-reanimated. Animated API only.
-3. Never hardcode a colour. useTheme() only.
+3. Never hardcode a colour. useTheme() + colours.* only.
 4. const theme = useTheme() — NOT const { theme } = useTheme()
-5. Default exports everywhere.
-6. Relative imports everywhere. No @/ alias.
-7. Every component: dark AND light mode.
-8. Every screen: empty state.
-9. Never show a financial number as zero. Redact instead.
-10. "Your Position" not "Net Worth." Everywhere.
-11. No new dependencies without PM approval.
-12. TypeScript strict. Zero `any` types.
-13. investment_transfer is NOT spend. Excluded from totals/savings rate.
-14. Physical assets — NEVER build.
-15. [V2] and [NEVER] tags — skip entirely.
-16. Commit after every ticket. Preview before committing.
-17. Space Grotesk for numbers/display. Inter for body/UI. Never Syne/DM Sans.
-18. Hero card ALWAYS dark — both modes.
-19. Directional KasheAsterisk replaces ↑↓ arrows everywhere.
-20. Empty state = redacted ghost + floating pill. NOT blurred overlay.
-21. Every commit = code + updated MD files together.
+5. theme.* for surface/border/background. colours.* for everything else.
+6. Default exports everywhere.
+7. Relative imports everywhere. No @/ alias.
+8. StyleSheet.create() for all styles — no inline style objects.
+9. Every component: dark AND light mode.
+10. Every screen: empty state.
+11. Never show a financial number as zero. Redact instead.
+12. "Your Position" not "Net Worth." Everywhere.
+13. No new dependencies without PM approval.
+14. TypeScript strict. Zero `any` types.
+15. investment_transfer is NOT spend. Excluded from totals/savings rate.
+16. Physical assets — NEVER build.
+17. [V2] and [NEVER] tags — skip entirely.
+18. Commit after every ticket. Preview before committing.
+19. Space Grotesk for numbers/display. Inter for body/UI. Never Syne/DM Sans.
+20. Hero card ALWAYS dark — both modes.
+21. Directional KasheAsterisk replaces ↑↓ arrows everywhere.
+22. Empty state = redacted ghost + floating pill. NOT blurred overlay.
+23. Every commit = code + updated MD files together.
+24. Read the existing working component BEFORE building its portfolio equivalent.
+    (SpendInsightStrip → PortfolioInsightStrip, etc.)
 
 ---
 

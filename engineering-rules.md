@@ -77,16 +77,23 @@ This is the ThemeContext rule. It is non-negotiable.
 backgroundColor: '#C8F04A'
 color: '#FF5C5C'
 borderColor: Colors.dark.border
+const { theme } = useTheme()    // WRONG — useTheme() returns theme DIRECTLY
 
 // RIGHT — always do this
-const { colors } = useTheme()
-backgroundColor: colors.accent
-color: colors.danger
-borderColor: colors.border
+const theme = useTheme()        // returns the theme object directly
+backgroundColor: theme.accent   // theme.* for surface/border/background
+color: colours.danger           // colours.* for static tokens (textPrimary,
+borderColor: theme.border       //   textSecondary, accent, danger, warning)
+                                // import colours from '../../constants/colours'
 ```
 
 `useColorScheme()` is called ONLY in `context/ThemeContext.tsx`.
 Every other file in the entire codebase calls `useTheme()` instead.
+`useTheme()` returns the theme object DIRECTLY — never destructure it.
+`theme.*` is used for dynamic surface/border/background values.
+`colours.*` (imported from constants/colours.ts) is used for static
+colour values that don't change with mode (textPrimary, accent, danger, etc).
+This pattern is locked and visible in SpendCategoryRow.tsx.
 This rule applies to every component, every screen, every hook.
 
 ---
@@ -165,4 +172,4 @@ These are permanent. Do not ask. Do not suggest workarounds.
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 10 March 2026*
+*Last updated: 11 March 2026*

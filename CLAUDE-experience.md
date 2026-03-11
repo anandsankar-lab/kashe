@@ -1,7 +1,7 @@
 # Kāshe — CLAUDE-experience.md
 *Team Member 2: Experience & Delight*
 *Read CLAUDE.md first, then this file.*
-*Last updated: March 2026 — Insights screen + FIRE planner spec added*
+*Last updated: 11 March 2026 — font refs corrected (Syne/DM Sans → SpaceGrotesk/Inter), PortfolioHoldingRow icon system locked (SVG, no emoji), Zone 4 spec updated*
 
 ---
 
@@ -224,7 +224,7 @@ LAYOUT (top to bottom):
 
 [Position Hero Card]
   "Your Position" label (label style, uppercase)
-  Large number in display font (Syne 800)
+  Large number in display font (SpaceGrotesk 700)
   Monthly delta + YTD delta (secondary text)
   ā macron rule (1px acid green divider)
   Expandable breakdown (collapsed by default):
@@ -293,7 +293,7 @@ LAYOUT (top to bottom):
 [Monthly Review Ready] ← conditional
   Only shown when a new monthly review is available
   "Your March review is ready →"
-  Accent colour, DM Sans medium
+  Accent colour, Inter 500
   Tap → Insights tab, MonthlyReviewSheet opens immediately
   Hidden once user has viewed the review
 
@@ -359,13 +359,13 @@ LAYOUT (top to bottom):
     Can navigate back up to 12 months of history
     Partial months shown as-is (no warning needed)
 
-  Net spend number (large, Syne 800)
+  Net spend number (large, SpaceGrotesk 700)
     Total debits for selected month, base currency
     investment_transfer and transfer EXCLUDED
     Multi-currency: base total shown
                     dim note beneath: "inc. amounts converted from INR"
 
-  Context line (DM Sans, textSecondary)
+  Context line (Inter 400, textSecondary)
     "↑ 12% vs last month  ·  ↑ 8% vs 3-month avg"
     Uses ↑ / ↓ text indicators only — no red/green colouring here
     Colours: textPrimary, textSecondary, textDim, accent only
@@ -393,8 +393,8 @@ LAYOUT (top to bottom):
 
   Each SpendCategoryRow:
     Category icon (left)
-    Category name (DM Sans medium)
-    Amount in base currency (Syne, right-aligned)
+    Category name (Inter 500)
+    Amount in base currency (SpaceGrotesk 700, right-aligned)
     Thin proportion bar beneath row:
       No budget set:        accent green, width = % of total spend
       Under budget:         accent green fill
@@ -437,9 +437,9 @@ LAYOUT:
   Tap subcategory → expands inline to show transactions
 
 TRANSACTION ROW (SpendTransactionRow):
-  Date        DM Sans, textSecondary, short format ("12 Jan")
-  Merchant    DM Sans medium, textPrimary
-  Amount      Syne, right-aligned, textPrimary
+  Date        Inter 400, textSecondary, short format ("12 Jan")
+  Merchant    Inter 500, textPrimary
+  Amount      SpaceGrotesk 700, right-aligned, textPrimary
   Category chip  small pill, textDim background
   Tap → TransactionEditSheet
 
@@ -468,7 +468,7 @@ LAYOUT (bottom sheet, scrollable):
 
   One row per spend category:
     Category icon + name (left)
-    Editable amount field (right, Syne font)
+    Editable amount field (right, SpaceGrotesk font)
     Clear button (×) to remove budget for that category
 
   Total row (bottom of list, above actions):
@@ -497,8 +497,8 @@ LAYOUT (bottom sheet):
   Kāshe asterisk (small, static)
   Insight type label (label style, textDim, uppercase)
     e.g. "MARKET EVENT" / "PORTFOLIO HEALTH" / "SPEND ANOMALY"
-  Insight headline (Syne, heading size)
-  Full insight body (DM Sans, up to 80 words)
+  Insight headline (SpaceGrotesk 700, heading size)
+  Full insight body (Inter 400, up to 80 words)
   Data points that triggered it (dim, small text)
     e.g. "Eating out: €340 this month vs €160 average"
   Source citation (MARKET_EVENT only)
@@ -601,7 +601,7 @@ ZONE 4 — HOLDINGS LIST          scrollable
 
 ```
 HEADER ROW
-  Left:  "Portfolio" (Syne 700, heading style)
+  Left:  "Portfolio" (SpaceGrotesk 700, heading style)
   Right: [+] button with notification dot
 
 COMPONENT: PortfolioTotalsCard
@@ -610,22 +610,22 @@ COMPONENT: PortfolioTotalsCard
 
   Live                      Locked
   €312,400                 €48,200
-  Syne 800, textPrimary    Syne 800, textPrimary
+  SpaceGrotesk 700, textPrimary    SpaceGrotesk 700, textPrimary
 
   ā macron rule between columns — meaningful divider ✓
 
   Combined dim total beneath:
   "€360,600 across all holdings"
-  DM Sans, textSecondary, small
+  Inter 400, textSecondary, small
 
   Monthly delta (live holdings only):
   "↑ €2,340 this month"
-  textSecondary, DM Sans
+  textSecondary, Inter 400
   No delta shown for Locked — stale values, no meaning
 
   Last refreshed:
   "Prices updated 4 min ago"
-  textDim, DM Sans, bottom of card
+  textDim, Inter 400, bottom of card
 ```
 
 ### Zone 2 — AI Insight Strip
@@ -685,9 +685,9 @@ COMPONENT: InvestmentPlanCard
 COMPONENT: InvestmentPlanExpanded
 
 COLLAPSED — no target set:
-  "Monthly investment plan"   DM Sans medium, textPrimary
+  "Monthly investment plan"   Inter 500, textPrimary
   "Set a target to get personalised guidance →"
-                              DM Sans, accent colour
+                              Inter 400, accent colour
   Chevron right
   Tap → expands inline
 
@@ -701,7 +701,7 @@ EXPANDED STATE:
 
   Monthly target field:
     Label: "Monthly target"
-    Editable number field, Syne font, large
+    Editable number field, SpaceGrotesk font, large
     Currency: base currency symbol prefix
 
   Salary-detected contributions (if salary slip uploaded):
@@ -714,7 +714,7 @@ EXPANDED STATE:
       Bucket pill: LOCKED (always — pension/EPF are locked)
 
     "Remaining to actively allocate: €920/month"
-    textPrimary, Syne 800
+    textPrimary, SpaceGrotesk 700
     ā macron rule beneath
 
   Suggested allocation breakdown:
@@ -788,7 +788,7 @@ LAYOUT (bottom sheet, scrollable):
     "These are educational suggestions, not financial advice.
      Kāshe earns nothing from these links.
      Always do your own research."
-    DM Sans, textDim, small
+    Inter 400, textDim, small
 
 RULES:
   No affiliate links. Ever.
@@ -805,54 +805,58 @@ Fixed section order: Growth → Stability → Locked
 Within each section: sorted by value descending
 
 COMPONENT: PortfolioSectionHeader
-  Section name (DM Sans 500, label style, uppercase)
-  Section total (Syne 800, right-aligned)
+  Section name (Inter 500, label style, uppercase, letterSpacing +0.8)
+  Section total (SpaceGrotesk 700, right-aligned)
   ā macron rule beneath — meaningful divider ✓
 
   GROWTH                    €198,400
 
   Empty bucket state (gentle, not full empty state):
     "No {bucket} holdings yet"
-    "[+ Add one]" textSecondary, small, tappable
+    "[+ Add one]" accent colour, small, tappable
     → Universal Add Sheet
 
 COMPONENT: PortfolioHoldingRow — LIVE variant
-  [🇮🇳/🇪🇺/🌍]  Holding name          €3,240
-                GROWTH · India        ↑ 2.3%
-                [freshness dot]
+  [rupee SVG / trend SVG]  Holding name          €54,200
+                           Mutual Fund · India   * 2.3%
+                           [freshness dot]
 
-  Geography flag: emoji flag, left
-  Holding name: DM Sans medium, textPrimary
-  Value: Syne 800, right-aligned, textPrimary
-  Bucket · Geography: DM Sans, textSecondary, small
-  Daily movement: ↑/↓ %, textSecondary
+  Left icon: SVG stroke-only, 22×22, no container box
+    India geography  → rupee symbol SVG
+    Europe/US/Global → trend line SVG + circle
+    See design-system.md → "PortfolioHoldingRow SVG ICON SYSTEM" for paths
+  Holding name: Inter 500Medium, textPrimary, fontSize 15
+  Value: SpaceGrotesk 600SemiBold, right-aligned, textPrimary
+  assetType · geography: Inter 400, textSecondary, small
+    e.g. "Mutual Fund · India", "ETF · Europe"
+  Daily movement: KasheAsterisk direction + % change
     Accent/success for positive
     Danger for negative
-    Dim for flat
-  Freshness dot: 6px circle, left of value
-    Green: updated today
+    Dim for flat (dailyChangePercent === 0 or undefined)
+  Freshness dot: 6px circle, positioned left of value
+    Green: updated today (fresh)
     Amber: 7–30 days stale
-    Red: >30 days stale
+    Red: >30 days stale (stale)
   Tap → HoldingDetailScreen
 
 COMPONENT: PortfolioHoldingRow — LOCKED variant
-  [🔒]  PPF                    ₹4,20,000
-        LOCKED · India         Unlocks Mar 2031
-        [freshness dot]
+  [padlock SVG]  PPF                     ₹4,20,000
+                 Provident Fund · India  Unlocks Mar 2031
+                 [freshness dot]
 
-  Lock icon replaces geography flag
+  Padlock SVG icon — see design-system.md for path
   No daily movement (no live price)
-  Unlock date in textDim if known
-  "Outcome unknown" in textDim for Crowdcube/angel
+  Unlock date shown in textDim if known
+  "Outcome unknown" in textDim for alternative_general holdings
   Tap → HoldingDetailScreen
 
 COMPONENT: PortfolioHoldingRow — PROTECTION variant
-  [🛡️]  ABN Amro Current      €8,400
-        PROTECTION · Europe    2.8 months covered
-        [freshness dot]
+  [shield+check SVG]  Current Account      €8,400
+                      Cash · Europe        2.8 months covered
+                      [freshness dot]
 
-  Shield icon replaces geography flag
-  "X months covered" = holding value ÷ avg monthly spend
+  Shield + check SVG icon — see design-system.md for path
+  "X.X months covered" = holding value ÷ avg monthly spend
   Accent colour if ≥3 months
   Warning colour if <3 months
   Tap → HoldingDetailScreen
@@ -900,7 +904,7 @@ LIVE HOLDING:
     Geography flag
 
   HERO:
-    Current value (Syne 800, large, textPrimary)
+    Current value (SpaceGrotesk 700, large, textPrimary)
     Daily change ↑↓ amount + percentage
     "X% of live portfolio" (textSecondary, small)
 
@@ -928,14 +932,14 @@ LOCKED HOLDING (additional fields):
     Crowdcube/angel: "Locked — exit event required"
 
   Unlock date (prominent if known):
-    Syne 700, textPrimary
+    SpaceGrotesk 700, textPrimary
     "Unlocks March 2031"
 
   COMPONENT: LockedProjectionCard (if unlock date known):
     "Projected value at unlock"
     Formula: currentValue × (1 + rate)^yearsToUnlock
     Rate source shown: "at 7.1% PPF rate (current)"
-    DM Sans, textSecondary
+    Inter 400, textSecondary
     Dim note: "Projection only — actual returns may vary"
 
   For Crowdcube/angel:
@@ -947,7 +951,7 @@ PROTECTION HOLDING (additional section):
   COMPONENT: ProtectionStatusCard
     "Emergency fund" label, shield icon
 
-    Current amount: €8,400 (Syne 800)
+    Current amount: €8,400 (SpaceGrotesk 700)
     Recommended range: €7,200 – €14,400
     Based on: "€2,560 average monthly spend (last 3 months)"
     Coverage: 2.8 – 5.6 months
@@ -1034,7 +1038,7 @@ No fixed header zone — Insights is not list-heavy enough to need one.
 ```
 COMPONENT: InsightsHeader
 
-Left:   "Insights" (Syne 700, heading style)
+Left:   "Insights" (SpaceGrotesk 700, heading style)
 Right:  [+] button with notification dot
 
 No month selector — Insights is not time-bounded.
@@ -1052,8 +1056,8 @@ When visible:
   Kāshe asterisk (small, static — not pulsing)
   Insight type label (label style, textDim, uppercase)
     e.g. "MARKET EVENT" / "PORTFOLIO HEALTH" / "FIRE UPDATE"
-  Headline (Syne 700, textPrimary, max 10 words)
-  Body (DM Sans, textSecondary, max 40 words)
+  Headline (SpaceGrotesk 700, textPrimary, max 10 words)
+  Body (Inter 400, textSecondary, max 40 words)
 
   MARKET_EVENT only — source + confidence:
     "via Reuters · 3 hours ago" (textDim, small)
@@ -1065,7 +1069,7 @@ When visible:
     textDim, small
     Only when institutional/retail sentiment diverges
 
-  [See full insight →] DM Sans medium, accent colour
+  [See full insight →] Inter 500, accent colour
     → opens InsightDetailSheet
 
   Dismiss: swipe left or tap ×
@@ -1096,7 +1100,7 @@ The rest of the screen renders normally around it.
 Simple card:
   Kāshe asterisk (small, static — not pulsing)
   "Nothing needs your attention right now."
-  DM Sans, textSecondary
+  Inter 400, textSecondary
   "Checked [X] hours ago" textDim, small
 
 DESIGN INTENT:
@@ -1118,7 +1122,7 @@ STATE 1 — Review available, not yet viewed:
   4px left border in accent colour (#C8F04A)
   Label: "MONTHLY REVIEW" (label style, textDim)
   Headline: "Your [Month] review is ready"
-    Syne 700, textPrimary
+    SpaceGrotesk 700, textPrimary
   Subtext: "Generated [date]" textDim, small
   [Read your [Month] review →] accent button
   → opens MonthlyReviewSheet
@@ -1126,20 +1130,20 @@ STATE 1 — Review available, not yet viewed:
 STATE 2 — Review available, already viewed:
   No accent border
   Label: "MONTHLY REVIEW" (label style, textDim)
-  "[Month] review" textPrimary, DM Sans medium
+  "[Month] review" textPrimary, Inter 500
   [Open →] text link, textSecondary
   → opens MonthlyReviewSheet
 
 STATE 3 — Review not yet available (< 3 months data):
   Label: "MONTHLY REVIEW" (label style, textDim)
   "Available once you have 3 months of data"
-  textSecondary, DM Sans
+  textSecondary, Inter 400
   No CTA — nothing to tap
 
 STATE 4 — Some data exists, insufficient for review:
   Label: "MONTHLY REVIEW" (label style, textDim)
   "Add more data to unlock monthly reviews"
-  textSecondary, DM Sans
+  textSecondary, Inter 400
   "[+ Upload bank statement]" text link → universal add sheet
 ```
 
@@ -1155,7 +1159,7 @@ TRIGGER: Tap MonthlyReviewCard (any state with CTA)
 Full-height bottom sheet, scrollable
 
 HEADER:
-  "[Month Year] Review" (Syne 700, heading)
+  "[Month Year] Review" (SpaceGrotesk 700, heading)
   "Generated [date]" (textDim, small)
   Dismiss handle (top centre)
 
@@ -1164,7 +1168,7 @@ SECTIONS (maps directly to Claude JSON response):
   1. WHERE YOU STAND
      Label: "WHERE YOU STAND" (label style, uppercase, textDim)
      Body: whereYouStand string from Claude
-     DM Sans, textPrimary
+     Inter 400, textPrimary
 
   ā macron rule
 
@@ -1172,15 +1176,15 @@ SECTIONS (maps directly to Claude JSON response):
      Label: "HOW YOUR MONEY IS WORKING" (label style, textDim)
      Four sub-rows:
        Growth / Stability / Locked / Protection
-       Each: bucket name (textSecondary, DM Sans medium)
-             + Claude's one-line assessment (textPrimary, DM Sans)
+       Each: bucket name (textSecondary, Inter 500)
+             + Claude's one-line assessment (textPrimary, Inter 400)
 
   ā macron rule
 
   3. THIS MONTH'S PRIORITY
      Label: "THIS MONTH'S PRIORITY" (label style, textDim)
-     Headline (Syne 700, textPrimary)
-     Reasoning (DM Sans, textSecondary)
+     Headline (SpaceGrotesk 700, textPrimary)
+     Reasoning (Inter 400, textSecondary)
      Bucket pill (if bucketTarget set):
        GROWTH / STABILITY / LOCKED pill, accent colour
        Tappable → navigates to Portfolio screen,
@@ -1190,8 +1194,8 @@ SECTIONS (maps directly to Claude JSON response):
 
   4. FIRE UPDATE
      Label: "FIRE UPDATE" (label style, textDim)
-     Headline (Syne 700, textPrimary)
-     Detail (DM Sans, textSecondary)
+     Headline (SpaceGrotesk 700, textPrimary)
+     Detail (Inter 400, textSecondary)
      Only renders if FIRE planner is set up
      If not set up:
        "Set up your FIRE planner to unlock this"
@@ -1201,13 +1205,13 @@ SECTIONS (maps directly to Claude JSON response):
 
   5. NEXT MONTH — WATCH FOR
      Label: "NEXT MONTH — WATCH FOR" (label style, textDim)
-     2–3 items (DM Sans, textPrimary)
+     2–3 items (Inter 400, textPrimary)
      Simple dot markers (·), no icons
 
 FOOTER (always visible, pinned, not scrollable):
   "Generated by Kāshe AI · Based on your data only ·
    Not financial advice"
-  DM Sans, textDim, very small, centred
+  Inter 400, textDim, very small, centred
   [Close] text link above disclaimer
 ```
 
@@ -1222,20 +1226,20 @@ Opens FIRE Planner detail screen — it is not the planner itself.
 STATE 1 — FIRE not set up:
   Label: "FINANCIAL INDEPENDENCE" (label style, textDim)
   "When could you stop working?"
-  Syne 700, textPrimary
+  SpaceGrotesk 700, textPrimary
   "Set up your FIRE planner to find out."
-  DM Sans, textSecondary
+  Inter 400, textSecondary
   [Set up FIRE planner →] accent button
   → navigates to /app/insights/fire.tsx
 
 STATE 2 — FIRE set up, projection exists:
   Label: "FINANCIAL INDEPENDENCE" (label style, textDim)
-  Projected year: Syne 800, very large, textPrimary
+  Projected year: SpaceGrotesk 700, very large, textPrimary
     e.g. "2036"
   Progress bar (acid green fill, 600ms ease-out on mount)
     Width = currentPortfolio / FIRENumber as percentage
-  "X% of your FIRE number" DM Sans, textSecondary
-  "€X,XXX to go" DM Sans, textDim, small
+  "X% of your FIRE number" Inter 400, textSecondary
+  "€X,XXX to go" Inter 400, textDim, small
   [Open FIRE planner →] text link, textSecondary
   → navigates to /app/insights/fire.tsx
 ```
@@ -1249,10 +1253,10 @@ Conditional — only renders when ≥2 past reviews exist.
 If <2: section does not render at all. No placeholder.
 
 Header row:
-  "Past reviews" (DM Sans 500, textSecondary, label style)
+  "Past reviews" (Inter 400 500, textSecondary, label style)
 
 Each row:
-  Month + Year (DM Sans medium, textPrimary)
+  Month + Year (Inter 500, textPrimary)
     e.g. "February 2026"
   Chevron right
   Tap → opens MonthlyReviewSheet for that month
@@ -1322,7 +1326,7 @@ Anand is the pilot. Show the trajectory, then let him adjust it.
 COMPONENT: FIREPlannerHeader
 
 Back chevron (slides back to Insights tab)
-"FIRE Planner" (Syne 700, heading style)
+"FIRE Planner" (SpaceGrotesk 700, heading style)
 No [+] button — this screen is purely analytical
 ```
 
@@ -1347,11 +1351,11 @@ The primary interaction. Hero element of the screen.
 
 Label:
   "Years to financial independence"
-  DM Sans, textSecondary
+  Inter 400, textSecondary
 
 Large display:
-  "[X] years" (Syne 800, display size, textPrimary)
-  "That's [year]" (DM Sans, textSecondary, beneath)
+  "[X] years" (SpaceGrotesk 700, display size, textPrimary)
+  "That's [year]" (Inter 400, textSecondary, beneath)
   e.g. "12 years" / "That's 2038"
 
 Slider:
@@ -1364,14 +1368,14 @@ Slider:
 Projection output (updates live with slider):
   Primary line:
     "You'd need to save [€X/month]"
-    Syne 800, textPrimary
+    SpaceGrotesk 700, textPrimary
   Secondary line:
     "to retire in [year] with [€X/month] to live on"
-    DM Sans, textSecondary
+    Inter 400, textSecondary
 
 Current trajectory indicator (if data available):
   "At your current pace: [year]"
-  textDim, DM Sans, small
+  textDim, Inter 400, small
   Shown only if investment_transfer data exists
   A dot marker on the slider track at the current pace year
 
@@ -1381,7 +1385,7 @@ Mortgage step-down annotation (conditional):
   Displayed as a subtle note beneath the projection output:
     "Your mortgage ends in [year] — this reduces your
      required monthly spend by ~€[X] from that point"
-    textDim, DM Sans, small
+    textDim, Inter 400, small
   The FIRE engine accounts for this automatically in calc
 ```
 
@@ -1396,14 +1400,14 @@ Collapsed by default on return visits (show summary line).
 
 Collapsed summary line:
   "€[portfolio] portfolio · €[savings]/mo savings ·
-   [age] years old" textSecondary, DM Sans, small
+   [age] years old" textSecondary, Inter 400, small
   Chevron to expand
 
 Expanded:
 
   FIELD: Current portfolio value
     Label: "Current portfolio value"
-    Value: Syne font, large, editable inline
+    Value: SpaceGrotesk font, large, editable inline
     Pre-filled from portfolio total if data exists
     Dim note: "From your portfolio" or "Enter manually"
     Currency symbol prefix (base currency)
@@ -1451,9 +1455,9 @@ Always visible. Never collapsible.
 Transparency is non-negotiable.
 
 "These projections are based on:"
-DM Sans, textSecondary
+Inter 400, textSecondary
 
-Bullet list (DM Sans, textDim, small):
+Bullet list (Inter 400, textDim, small):
   · 4% safe withdrawal rate (Bengen rule)
   · [X]% expected annual return
   · [X]% annual inflation ([country] default)
@@ -1463,7 +1467,7 @@ Bullet list (DM Sans, textDim, small):
   · FIRE number = target monthly spend × 300
 
 "Projections are estimates, not guarantees."
-DM Sans, textDim, small
+Inter 400, textDim, small
 ```
 
 ### FIREProfileSelector
@@ -1493,16 +1497,16 @@ Not set up (no inputs entered, no age from onboarding):
 
   Kāshe asterisk (slow pulse, medium size)
   "Your FIRE number starts here"
-  Syne 700, textPrimary
+  SpaceGrotesk 700, textPrimary
 
   One field shown immediately (lowest barrier to entry):
     "Monthly spend in retirement"
-    Large editable field, Syne font
+    Large editable field, SpaceGrotesk font
     Dim placeholder: "€3,000"
 
   Beneath field:
     "Start with one number. We'll calculate the rest."
-    DM Sans, textDim, small
+    Inter 400, textDim, small
 
   [Start calculating →] accent button
     On tap: reveals full FIREInputsCard (expanded)
@@ -1575,7 +1579,7 @@ Screen 4 (Age) is new. Budget Suggestion is screen 8.
 
 4. Age  ← NEW
    "How old are you?"
-   Large number input, Syne font
+   Large number input, SpaceGrotesk font
    [Continue →] accent button
    [Skip for now] text link, textSecondary
    Dim note: "Used for your FIRE projection only"
