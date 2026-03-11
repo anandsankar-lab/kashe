@@ -5,6 +5,7 @@ import Spacing, { borderRadius } from '@/constants/spacing'
 import AppHeader from '@/components/shared/AppHeader'
 import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
 import PortfolioSectionHeader from '@/components/portfolio/PortfolioSectionHeader'
+import PortfolioHoldingRow from '@/components/portfolio/PortfolioHoldingRow'
 import { MOCK_PORTFOLIO_TOTALS } from '@/constants/mockData'
 
 function DotsButton({ onPress }: { onPress: () => void }) {
@@ -86,6 +87,18 @@ export default function PortfolioScreen() {
             currency="€"
             isRedacted={false}
           />
+          <PortfolioHoldingRow
+            variant="live"
+            name="Parag Parikh Flexi Cap"
+            assetType="Mutual Fund"
+            value={54200}
+            currency="€"
+            bucket="GROWTH"
+            geography="India"
+            allocationPct={0.33}
+            dailyMovementPct={2.3}
+            freshnessStatus="green"
+          />
           <View style={{ marginBottom: 16 }} />
           <PortfolioSectionHeader
             label="STABILITY"
@@ -93,13 +106,37 @@ export default function PortfolioScreen() {
             currency="€"
             isRedacted={false}
           />
+          <PortfolioHoldingRow
+            variant="protection"
+            name="Current Account"
+            assetType="Cash"
+            value={8400}
+            currency="€"
+            bucket="STABILITY"
+            geography="Europe"
+            allocationPct={0.05}
+            monthsCovered={2.8}
+            freshnessStatus="amber"
+          />
           <View style={{ marginBottom: 16 }} />
           <PortfolioSectionHeader
             label="LOCKED"
             total={48200}
             currency="€"
-            isEmpty={true}
+            isEmpty={false}
             onAddPress={() => console.log('Add locked holding pressed')}
+          />
+          <PortfolioHoldingRow
+            variant="locked"
+            name="PPF Account"
+            assetType="Provident Fund"
+            value={420000}
+            currency="₹"
+            bucket="LOCKED"
+            geography="India"
+            allocationPct={0.29}
+            unlockDate="Mar 2031"
+            freshnessStatus="red"
           />
         </View>
       </ScrollView>
