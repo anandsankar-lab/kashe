@@ -132,6 +132,12 @@ export interface AllocationSuggestion {
   suggestedPercent: number
 }
 
+export interface PortfolioInsight {
+  id: string
+  headline: string
+  body: string
+}
+
 // Default bucket per subtype — single source of truth.
 // UI and services both import this. Never duplicated.
 export const DEFAULT_BUCKET: Record<AssetSubtype, BucketType> = {

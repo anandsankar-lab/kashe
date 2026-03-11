@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
+import { useState } from 'react'
 import { useTheme } from '@/context/ThemeContext'
 import Typography from '@/constants/typography'
 import Spacing, { borderRadius } from '@/constants/spacing'
@@ -6,7 +7,14 @@ import AppHeader from '@/components/shared/AppHeader'
 import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
 import PortfolioSectionHeader from '@/components/portfolio/PortfolioSectionHeader'
 import PortfolioHoldingRow from '@/components/portfolio/PortfolioHoldingRow'
+import PortfolioInsightStrip from '@/components/portfolio/PortfolioInsightStrip'
 import { MOCK_PORTFOLIO_TOTALS } from '@/constants/mockData'
+
+const MOCK_PORTFOLIO_INSIGHT = {
+  id: 'mock-insight-1',
+  headline: 'Employer stock above 15% of portfolio',
+  body: 'Your employer stock is 18% of your live portfolio. Consider diversifying to reduce concentration risk.',
+}
 
 function DotsButton({ onPress }: { onPress: () => void }) {
   const theme = useTheme()
@@ -56,6 +64,7 @@ function PlusButton({ onPress }: { onPress: () => void }) {
 
 export default function PortfolioScreen() {
   const theme = useTheme()
+  const [activeInsight, setActiveInsight] = useState<typeof MOCK_PORTFOLIO_INSIGHT | null>(MOCK_PORTFOLIO_INSIGHT)
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -78,6 +87,12 @@ export default function PortfolioScreen() {
         <PortfolioTotalsCard
           totals={MOCK_PORTFOLIO_TOTALS}
           isRedacted={false}
+        />
+
+        <PortfolioInsightStrip
+          insight={activeInsight}
+          onDismiss={() => setActiveInsight(null)}
+          onPress={() => console.log('Portfolio insight tapped — InsightDetailSheet to come')}
         />
 
         <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
