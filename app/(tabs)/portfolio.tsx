@@ -8,7 +8,8 @@ import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
 import PortfolioSectionHeader from '@/components/portfolio/PortfolioSectionHeader'
 import PortfolioHoldingRow from '@/components/portfolio/PortfolioHoldingRow'
 import PortfolioInsightStrip from '@/components/portfolio/PortfolioInsightStrip'
-import { MOCK_PORTFOLIO_TOTALS } from '@/constants/mockData'
+import InvestmentPlanCard from '../../components/portfolio/InvestmentPlanCard'
+import { MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN } from '@/constants/mockData'
 
 const MOCK_PORTFOLIO_INSIGHT = {
   id: 'mock-insight-1',
@@ -93,6 +94,13 @@ export default function PortfolioScreen() {
           insight={activeInsight}
           onDismiss={() => setActiveInsight(null)}
           onPress={() => console.log('Portfolio insight tapped — InsightDetailSheet to come')}
+        />
+
+        <InvestmentPlanCard
+          plan={MOCK_INVESTMENT_PLAN}
+          onSaveTarget={(target) => console.log('Save target:', target)}
+          onExploreOptions={(bucket) => console.log('Explore options:', bucket)}
+          isRedacted={false}
         />
 
         <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
