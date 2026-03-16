@@ -10,8 +10,10 @@ import PortfolioHoldingRow from '@/components/portfolio/PortfolioHoldingRow'
 import PortfolioInsightStrip from '@/components/portfolio/PortfolioInsightStrip'
 import InvestmentPlanCard from '../../components/portfolio/InvestmentPlanCard'
 import InstrumentSuggestionSheet from '../../components/portfolio/InstrumentSuggestionSheet'
+import BucketReassignSheet from '../../components/portfolio/BucketReassignSheet'
 import { MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN, MOCK_PORTFOLIO_HOLDINGS } from '@/constants/mockData'
-import { BucketType } from '../../types/portfolio'
+import { BucketType, PortfolioHolding } from '../../types/portfolio'
+import colours from '../../constants/colours'
 
 const growthTotal = MOCK_PORTFOLIO_HOLDINGS
   .filter(h => h.bucket === 'GROWTH')
@@ -84,6 +86,10 @@ export default function PortfolioScreen() {
     visible: false,
     bucket: 'GROWTH',
   })
+  const [reassignSheet, setReassignSheet] = useState<{
+    visible: boolean;
+    holding: PortfolioHolding | null;
+  }>({ visible: false, holding: null })
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -107,6 +113,15 @@ export default function PortfolioScreen() {
           totals={MOCK_PORTFOLIO_TOTALS}
           isRedacted={false}
         />
+
+        <TouchableOpacity
+          style={{ marginHorizontal: 20, marginTop: 12, padding: 12, backgroundColor: theme.surface, borderRadius: 8, alignItems: 'center' }}
+          onPress={() => setReassignSheet({ visible: true, holding: MOCK_PORTFOLIO_HOLDINGS[0] })}
+        >
+          <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: colours.textSecondary }}>
+            [TEST] Open BucketReassignSheet
+          </Text>
+        </TouchableOpacity>
 
         <PortfolioInsightStrip
           insight={activeInsight}
@@ -186,6 +201,16 @@ export default function PortfolioScreen() {
         isVisible={suggestionSheet.visible}
         bucket={suggestionSheet.bucket}
         onClose={() => setSuggestionSheet(prev => ({ ...prev, visible: false }))}
+      />
+
+      <BucketReassignSheet
+        holding={reassignSheet.holding}
+        isVisible={reassignSheet.visible}
+        onClose={() => setReassignSheet({ visible: false, holding: null })}
+        onConfirm={(holdingId, newBucket) => {
+          console.log('Reassign:', holdingId, '->', newBucket);
+          setReassignSheet({ visible: false, holding: null });
+        }}
       />
     </View>
   )
