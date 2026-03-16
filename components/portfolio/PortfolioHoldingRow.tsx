@@ -20,6 +20,7 @@ type HoldingVariant = 'live' | 'locked' | 'protection';
 type HoldingBucket = 'GROWTH' | 'STABILITY' | 'LOCKED';
 
 interface PortfolioHoldingRowProps {
+  id?: string;
   variant: HoldingVariant;
   name: string;
   assetType: string;         // e.g. "Mutual Fund", "Cash", "Provident Fund"
@@ -37,6 +38,8 @@ interface PortfolioHoldingRowProps {
   monthsCovered?: number;
   // empty state
   isRedacted?: boolean;
+  // navigation
+  onPress?: (id: string) => void;
 }
 
 // ─── HoldingTypeIcon (internal — not exported) ────────────────────────────────
@@ -154,6 +157,7 @@ function getBarColor(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PortfolioHoldingRow({
+  id,
   variant,
   name,
   assetType,
@@ -166,6 +170,7 @@ export default function PortfolioHoldingRow({
   unlockDate,
   monthsCovered,
   isRedacted = false,
+  onPress,
 }: PortfolioHoldingRowProps) {
   const theme = useTheme();
   const barAnim = useRef(new Animated.Value(0)).current;
@@ -209,6 +214,7 @@ export default function PortfolioHoldingRow({
     <TouchableOpacity
       activeOpacity={0.7}
       style={Platform.OS === 'web' ? ({ outline: 'none' } as object) : undefined}
+      onPress={onPress && id ? () => onPress(id) : undefined}
     >
       {/* Row content */}
       <View style={styles.rowContent}>

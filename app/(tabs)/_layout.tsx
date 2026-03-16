@@ -64,12 +64,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="insights"
+        name="invest"
         options={{
-          title: 'Insights',
+          title: 'Invest',
           tabBarIcon: ({ focused }) => (
             <Ionicons
-              name={focused ? 'bulb' : 'bulb-outline'}
+              name={focused ? 'trending-up' : 'trending-up-outline'}
               size={24}
               color={focused ? theme.accent : theme.textDim}
             />

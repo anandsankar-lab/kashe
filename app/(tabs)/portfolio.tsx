@@ -1,8 +1,10 @@
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { useState } from 'react'
+import { useRouter } from 'expo-router'
 import { useTheme } from '@/context/ThemeContext'
 import Typography from '@/constants/typography'
 import Spacing, { borderRadius } from '@/constants/spacing'
+import colours from '../../constants/colours'
 import AppHeader from '@/components/shared/AppHeader'
 import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
 import PortfolioSectionHeader from '@/components/portfolio/PortfolioSectionHeader'
@@ -10,10 +12,9 @@ import PortfolioHoldingRow from '@/components/portfolio/PortfolioHoldingRow'
 import PortfolioInsightStrip from '@/components/portfolio/PortfolioInsightStrip'
 import InvestmentPlanCard from '../../components/portfolio/InvestmentPlanCard'
 import InstrumentSuggestionSheet from '../../components/portfolio/InstrumentSuggestionSheet'
-import BucketReassignSheet from '../../components/portfolio/BucketReassignSheet'
+import KasheAsterisk from '../../components/shared/KasheAsterisk'
 import { MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN, MOCK_PORTFOLIO_HOLDINGS } from '@/constants/mockData'
-import { BucketType, PortfolioHolding } from '../../types/portfolio'
-import colours from '../../constants/colours'
+import { BucketType } from '../../types/portfolio'
 
 const growthTotal = MOCK_PORTFOLIO_HOLDINGS
   .filter(h => h.bucket === 'GROWTH')
@@ -81,15 +82,13 @@ function PlusButton({ onPress }: { onPress: () => void }) {
 
 export default function PortfolioScreen() {
   const theme = useTheme()
+  const router = useRouter()
+  const hasData = true  // toggle to false to preview empty state
   const [activeInsight, setActiveInsight] = useState<typeof MOCK_PORTFOLIO_INSIGHT | null>(MOCK_PORTFOLIO_INSIGHT)
   const [suggestionSheet, setSuggestionSheet] = useState<{ visible: boolean; bucket: BucketType }>({
     visible: false,
     bucket: 'GROWTH',
   })
-  const [reassignSheet, setReassignSheet] = useState<{
-    visible: boolean;
-    holding: PortfolioHolding | null;
-  }>({ visible: false, holding: null })
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -109,109 +108,138 @@ export default function PortfolioScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: Spacing.lg }}
       >
-        <PortfolioTotalsCard
-          totals={MOCK_PORTFOLIO_TOTALS}
-          isRedacted={false}
-        />
+        <View style={{ opacity: hasData ? 1 : 0.5 }}>
+          <PortfolioTotalsCard
+            totals={MOCK_PORTFOLIO_TOTALS}
+            isRedacted={!hasData}
+          />
 
-        <TouchableOpacity
-          style={{ marginHorizontal: 20, marginTop: 12, padding: 12, backgroundColor: theme.surface, borderRadius: 8, alignItems: 'center' }}
-          onPress={() => setReassignSheet({ visible: true, holding: MOCK_PORTFOLIO_HOLDINGS[0] })}
-        >
-          <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: colours.textSecondary }}>
-            [TEST] Open BucketReassignSheet
-          </Text>
-        </TouchableOpacity>
+          <PortfolioInsightStrip
+            insight={hasData ? activeInsight : null}
+            onDismiss={() => setActiveInsight(null)}
+            onPress={() => console.log('Portfolio insight tapped — InsightDetailSheet to come')}
+          />
 
-        <PortfolioInsightStrip
-          insight={activeInsight}
-          onDismiss={() => setActiveInsight(null)}
-          onPress={() => console.log('Portfolio insight tapped — InsightDetailSheet to come')}
-        />
+          <InvestmentPlanCard
+            plan={MOCK_INVESTMENT_PLAN}
+            onSaveTarget={(target) => console.log('Save target:', target)}
+            onExploreOptions={(bucket) => setSuggestionSheet({ visible: true, bucket })}
+            isRedacted={!hasData}
+          />
 
-        <InvestmentPlanCard
-          plan={MOCK_INVESTMENT_PLAN}
-          onSaveTarget={(target) => console.log('Save target:', target)}
-          onExploreOptions={(bucket) => setSuggestionSheet({ visible: true, bucket })}
-          isRedacted={false}
-        />
-
-        <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
-          <PortfolioSectionHeader
-            label="GROWTH"
-            total={growthTotal}
-            currency="€"
-            isRedacted={false}
-          />
-          <PortfolioHoldingRow
-            variant="live"
-            name="Parag Parikh Flexi Cap"
-            assetType="Mutual Fund"
-            value={54200}
-            currency="€"
-            bucket="GROWTH"
-            geography="India"
-            allocationPct={0.33}
-            dailyMovementPct={2.3}
-            freshnessStatus="green"
-          />
-          <View style={{ marginBottom: 16 }} />
-          <PortfolioSectionHeader
-            label="STABILITY"
-            total={stabilityTotal}
-            currency="€"
-            isRedacted={false}
-          />
-          <PortfolioHoldingRow
-            variant="protection"
-            name="Current Account"
-            assetType="Cash"
-            value={8400}
-            currency="€"
-            bucket="STABILITY"
-            geography="Europe"
-            allocationPct={0.05}
-            monthsCovered={2.8}
-            freshnessStatus="amber"
-          />
-          <View style={{ marginBottom: 16 }} />
-          <PortfolioSectionHeader
-            label="LOCKED"
-            total={lockedTotal}
-            currency="€"
-            isEmpty={false}
-            onAddPress={() => console.log('Add locked holding pressed')}
-          />
-          <PortfolioHoldingRow
-            variant="locked"
-            name="PPF Account"
-            assetType="Provident Fund"
-            value={420000}
-            currency="₹"
-            bucket="LOCKED"
-            geography="India"
-            allocationPct={0.29}
-            unlockDate="Mar 2031"
-            freshnessStatus="red"
-          />
+          <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
+            <PortfolioSectionHeader
+              label="GROWTH"
+              total={growthTotal}
+              currency="€"
+              isRedacted={!hasData}
+            />
+            <PortfolioHoldingRow
+              id="h3"
+              variant="live"
+              name="Parag Parikh Flexi Cap"
+              assetType="Mutual Fund"
+              value={54200}
+              currency="€"
+              bucket="GROWTH"
+              geography="India"
+              allocationPct={0.33}
+              dailyMovementPct={2.3}
+              freshnessStatus="green"
+              isRedacted={!hasData}
+              onPress={(id) => router.push(`/portfolio/${id}`)}
+            />
+            <View style={{ marginBottom: 16 }} />
+            <PortfolioSectionHeader
+              label="STABILITY"
+              total={stabilityTotal}
+              currency="€"
+              isRedacted={!hasData}
+            />
+            <PortfolioHoldingRow
+              id="h4"
+              variant="protection"
+              name="Current Account"
+              assetType="Cash"
+              value={8400}
+              currency="€"
+              bucket="STABILITY"
+              geography="Europe"
+              allocationPct={0.05}
+              monthsCovered={2.8}
+              freshnessStatus="amber"
+              isRedacted={!hasData}
+              onPress={(id) => router.push(`/portfolio/${id}`)}
+            />
+            <View style={{ marginBottom: 16 }} />
+            <PortfolioSectionHeader
+              label="LOCKED"
+              total={lockedTotal}
+              currency="€"
+              isEmpty={false}
+              isRedacted={!hasData}
+              onAddPress={() => console.log('Add locked holding pressed')}
+            />
+            <PortfolioHoldingRow
+              id="h6"
+              variant="locked"
+              name="PPF Account"
+              assetType="Provident Fund"
+              value={420000}
+              currency="₹"
+              bucket="LOCKED"
+              geography="India"
+              allocationPct={0.29}
+              unlockDate="Mar 2031"
+              freshnessStatus="red"
+              isRedacted={!hasData}
+              onPress={(id) => router.push(`/portfolio/${id}`)}
+            />
+          </View>
         </View>
       </ScrollView>
+
+      {!hasData && (
+        <View style={styles.emptyPill}>
+          <TouchableOpacity
+            style={[styles.pillButton, { backgroundColor: colours.accent }]}
+            onPress={() => console.log('Open invitation sheet')}
+            activeOpacity={0.85}
+          >
+            <KasheAsterisk size={14} animated={false} direction="neutral" />
+            <Text style={styles.pillText}>  Connect your data</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <InstrumentSuggestionSheet
         isVisible={suggestionSheet.visible}
         bucket={suggestionSheet.bucket}
         onClose={() => setSuggestionSheet(prev => ({ ...prev, visible: false }))}
       />
-
-      <BucketReassignSheet
-        holding={reassignSheet.holding}
-        isVisible={reassignSheet.visible}
-        onClose={() => setReassignSheet({ visible: false, holding: null })}
-        onConfirm={(holdingId, newBucket) => {
-          console.log('Reassign:', holdingId, '->', newBucket);
-          setReassignSheet({ visible: false, holding: null });
-        }}
-      />
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  emptyPill: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  pillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  pillText: {
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 14,
+    color: colours.textPrimary,
+  },
+})
