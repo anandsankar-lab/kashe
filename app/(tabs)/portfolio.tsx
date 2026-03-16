@@ -9,7 +9,21 @@ import PortfolioSectionHeader from '@/components/portfolio/PortfolioSectionHeade
 import PortfolioHoldingRow from '@/components/portfolio/PortfolioHoldingRow'
 import PortfolioInsightStrip from '@/components/portfolio/PortfolioInsightStrip'
 import InvestmentPlanCard from '../../components/portfolio/InvestmentPlanCard'
-import { MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN } from '@/constants/mockData'
+import InstrumentSuggestionSheet from '../../components/portfolio/InstrumentSuggestionSheet'
+import { MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN, MOCK_PORTFOLIO_HOLDINGS } from '@/constants/mockData'
+import { BucketType } from '../../types/portfolio'
+
+const growthTotal = MOCK_PORTFOLIO_HOLDINGS
+  .filter(h => h.bucket === 'GROWTH')
+  .reduce((sum, h) => sum + h.currentValue, 0);
+
+const stabilityTotal = MOCK_PORTFOLIO_HOLDINGS
+  .filter(h => h.bucket === 'STABILITY')
+  .reduce((sum, h) => sum + h.currentValue, 0);
+
+const lockedTotal = MOCK_PORTFOLIO_HOLDINGS
+  .filter(h => h.bucket === 'LOCKED')
+  .reduce((sum, h) => sum + h.currentValue, 0);
 
 const MOCK_PORTFOLIO_INSIGHT = {
   id: 'mock-insight-1',
@@ -66,6 +80,10 @@ function PlusButton({ onPress }: { onPress: () => void }) {
 export default function PortfolioScreen() {
   const theme = useTheme()
   const [activeInsight, setActiveInsight] = useState<typeof MOCK_PORTFOLIO_INSIGHT | null>(MOCK_PORTFOLIO_INSIGHT)
+  const [suggestionSheet, setSuggestionSheet] = useState<{ visible: boolean; bucket: BucketType }>({
+    visible: false,
+    bucket: 'GROWTH',
+  })
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -99,14 +117,14 @@ export default function PortfolioScreen() {
         <InvestmentPlanCard
           plan={MOCK_INVESTMENT_PLAN}
           onSaveTarget={(target) => console.log('Save target:', target)}
-          onExploreOptions={(bucket) => console.log('Explore options:', bucket)}
+          onExploreOptions={(bucket) => setSuggestionSheet({ visible: true, bucket })}
           isRedacted={false}
         />
 
         <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
           <PortfolioSectionHeader
             label="GROWTH"
-            total={198400}
+            total={growthTotal}
             currency="€"
             isRedacted={false}
           />
@@ -125,7 +143,7 @@ export default function PortfolioScreen() {
           <View style={{ marginBottom: 16 }} />
           <PortfolioSectionHeader
             label="STABILITY"
-            total={65200}
+            total={stabilityTotal}
             currency="€"
             isRedacted={false}
           />
@@ -144,7 +162,7 @@ export default function PortfolioScreen() {
           <View style={{ marginBottom: 16 }} />
           <PortfolioSectionHeader
             label="LOCKED"
-            total={48200}
+            total={lockedTotal}
             currency="€"
             isEmpty={false}
             onAddPress={() => console.log('Add locked holding pressed')}
@@ -163,6 +181,12 @@ export default function PortfolioScreen() {
           />
         </View>
       </ScrollView>
+
+      <InstrumentSuggestionSheet
+        isVisible={suggestionSheet.visible}
+        bucket={suggestionSheet.bucket}
+        onClose={() => setSuggestionSheet(prev => ({ ...prev, visible: false }))}
+      />
     </View>
   )
 }
