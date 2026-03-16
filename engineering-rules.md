@@ -13,6 +13,7 @@ Every piece of data or configuration has exactly one home.
 - Transactions → `spendStore`
 - Typography → `constants/typography.ts`
 - Mock data → `constants/mockData.ts`
+- Currency formatting → `constants/formatters.ts`
 
 If you find yourself defining the same thing in two places, stop.
 One of them is wrong. Fix the source, not the symptom.
@@ -98,6 +99,36 @@ This rule applies to every component, every screen, every hook.
 
 ---
 
+## CURRENCY FORMATTING RULE — LOCKED (March 2026)
+
+```
+ALWAYS use formatCurrency() from /constants/formatters.ts
+NEVER use Intl.NumberFormat — unreliable in Expo web bundler
+NEVER use template literals with raw numbers: `€${amount}`
+
+import { formatCurrency } from '../../constants/formatters'
+
+// Correct:
+formatCurrency(1500, 'EUR')     // → "€1,500"
+formatCurrency(420000, 'INR')   // → "₹4,20,000"
+formatCurrency(48200, 'EUR')    // → "€48,200"
+
+// Wrong:
+`€${amount.toLocaleString()}`   // Intl — breaks in Expo web
+`€${amount}`                    // No formatting at all
+new Intl.NumberFormat(...)      // Banned permanently
+```
+
+This decision was made in Session 05 after Intl.NumberFormat
+produced inconsistent results in the Expo web bundler.
+The manual regex formatter in formatters.ts is the permanent solution.
+It handles EUR, INR, GBP, USD symbols and comma separators correctly.
+
+TextInput fields: format on blur, parse on save.
+Never try to format a live TextInput value — it breaks cursor position.
+
+---
+
 ## ENVIRONMENT RULES
 
 ```
@@ -109,13 +140,17 @@ npm install     ALWAYS use --legacy-peer-deps
 Animations      NEVER install react-native-reanimated for web preview
                 It breaks the web bundler completely
                 Use React Native built-in Animated API only
-                Reanimated returns in Session 10 (native builds only)
+                Reanimated returns in QA session (native builds only)
 
 TypeScript      Strict mode throughout. Zero `any` types.
                 If you can't type it, you don't understand it yet.
 
 Preview         npx expo start → w → localhost:8081
                 Every ticket must be visually confirmed before committing
+
+Git             ALWAYS run git commands manually in a normal terminal
+                NEVER run git through Claude Code
+                Claude Code is for writing files only
 ```
 
 ---
@@ -124,7 +159,7 @@ Preview         npx expo start → w → localhost:8081
 
 ```
 Format:   [TICKET-ID] Brief description
-Example:  [HOME-02] Build PositionHeroCard component
+Example:  [PORT-06] PortfolioInsightStrip — conditional insight card
 
 Rules:
 - One commit per logical ticket
@@ -133,6 +168,7 @@ Rules:
 - Never commit API keys or tokens
 - Never commit .env files
 - Push at end of every session
+- Every commit includes code + updated MD files together
 ```
 
 ---
@@ -140,13 +176,13 @@ Rules:
 ## BEFORE YOU WRITE ANY CODE
 
 1. Read `CLAUDE-state.md` — know what exists and what the next ticket is
-2. Read the skill file(s) for your domain
+2. Read the latest `kashe-handoff-session-XX.md`
 3. Read only the relevant section of the spec file your ticket needs
 4. Check that the TypeScript type exists in `/types/` before building
 5. Check that mock data exists in `/constants/mockData.ts` before building
 
-**If you find yourself reading all four spec files upfront — stop.**
-That is not the process. Read CLAUDE-state.md and the relevant skill.
+**If you find yourself reading all spec files upfront — stop.**
+That is not the process. Read CLAUDE-state.md and the handoff doc.
 That is enough to start.
 
 ---
@@ -167,9 +203,15 @@ These are permanent. Do not ask. Do not suggest workarounds.
 [NEVER] Specific buy/sell recommendations
 [NEVER] Regulated financial advice
 [NEVER] Net Worth — always "Your Position" everywhere
+[NEVER] Intl.NumberFormat — use formatCurrency() from formatters.ts
+[NEVER] react-native-reanimated in web builds
+[NEVER] @/ import alias — relative imports only
+[NEVER] Named exports from component files — default exports only
+[NEVER] Inline style objects — StyleSheet.create() only
+[NEVER] Hardcoded hex colour values in components
 ```
 
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 11 March 2026*
+*Last updated: 16 March 2026*
