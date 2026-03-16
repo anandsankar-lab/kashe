@@ -1,6 +1,6 @@
 # Kāshe — CLAUDE-state.md
 *Current build state. Read this before any new session.*
-*Last updated: 11 March 2026*
+*Last updated: 16 March 2026*
 
 ---
 
@@ -21,8 +21,8 @@ Every ticket follows these four steps. No exceptions.
 3. Screenshot shared back in planning chat → verified together
 4. Planning chat provides exact git commands → Anand commits
 
-MD files are updated in the planning chat and downloaded directly
-into the repo. Every commit includes code + updated MD files together.
+MD files are updated in the planning chat, downloaded directly
+into the repo, and committed together with code. Never separately.
 
 ---
 
@@ -112,12 +112,37 @@ PM decisions locked this session:
   direct render matching CategoryIcon pattern exactly.
 - PortfolioHoldingRow assetType prop carries display label
   (e.g. "Mutual Fund", "ETF", "Cash") — separate from geography.
-- MD files updated in planning chat, downloaded into repo.
-  Every commit = code + docs together.
+- MD files downloaded and replaced in repo. Every commit = code + docs together.
+
+### Session 05 — Portfolio Screen (PORT-06 through PORT-09 complete)
+✅ /components/portfolio/PortfolioInsightStrip.tsx — PORT-06
+   Conditional insight card, swipe-left/tap-dismiss, KasheAsterisk,
+   PanResponder, returns null when no insight active
+✅ /components/portfolio/InvestmentPlanCard.tsx — PORT-07
+   Three-state card, animated progress bar, editable monthly target,
+   salary contributions, suggested allocation rows
+✅ /constants/formatters.ts — manual regex currency formatter
+   Intl.NumberFormat permanently banned — unreliable in Expo web bundler
+   formatCurrency() is the only permitted formatter everywhere
+✅ /components/portfolio/InstrumentSuggestionSheet.tsx — PORT-08
+   Bottom sheet, GROWTH/STABILITY/LOCKED content variants,
+   disclaimer pinned at bottom
+✅ /components/portfolio/BucketReassignSheet.tsx — PORT-09
+   Slide-up sheet, radio bucket selector, pre-selects current bucket,
+   isProtection=true hides Locked option with dim note,
+   maxHeight constraint keeps buttons always visible
+✅ /app/(tabs)/portfolio.tsx — updated with reassignSheet state +
+   temporary TEST trigger button (remove during PORT-10 wiring)
+
+Key commits this session:
+  5ef86a3  [PORT-06] PortfolioInsightStrip
+  7a0b244  [PORT-07] InvestmentPlanCard
+  f2a7991  [PORT-08] InstrumentSuggestionSheet + ai-insights.md rewrite
+  [PORT-09] BucketReassignSheet + ai-insights.md instrument-class routing
 
 ---
 
-## CONFIRMED FILE TREE (as of Session 04, PORT-03 complete)
+## CONFIRMED FILE TREE (as of Session 05, PORT-09 complete)
 
 ```
 app/
@@ -125,7 +150,8 @@ app/
     _layout.tsx
     index.tsx          ✅ Home screen (complete)
     spend.tsx          ✅ Spend screen (complete)
-    portfolio.tsx      🔄 In progress — PORT-01/02/03 wired
+    portfolio.tsx      🔄 In progress — PORT-01 through PORT-09 wired
+                          ⚠️ TEST button present — remove in PORT-10
     insights.tsx       ⬜ Empty shell
   _layout.tsx
   spend/
@@ -148,7 +174,7 @@ components/
     AppHeader.tsx
     DataSourceSheet.tsx
     EmptyState.tsx
-    KasheAsterisk.tsx  ⚠️ k-stroke needs more prominence (fix Session 09)
+    KasheAsterisk.tsx  ⚠️ k-stroke needs more prominence (fix Polish session)
     MacronRule.tsx
     RedactedNumber.tsx
   spend/               ✅ All complete
@@ -168,10 +194,10 @@ components/
     PortfolioTotalsCard.tsx        ✅ PORT-01
     PortfolioSectionHeader.tsx     ✅ PORT-02
     PortfolioHoldingRow.tsx        ✅ PORT-03/04/05
-    PortfolioInsightStrip.tsx      ⬜ PORT-06
-    InvestmentPlanCard.tsx         ⬜ PORT-07
-    InstrumentSuggestionSheet.tsx  ⬜ PORT-08
-    BucketReassignSheet.tsx        ⬜ PORT-09
+    PortfolioInsightStrip.tsx      ✅ PORT-06
+    InvestmentPlanCard.tsx         ✅ PORT-07
+    InstrumentSuggestionSheet.tsx  ✅ PORT-08
+    BucketReassignSheet.tsx        ✅ PORT-09
     LockedProjectionCard.tsx       ⬜ PORT-10
     ProtectionStatusCard.tsx       ⬜ PORT-10
   ui/                  ✅ All complete
@@ -181,6 +207,7 @@ components/
 
 constants/
   colours.ts     ✅
+  formatters.ts  ✅ formatCurrency() — Intl.NumberFormat permanently banned
   mockData.ts    ✅ Includes portfolio mock data
   spacing.ts     ✅
   typography.ts  ✅
@@ -201,7 +228,9 @@ docs/
     engineering-rules.md
     design-system.md
     data-architecture.md
-    ai-insights.md
+    ai-insights.md     ✅ Updated — instrument-class source routing,
+                          stale app handling, currency concentration trigger,
+                          portfolio data sufficiency rules
     freemium-boundaries.md
   CLAUDE-state.md       ← this file
 ```
@@ -234,6 +263,12 @@ docs/
 ### Styling Pattern
 - StyleSheet.create() for all styles — no inline style objects in components.
   This is the SpendCategoryRow pattern — locked for all portfolio components.
+
+### Currency Formatting Pattern
+- formatCurrency(amount, currency) from /constants/formatters.ts — always
+- Intl.NumberFormat — permanently banned, breaks Expo web bundler
+- Template literals with raw numbers — never (`€${amount}`)
+- TextInput fields: format on blur, parse on save. Never format live.
 
 ---
 
@@ -307,7 +342,7 @@ Screen 8: Budget Suggestion (conditional — only if upload succeeded).
    File: /constants/mockData.ts
 
 2. **Category detail screen layout bug** — Large empty space between
-   month selector and tag pills. Fix in Settings + Polish session.
+   month selector and tag pills. Fix in Polish session.
 
 3. **KasheAsterisk k-stroke** — Needs more visual prominence.
    Fix in Polish session.
@@ -316,73 +351,81 @@ Screen 8: Budget Suggestion (conditional — only if upload succeeded).
    View with theme.accent background instead of the MacronRule component.
    Standardise in Polish session.
 
+5. **TextInput monthly target formatting** — InvestmentPlanCard shows
+   "1500" not "1,500". Fix: format on blur, parse on save. Polish session.
+
+6. **PPF Account currency** — Still shows ₹420,000 in some paths.
+   Full fix when FX service wired in data layer session.
+
+7. **BucketReassignSheet TEST button** — Temporary trigger in
+   portfolio.tsx. Remove and replace with HoldingRow onPress →
+   router.push during PORT-10.
+
+8. **InstrumentSuggestionSheet drag handle** — Check visibility
+   during PORT-10 pass.
+
 ---
 
-## NEXT — PORT-06: PortfolioInsightStrip
+## NEXT — PORT-10: HoldingDetailScreen
 
-File: /components/portfolio/PortfolioInsightStrip.tsx
-Spec: CLAUDE-experience.md → "Portfolio Screen — Full Spec" → Zone 2
+File: /app/portfolio/[holdingId].tsx
+Sub-components:
+  /components/portfolio/LockedProjectionCard.tsx
+  /components/portfolio/ProtectionStatusCard.tsx
 
-Same visual pattern as SpendInsightStrip.
-Conditional — only renders when AI has something worth saying.
-Read SpendInsightStrip.tsx before writing any code.
+Spec: kashe-handoff-session-06.md → PORT-10 section
 
-Key points from spec:
-- KasheAsterisk (small, static) + insight type label (MARKET EVENT etc)
-- Headline max 10 words, body max 40 words
-- Source citation line (MARKET_EVENT only): "via Reuters · 3 hours ago"
-- Forum signal line (MARKET_EVENT only, when divergence meaningful)
-- Dismiss: swipe left or tap × → hidden 24 hours
-- Tap → InsightDetailSheet (shared component, build shell only for now)
-- Confidence indicator: LOW only (dim note), MEDIUM/HIGH clean
-
-Before writing any code, read:
-1. This file (done)
-2. components/spend/SpendInsightStrip.tsx  ← primary reference
-3. CLAUDE-experience.md → Zone 2 Portfolio Insight Strip spec
+Key points:
+- Dynamic Expo Router route — read holdingId from useLocalSearchParams()
+- Look up holding in MOCK_PORTFOLIO_HOLDINGS by id
+- Back chevron + holding name as header
+- Live, Locked, Protection variants render different layouts
+- BucketReassignSheet wired here via [Reassign bucket] button
+- Remove TEST button from portfolio.tsx in this pass
+- LockedProjectionCard: FV projection by subtype rate, alternative_general
+  shows last known valuation only
+- ProtectionStatusCard: coverage months, status bar, surplus note
 
 ---
 
 ## REMAINING PORTFOLIO TICKETS
 
 ```
-PORT-06  PortfolioInsightStrip          ← NEXT
-PORT-07  InvestmentPlanCard (collapsed + expanded)
-PORT-08  InstrumentSuggestionSheet
-PORT-09  BucketReassignSheet
-PORT-10  /app/portfolio/[holdingId].tsx
+PORT-10  /app/portfolio/[holdingId].tsx    ← NEXT
+           LockedProjectionCard
+           ProtectionStatusCard
 PORT-11  Portfolio empty state
 ```
 
-Full spec for all tickets: CLAUDE-experience.md → "Portfolio Screen — Full Spec"
+Full spec: kashe-handoff-session-06.md
 
 ---
 
 ## FULL REMAINING SESSION ORDER
 
 ```
-Session 04 (cont.) — PORT-06 to PORT-11
-Session 05  Insights Screen + FIRE Planner (INS-01 to INS-10)
-Session 06  Data Layer — services, stores, hooks (no UI)
-Session 07  Wire UI to Data Layer
-Session 08  Onboarding Stack (10 screens + UniversalAddSheet)
-Session 09  Settings + Polish
-Session 10  QA + Native Build Prep
+Session 06 (cont.) — PORT-10, PORT-11
+Session 07  Insights Screen + FIRE Planner (INS-01 to INS-10)
+Session 08  Data Layer — services, stores, hooks (no UI)
+Session 09  Wire UI to Data Layer
+Session 10  Onboarding Stack (10 screens + UniversalAddSheet)
+Session 11  Settings + Polish
+Session 12  QA + Native Build Prep
 ```
 
 ---
 
 ## CRITICAL RULES — QUICK REFERENCE
 
-1. `--legacy-peer-deps` on every npm install. No exceptions.
-2. Never use react-native-reanimated. Animated API only.
-3. Never hardcode a colour. useTheme() + colours.* only.
-4. const theme = useTheme() — NOT const { theme } = useTheme()
-5. theme.* for surface/border/background. colours.* for everything else.
-6. Default exports everywhere.
-7. Relative imports everywhere. No @/ alias.
-8. StyleSheet.create() for all styles — no inline style objects.
-9. Every component: dark AND light mode.
+1.  `--legacy-peer-deps` on every npm install. No exceptions.
+2.  Never use react-native-reanimated. Animated API only.
+3.  Never hardcode a colour. useTheme() + colours.* only.
+4.  const theme = useTheme() — NOT const { theme } = useTheme()
+5.  theme.* for surface/border/background. colours.* for everything else.
+6.  Default exports everywhere.
+7.  Relative imports everywhere. No @/ alias.
+8.  StyleSheet.create() for all styles — no inline style objects.
+9.  Every component: dark AND light mode.
 10. Every screen: empty state.
 11. Never show a financial number as zero. Redact instead.
 12. "Your Position" not "Net Worth." Everywhere.
@@ -398,7 +441,9 @@ Session 10  QA + Native Build Prep
 22. Empty state = redacted ghost + floating pill. NOT blurred overlay.
 23. Every commit = code + updated MD files together.
 24. Read the existing working component BEFORE building its portfolio equivalent.
-    (SpendInsightStrip → PortfolioInsightStrip, etc.)
+25. formatCurrency() from formatters.ts always. Never Intl.NumberFormat.
+26. MD files are always downloaded and replaced in full. Never edited inline.
+27. Git commands always run manually by Anand. Never through Claude Code.
 
 ---
 
@@ -407,7 +452,7 @@ Session 10  QA + Native Build Prep
 ```
 engineering-rules.md    Read before EVERY session
 design-system.md        Read before any UI work
-data-architecture.md    Read before PORT-07 and all data layer work
+data-architecture.md    Read before data layer session
 ai-insights.md          Read before Insights session
 freemium-boundaries.md  Reference for feature flag decisions
 ```
