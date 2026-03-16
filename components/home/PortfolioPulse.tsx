@@ -27,7 +27,7 @@ export default function PortfolioPulse({ items, isRedacted = false }: Props) {
 
   return (
     <Card padded>
-      <Text style={[Typography.label, { color: colours.textSecondary, marginBottom: 4 }]}>
+      <Text style={[Typography.label, { color: theme.textSecondary, marginBottom: 4 }]}>
         Portfolio Pulse
       </Text>
 
@@ -53,7 +53,7 @@ export default function PortfolioPulse({ items, isRedacted = false }: Props) {
                 style={{
                   fontFamily: 'SpaceGrotesk_700Bold',
                   fontSize: 14,
-                  color: colours.textPrimary,
+                  color: theme.textPrimary,
                 }}
               >
                 {item.ticker}
@@ -81,7 +81,7 @@ export default function PortfolioPulse({ items, isRedacted = false }: Props) {
               style={{
                 fontFamily: 'Inter_400Regular',
                 fontSize: 13,
-                color: colours.textSecondary,
+                color: theme.textSecondary,
                 textAlign: 'right',
                 flex: 1,
                 marginLeft: 12,

@@ -119,9 +119,9 @@ function getDotColor(status: FreshnessStatus): string {
   }
 }
 
-function getMovementColor(dailyMovementPct: number | undefined): string {
+function getMovementColor(dailyMovementPct: number | undefined, textSecondary: string): string {
   if (dailyMovementPct === undefined || dailyMovementPct === 0) {
-    return colours.textSecondary;
+    return textSecondary;
   }
   return dailyMovementPct > 0 ? colours.success : colours.danger;
 }
@@ -137,15 +137,16 @@ function getBarColor(
   variant: HoldingVariant,
   dailyMovementPct: number | undefined,
   monthsCovered: number | undefined,
+  textDim: string,
 ): string {
   if (variant === 'live') {
     if (dailyMovementPct === undefined || dailyMovementPct === 0) {
-      return colours.textDim;
+      return textDim;
     }
     return dailyMovementPct > 0 ? colours.success : colours.danger;
   }
   if (variant === 'locked') {
-    return colours.textDim;
+    return textDim;
   }
   // protection
   if (monthsCovered === undefined || monthsCovered < 3) {
@@ -176,9 +177,9 @@ export default function PortfolioHoldingRow({
   const barAnim = useRef(new Animated.Value(0)).current;
 
   const barFillPercent = isRedacted ? 0 : (allocationPct ?? 0);
-  const barColor = getBarColor(variant, dailyMovementPct, monthsCovered);
+  const barColor = getBarColor(variant, dailyMovementPct, monthsCovered, theme.textDim);
   const dotColor = getDotColor(freshnessStatus);
-  const movementColor = getMovementColor(dailyMovementPct);
+  const movementColor = getMovementColor(dailyMovementPct, theme.textSecondary);
   const coveredColor = getCoveredColor(monthsCovered);
 
   useEffect(() => {
@@ -223,15 +224,15 @@ export default function PortfolioHoldingRow({
           variant={variant}
           geography={geography}
           size={22}
-          color={colours.textSecondary}
+          color={theme.textSecondary}
         />
 
         {/* Name + sub-label */}
         <View style={styles.nameContainer}>
-          <Text style={[styles.holdingName, { color: colours.textPrimary }]}>
+          <Text style={[styles.holdingName, { color: theme.textPrimary }]}>
             {name}
           </Text>
-          <Text style={[styles.subLabel, { color: colours.textSecondary }]}>
+          <Text style={[styles.subLabel, { color: theme.textSecondary }]}>
             {subLabelText}
           </Text>
         </View>
@@ -241,7 +242,7 @@ export default function PortfolioHoldingRow({
           {/* Value row with freshness dot */}
           <View style={styles.valueRow}>
             <View style={[styles.freshnessDot, { backgroundColor: dotColor }]} />
-            <Text style={[styles.valueText, { color: colours.textPrimary }]}>
+            <Text style={[styles.valueText, { color: theme.textPrimary }]}>
               {currency}{value.toLocaleString()}
             </Text>
           </View>
@@ -257,7 +258,7 @@ export default function PortfolioHoldingRow({
               </>
             )}
             {variant === 'locked' && (
-              <Text style={[styles.metaText, { color: colours.textSecondary }]}>
+              <Text style={[styles.metaText, { color: theme.textSecondary }]}>
                 {((allocationPct ?? 0) * 100).toFixed(0)}% of portfolio
               </Text>
             )}

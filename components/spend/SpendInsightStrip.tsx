@@ -7,7 +7,6 @@ import {
   Text,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import colours from '../../constants/colours';
 import KasheAsterisk from '../shared/KasheAsterisk';
 import RedactedNumber from '../shared/RedactedNumber';
 
@@ -103,7 +102,7 @@ export default function SpendInsightStrip({
                 fontSize: 11,
                 letterSpacing: 0.8,
                 textTransform: 'uppercase',
-                color: colours.textDim,
+                color: theme.textDim,
               }}
             >
               Spend Insight
@@ -119,7 +118,7 @@ export default function SpendInsightStrip({
               style={{
                 fontFamily: 'Inter_400Regular',
                 fontSize: 20,
-                color: colours.textDim,
+                color: theme.textDim,
               }}
             >
               ×
@@ -144,7 +143,7 @@ export default function SpendInsightStrip({
               fontFamily: 'SpaceGrotesk_600SemiBold',
               fontSize: 15,
               letterSpacing: -0.5,
-              color: colours.textPrimary,
+              color: theme.textPrimary,
               marginBottom: 6,
             }}
           >
@@ -164,7 +163,7 @@ export default function SpendInsightStrip({
               fontFamily: 'Inter_400Regular',
               fontSize: 13,
               letterSpacing: -0.2,
-              color: colours.textSecondary,
+              color: theme.textSecondary,
               lineHeight: 20,
             }}
           >

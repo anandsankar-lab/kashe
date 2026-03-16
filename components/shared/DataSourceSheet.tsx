@@ -69,7 +69,7 @@ export default function DataSourceSheet({ isVisible, onClose, sources, onRequest
   function renderStatusLine(source: DataSource) {
     if (source.status === 'FRESH') {
       return (
-        <Text style={[styles.statusLine, { color: colours.textDim }]}>
+        <Text style={[styles.statusLine, { color: theme.textDim }]}>
           Updated {source.lastUpdatedDays} days ago
         </Text>
       );
@@ -144,10 +144,10 @@ export default function DataSourceSheet({ isVisible, onClose, sources, onRequest
 
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <Text style={[styles.sheetTitle, { color: colours.textPrimary }]}>
+          <Text style={[styles.sheetTitle, { color: theme.textPrimary }]}>
             Your data sources
           </Text>
-          <Text style={[styles.sheetSubhead, { color: colours.textDim }]}>
+          <Text style={[styles.sheetSubhead, { color: theme.textDim }]}>
             Keep these fresh for accurate insights
           </Text>
 
@@ -157,7 +157,7 @@ export default function DataSourceSheet({ isVisible, onClose, sources, onRequest
             if (!group || group.length === 0) return null;
             return (
               <View key={type}>
-                <Text style={[styles.sectionLabel, { color: colours.textDim }]}>
+                <Text style={[styles.sectionLabel, { color: theme.textDim }]}>
                   {TYPE_LABELS[type]}
                 </Text>
                 {group.map((source, idx) => (
@@ -169,7 +169,7 @@ export default function DataSourceSheet({ isVisible, onClose, sources, onRequest
                     ]}
                   >
                     <View style={styles.sourceLeft}>
-                      <Text style={[styles.institutionName, { color: colours.textPrimary }]}>
+                      <Text style={[styles.institutionName, { color: theme.textPrimary }]}>
                         {source.institution}
                       </Text>
                       <View style={{ marginTop: 3 }}>{renderStatusLine(source)}</View>
@@ -183,7 +183,7 @@ export default function DataSourceSheet({ isVisible, onClose, sources, onRequest
 
           {/* Add a source section */}
           <View style={styles.addSection}>
-            <Text style={[styles.sectionLabel, { color: colours.textDim }]}>
+            <Text style={[styles.sectionLabel, { color: theme.textDim }]}>
               Add a source
             </Text>
             {ADD_ROWS.map((row, idx) => (
@@ -198,21 +198,21 @@ export default function DataSourceSheet({ isVisible, onClose, sources, onRequest
                 ]}
               >
                 <Text style={styles.addRowEmoji}>{row.emoji}</Text>
-                <Text style={[styles.addRowLabel, { color: colours.textPrimary }]}>
+                <Text style={[styles.addRowLabel, { color: theme.textPrimary }]}>
                   {row.label}
                 </Text>
-                <Text style={[styles.addRowChevron, { color: colours.textDim }]}>›</Text>
+                <Text style={[styles.addRowChevron, { color: theme.textDim }]}>›</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Automation interest */}
           <View style={styles.autoSyncSection}>
-            <Text style={[styles.autoSyncText, { color: colours.textDim }]}>
+            <Text style={[styles.autoSyncText, { color: theme.textDim }]}>
               Automatic sync is coming — interested?
             </Text>
             {autoSyncInterested ? (
-              <Text style={[styles.autoSyncConfirm, { color: colours.textDim }]}>
+              <Text style={[styles.autoSyncConfirm, { color: theme.textDim }]}>
                 Got it — we'll let you know ✓
               </Text>
             ) : (

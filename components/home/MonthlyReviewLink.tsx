@@ -26,7 +26,7 @@ export default function MonthlyReviewLink({ month, isVisible, isRedacted, onPres
         ]}
       >
         <Text
-          style={[styles.label, { color: colours.textPrimary }]}
+          style={[styles.label, { color: theme.textPrimary }]}
           numberOfLines={1}
         >
           Your {month} review is ready

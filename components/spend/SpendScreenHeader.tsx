@@ -25,7 +25,7 @@ function DotsButton({ onPress, hasStaleData }: { onPress: () => void; hasStaleDa
         activeOpacity={0.7}
         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       >
-        <Text style={[styles.overflowDots, { color: colours.textSecondary }]}>···</Text>
+        <Text style={[styles.overflowDots, { color: theme.textSecondary }]}>···</Text>
       </TouchableOpacity>
       {hasStaleData && (
         <View style={[styles.staleDot, { backgroundColor: colours.warning }]} />

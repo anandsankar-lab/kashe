@@ -42,7 +42,7 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
             fontSize: 11,
             letterSpacing: 0.8,
             textTransform: 'uppercase',
-            color: colours.textSecondary,
+            color: theme.textSecondary,
           }}
         >
           Financial Independence
@@ -55,7 +55,7 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
               fontFamily: 'SpaceGrotesk_700Bold',
               fontSize: 22,
               letterSpacing: -0.5,
-              color: colours.textPrimary,
+              color: theme.textPrimary,
             }}
           >
             {projectedYear}
@@ -90,7 +90,7 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
         {isRedacted ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <RedactedNumber length={2} style={{ fontSize: 13 }} />
-            <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: colours.textSecondary }}>
+            <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, color: theme.textSecondary }}>
               % to FIRE
             </Text>
           </View>
@@ -99,7 +99,7 @@ export default function FIREProgress({ percentage, projectedYear, isSetUp, onPre
             style={{
               fontFamily: 'Inter_400Regular',
               fontSize: 13,
-              color: colours.textSecondary,
+              color: theme.textSecondary,
             }}
           >
             {percentage}% to FIRE

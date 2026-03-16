@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import colours from '../../constants/colours';
 import { Theme } from '../../constants/colours';
 import { BucketType, PortfolioHolding } from '../../types/portfolio';
 import MacronRule from '../shared/MacronRule';
@@ -62,7 +61,7 @@ function makeStyles(theme: Theme, bottomInset: number) {
     headerText: {
       fontFamily: 'SpaceGrotesk_600SemiBold',
       fontSize: 18,
-      color: colours.textPrimary,
+      color: theme.textPrimary,
       paddingHorizontal: 20,
       paddingTop: 20,
       paddingBottom: 8,
@@ -70,7 +69,7 @@ function makeStyles(theme: Theme, bottomInset: number) {
     reasoningText: {
       fontFamily: 'Inter_400Regular',
       fontSize: 13,
-      color: colours.textDim,
+      color: theme.textDim,
       paddingHorizontal: 20,
       paddingBottom: 16,
     },
@@ -90,18 +89,18 @@ function makeStyles(theme: Theme, bottomInset: number) {
       height: 20,
       borderRadius: 10,
       borderWidth: 2,
-      borderColor: colours.textDim,
+      borderColor: theme.textDim,
       backgroundColor: 'transparent',
       marginRight: 12,
     },
     radioOuterSelected: {
-      borderColor: colours.accent,
+      borderColor: theme.accent,
     },
     radioInner: {
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: colours.accent,
+      backgroundColor: theme.accent,
       position: 'absolute',
       top: 4,
       left: 4,
@@ -112,18 +111,18 @@ function makeStyles(theme: Theme, bottomInset: number) {
     optionLabel: {
       fontFamily: 'Inter_500Medium',
       fontSize: 15,
-      color: colours.textPrimary,
+      color: theme.textPrimary,
     },
     optionDescription: {
       fontFamily: 'Inter_400Regular',
       fontSize: 13,
-      color: colours.textSecondary,
+      color: theme.textSecondary,
       marginTop: 2,
     },
     protectionNote: {
       fontFamily: 'Inter_400Regular',
       fontSize: 13,
-      color: colours.textDim,
+      color: theme.textDim,
       paddingVertical: 14,
     },
     buttonsContainer: {
@@ -132,7 +131,7 @@ function makeStyles(theme: Theme, bottomInset: number) {
       paddingBottom: 32,
     },
     confirmButton: {
-      backgroundColor: colours.accent,
+      backgroundColor: theme.accent,
       borderRadius: 12,
       paddingVertical: 14,
       alignItems: 'center',
@@ -140,12 +139,12 @@ function makeStyles(theme: Theme, bottomInset: number) {
     confirmText: {
       fontFamily: 'Inter_500Medium',
       fontSize: 15,
-      color: colours.textPrimary,
+      color: theme.textOnAccent,
     },
     cancelText: {
       fontFamily: 'Inter_400Regular',
       fontSize: 14,
-      color: colours.textSecondary,
+      color: theme.textSecondary,
       textAlign: 'center',
       marginTop: 12,
     },

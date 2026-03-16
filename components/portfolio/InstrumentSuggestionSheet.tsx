@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import colours from '../../constants/colours';
 import { Theme } from '../../constants/colours';
 import { BucketType } from '../../types/portfolio';
 
@@ -204,7 +203,7 @@ function makeStyles(theme: Theme, screenHeight: number, bottomInset: number) {
     header: {
       fontFamily: 'SpaceGrotesk_700Bold',
       fontSize: 18,
-      color: colours.textPrimary,
+      color: theme.textPrimary,
       letterSpacing: -0.5,
       paddingHorizontal: 20,
       paddingBottom: 16,
@@ -220,7 +219,7 @@ function makeStyles(theme: Theme, screenHeight: number, bottomInset: number) {
       fontFamily: 'Inter_500Medium',
       fontSize: 11,
       letterSpacing: 0.8,
-      color: colours.textDim,
+      color: theme.textDim,
       textTransform: 'uppercase',
       marginTop: 16,
       marginBottom: 8,
@@ -232,25 +231,25 @@ function makeStyles(theme: Theme, screenHeight: number, bottomInset: number) {
       fontFamily: 'Inter_500Medium',
       fontSize: 11,
       letterSpacing: 0.8,
-      color: colours.textDim,
+      color: theme.textDim,
       textTransform: 'uppercase',
       marginBottom: 4,
     },
     instrumentName: {
       fontFamily: 'Inter_500Medium',
       fontSize: 14,
-      color: colours.textPrimary,
+      color: theme.textPrimary,
     },
     instrumentDescription: {
       fontFamily: 'Inter_400Regular',
       fontSize: 12,
-      color: colours.textSecondary,
+      color: theme.textSecondary,
       marginTop: 2,
     },
     instrumentNote: {
       fontFamily: 'Inter_400Regular',
       fontSize: 12,
-      color: colours.textDim,
+      color: theme.textDim,
       marginTop: 4,
     },
     linkRow: {
@@ -260,7 +259,7 @@ function makeStyles(theme: Theme, screenHeight: number, bottomInset: number) {
     linkText: {
       fontFamily: 'Inter_500Medium',
       fontSize: 12,
-      color: colours.accent,
+      color: theme.accent,
     },
     linkSpacing: {
       marginLeft: 16,
@@ -281,7 +280,7 @@ function makeStyles(theme: Theme, screenHeight: number, bottomInset: number) {
     disclaimerText: {
       fontFamily: 'Inter_400Regular',
       fontSize: 11,
-      color: colours.textDim,
+      color: theme.textDim,
       textAlign: 'center',
       lineHeight: 16,
     },

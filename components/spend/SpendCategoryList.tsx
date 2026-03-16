@@ -181,13 +181,13 @@ export default function SpendCategoryList({
       return (
         <View style={styles.childcareZeroRow}>
           <View style={styles.iconWrapper}>
-            <CategoryIcon categoryId={cat.id} size={22} color={colours.textDim} />
+            <CategoryIcon categoryId={cat.id} size={22} color={theme.textDim} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.childcareZeroName, { color: colours.textSecondary }]}>
+            <Text style={[styles.childcareZeroName, { color: theme.textSecondary }]}>
               {cat.name}
             </Text>
-            <Text style={[styles.childcareZeroNote, { color: colours.textDim }]}>
+            <Text style={[styles.childcareZeroNote, { color: theme.textDim }]}>
               No spend this month
             </Text>
           </View>
@@ -203,7 +203,7 @@ export default function SpendCategoryList({
           isRedacted={isRedacted}
         />
         {cat.id === 'other' && cat.amount >= OTHER_NUDGE_AMOUNT && (
-          <Text style={[styles.otherNudge, { color: colours.textDim }]}>
+          <Text style={[styles.otherNudge, { color: theme.textDim }]}>
             Tap to recategorise
           </Text>
         )}
@@ -214,7 +214,7 @@ export default function SpendCategoryList({
   return (
     <View>
       {/* Section label */}
-      <Text style={[styles.sectionLabel, { color: colours.textDim }]}>CATEGORIES</Text>
+      <Text style={[styles.sectionLabel, { color: theme.textDim }]}>CATEGORIES</Text>
 
       {/* Top 5 visible rows with optional fade gradient */}
       <View style={{ position: 'relative' }}>
@@ -270,7 +270,7 @@ export default function SpendCategoryList({
             activeOpacity={0.8}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.expandButtonLabel}>
+              <Text style={[styles.expandButtonLabel, { color: theme.textSecondary }]}>
                 {isExpanded ? 'Show less' : `Show all ${enriched.length} categories`}
               </Text>
               <KasheAsterisk size={11} direction={isExpanded ? 'up' : 'down'} />
@@ -285,32 +285,32 @@ export default function SpendCategoryList({
           activeOpacity={0.7}
           style={[styles.recurringStrip, { backgroundColor: surfaceColor }]}
         >
-          <Text style={[styles.recurringIcon, { color: colours.textDim }]}>↻</Text>
+          <Text style={[styles.recurringIcon, { color: theme.textDim }]}>↻</Text>
           <View style={styles.recurringTextRow}>
             {isRedacted ? (
               <>
                 <RedactedNumber length={1} style={styles.recurringAmount} />
-                <Text style={[styles.recurringText, { color: colours.textSecondary }]}>
+                <Text style={[styles.recurringText, { color: theme.textSecondary }]}>
                   {' recurring charges '}
                 </Text>
-                <Text style={{ color: colours.textDim, fontFamily: 'Inter_400Regular', fontSize: 14 }}>·</Text>
-                <Text style={[styles.recurringText, { color: colours.textSecondary }]}>{' €'}</Text>
+                <Text style={{ color: theme.textDim, fontFamily: 'Inter_400Regular', fontSize: 14 }}>·</Text>
+                <Text style={[styles.recurringText, { color: theme.textSecondary }]}>{' €'}</Text>
                 <RedactedNumber length={3} style={styles.recurringAmount} />
-                <Text style={[styles.recurringText, { color: colours.textSecondary }]}>/month</Text>
+                <Text style={[styles.recurringText, { color: theme.textSecondary }]}>/month</Text>
               </>
             ) : (
               <>
-                <Text style={[styles.recurringText, { color: colours.textSecondary }]}>
+                <Text style={[styles.recurringText, { color: theme.textSecondary }]}>
                   {recurringCount} recurring charges
                 </Text>
-                <Text style={[styles.recurringText, { color: colours.textDim }]}>{' · '}</Text>
-                <Text style={[styles.recurringText, { color: colours.textSecondary }]}>
+                <Text style={[styles.recurringText, { color: theme.textDim }]}>{' · '}</Text>
+                <Text style={[styles.recurringText, { color: theme.textSecondary }]}>
                   €{Math.round(recurringTotal)}/month
                 </Text>
               </>
             )}
           </View>
-          <Text style={[styles.recurringChevron, { color: colours.textDim }]}>›</Text>
+          <Text style={[styles.recurringChevron, { color: theme.textDim }]}>›</Text>
         </TouchableOpacity>
       )}
 
@@ -329,7 +329,7 @@ export default function SpendCategoryList({
           />
 
           {/* Section label */}
-          <Text style={[styles.transfersLabel, { color: colours.textDim }]}>
+          <Text style={[styles.transfersLabel, { color: theme.textDim }]}>
             TRANSFERS &amp; INVESTMENTS
           </Text>
 
@@ -349,15 +349,15 @@ export default function SpendCategoryList({
                 >
                   {/* Icon */}
                   <View style={styles.transferIconWrapper}>
-                    <CategoryIcon categoryId={cat.id} size={22} color={colours.textDim} />
+                    <CategoryIcon categoryId={cat.id} size={22} color={theme.textDim} />
                   </View>
 
                   {/* Name + note */}
                   <View style={styles.transferMiddle}>
-                    <Text style={[styles.transferName, { color: colours.textSecondary }]}>
+                    <Text style={[styles.transferName, { color: theme.textSecondary }]}>
                       {cat.name}
                     </Text>
-                    <Text style={[styles.transferNote, { color: colours.textDim }]}>
+                    <Text style={[styles.transferNote, { color: theme.textDim }]}>
                       excluded from totals
                     </Text>
                   </View>
@@ -367,11 +367,11 @@ export default function SpendCategoryList({
                     {isRedacted ? (
                       <RedactedNumber length={4} style={styles.transferAmount} />
                     ) : (
-                      <Text style={[styles.transferAmount, { color: colours.textSecondary }]}>
+                      <Text style={[styles.transferAmount, { color: theme.textSecondary }]}>
                         {cat.currency}{cat.amount.toLocaleString()}
                       </Text>
                     )}
-                    <Text style={[styles.transferChevron, { color: colours.textDim }]}>›</Text>
+                    <Text style={[styles.transferChevron, { color: theme.textDim }]}>›</Text>
                   </View>
                 </TouchableOpacity>
 
@@ -429,7 +429,6 @@ const styles = StyleSheet.create({
   expandButtonLabel: {
     fontFamily: 'Inter_500Medium',
     fontSize: 13,
-    color: colours.textSecondary,
   },
   recurringStrip: {
     flexDirection: 'row',

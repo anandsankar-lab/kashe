@@ -113,25 +113,25 @@ export default function BulkTagSheet({
         <View style={[styles.dragHandle, { backgroundColor: border }]} />
 
         {/* Header */}
-        <Text style={[styles.header, { color: colours.textPrimary }]}>
+        <Text style={[styles.header, { color: theme.textPrimary }]}>
           Tag {selectedCount} transaction{selectedCount !== 1 ? 's' : ''}
         </Text>
 
         {/* Dim note */}
-        <Text style={[styles.dimNote, { color: colours.textDim }]}>
+        <Text style={[styles.dimNote, { color: theme.textDim }]}>
           These tags will be added to all selected transactions
         </Text>
 
         {/* Tag input section */}
         <View style={styles.tagSection}>
-          <Text style={[styles.sectionLabel, { color: colours.textDim }]}>
+          <Text style={[styles.sectionLabel, { color: theme.textDim }]}>
             ADD TAGS
           </Text>
 
           {/* Selected tags chips */}
           <View style={styles.existingTags}>
             {tags.length === 0 ? (
-              <Text style={[styles.noTagsText, { color: colours.textDim }]}>
+              <Text style={[styles.noTagsText, { color: theme.textDim }]}>
                 No tags selected yet
               </Text>
             ) : (
@@ -141,7 +141,7 @@ export default function BulkTagSheet({
                   style={[styles.tagChip, { backgroundColor: border }]}
                 >
                   <Text
-                    style={[styles.tagChipText, { color: colours.textPrimary }]}
+                    style={[styles.tagChipText, { color: theme.textPrimary }]}
                   >
                     {tag}
                   </Text>
@@ -152,7 +152,7 @@ export default function BulkTagSheet({
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text
-                      style={[styles.tagChipRemove, { color: colours.textDim }]}
+                      style={[styles.tagChipRemove, { color: theme.textDim }]}
                     >
                       ×
                     </Text>
@@ -170,11 +170,11 @@ export default function BulkTagSheet({
                 {
                   backgroundColor: bg,
                   borderColor: border,
-                  color: colours.textPrimary,
+                  color: theme.textPrimary,
                 },
               ]}
               placeholder="Add a tag..."
-              placeholderTextColor={colours.textDim}
+              placeholderTextColor={theme.textDim}
               value={tagInput}
               onChangeText={setTagInput}
               onSubmitEditing={handleAdd}
@@ -183,7 +183,7 @@ export default function BulkTagSheet({
             <TouchableOpacity
               style={[
                 styles.addTagBtn,
-                { backgroundColor: colours.accent },
+                { backgroundColor: theme.accent },
                 tagInput.trim().length === 0 && styles.addTagBtnDisabled,
               ]}
               onPress={handleAdd}
@@ -213,7 +213,7 @@ export default function BulkTagSheet({
                   <Text
                     style={[
                       styles.suggestionText,
-                      { color: colours.textSecondary },
+                      { color: theme.textSecondary },
                     ]}
                   >
                     {s}
@@ -228,7 +228,7 @@ export default function BulkTagSheet({
         <TouchableOpacity
           style={[
             styles.applyBtn,
-            { backgroundColor: colours.accent },
+            { backgroundColor: theme.accent },
             tags.length === 0 && styles.applyBtnDisabled,
           ]}
           onPress={handleApply}

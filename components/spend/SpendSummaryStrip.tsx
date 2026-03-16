@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 import RedactedNumber from '../shared/RedactedNumber';
 import KasheAsterisk from '../shared/KasheAsterisk';
 
@@ -26,20 +26,22 @@ export default function SpendSummaryStrip({
   hasMultiCurrency,
   isRedacted,
 }: SpendSummaryStripProps) {
+  const theme = useTheme();
+
   return (
     <View style={styles.container}>
       {/* 1. Net spend number */}
       {isRedacted ? (
         <RedactedNumber length={5} style={{ fontSize: 48, letterSpacing: -1.5 }} />
       ) : (
-        <Text style={styles.spendNumber}>
+        <Text style={[styles.spendNumber, { color: theme.textPrimary }]}>
           {currency}{formatAmount(totalSpend)}
         </Text>
       )}
 
       {/* Multi-currency note */}
       {hasMultiCurrency && !isRedacted && (
-        <Text style={styles.multiCurrencyNote}>incl. amounts converted from INR</Text>
+        <Text style={[styles.multiCurrencyNote, { color: theme.textDim }]}>incl. amounts converted from INR</Text>
       )}
 
       {/* 2. Context line — only when vsLastMonth is not null */}
@@ -48,10 +50,10 @@ export default function SpendSummaryStrip({
           <View style={styles.contextRow}>
             <KasheAsterisk size={11} direction="neutral" />
             <RedactedNumber length={2} style={{ fontSize: 14 }} />
-            <Text style={styles.contextDim}>% vs last month  ·  </Text>
+            <Text style={[styles.contextDim, { color: theme.textDim }]}>% vs last month  ·  </Text>
             <KasheAsterisk size={11} direction="neutral" />
             <RedactedNumber length={2} style={{ fontSize: 14 }} />
-            <Text style={styles.contextDim}>% vs 3-month avg</Text>
+            <Text style={[styles.contextDim, { color: theme.textDim }]}>% vs 3-month avg</Text>
           </View>
         ) : (
           <View style={styles.contextRow}>
@@ -59,17 +61,17 @@ export default function SpendSummaryStrip({
               size={11}
               direction={vsLastMonth > 0 ? 'up' : vsLastMonth < 0 ? 'down' : 'neutral'}
             />
-            <Text style={[styles.contextDim, { color: colours.textSecondary }]}>
+            <Text style={[styles.contextDim, { color: theme.textSecondary }]}>
               {Math.abs(vsLastMonth)}% vs last month
             </Text>
             {vs3MonthAvg !== null && (
               <>
-                <Text style={styles.contextDim}>  ·  </Text>
+                <Text style={[styles.contextDim, { color: theme.textDim }]}>  ·  </Text>
                 <KasheAsterisk
                   size={11}
                   direction={vs3MonthAvg > 0 ? 'up' : vs3MonthAvg < 0 ? 'down' : 'neutral'}
                 />
-                <Text style={[styles.contextDim, { color: colours.textSecondary }]}>
+                <Text style={[styles.contextDim, { color: theme.textSecondary }]}>
                   {Math.abs(vs3MonthAvg)}% vs 3-month avg
                 </Text>
               </>
@@ -83,12 +85,12 @@ export default function SpendSummaryStrip({
         isRedacted ? (
           <View style={styles.budgetRow}>
             <RedactedNumber length={4} style={{ fontSize: 14 }} />
-            <Text style={styles.budgetText}> of </Text>
+            <Text style={[styles.budgetText, { color: theme.textSecondary }]}> of </Text>
             <RedactedNumber length={4} style={{ fontSize: 14 }} />
-            <Text style={styles.budgetText}> budget</Text>
+            <Text style={[styles.budgetText, { color: theme.textSecondary }]}> budget</Text>
           </View>
         ) : (
-          <Text style={styles.budgetText}>
+          <Text style={[styles.budgetText, { color: theme.textSecondary }]}>
             {currency}{formatAmount(totalSpend)} of {currency}{formatAmount(budgetAmount)} budget
           </Text>
         )
@@ -107,18 +109,15 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceGrotesk_700Bold',
     fontSize: 48,
     letterSpacing: -1.5,
-    color: colours.textPrimary,
   },
   multiCurrencyNote: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
-    color: colours.textDim,
     marginTop: 2,
   },
   contextText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textPrimary,
     marginTop: 6,
   },
   contextRow: {
@@ -131,12 +130,10 @@ const styles = StyleSheet.create({
   contextNumber: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textPrimary,
   },
   contextDim: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textDim,
   },
   budgetRow: {
     flexDirection: 'row',
@@ -147,7 +144,6 @@ const styles = StyleSheet.create({
   budgetText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textSecondary,
     marginTop: 4,
   },
 });

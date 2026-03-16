@@ -27,7 +27,7 @@ export default function HoldingDetailScreen() {
   if (!holding) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 15, color: colours.textSecondary }}>
+        <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 15, color: theme.textSecondary }}>
           Holding not found
         </Text>
       </View>
@@ -42,7 +42,7 @@ export default function HoldingDetailScreen() {
 
   const changeColor =
     dailyChangePercent === undefined || dailyChangePercent === 0
-      ? colours.textDim
+      ? theme.textDim
       : dailyChangePercent > 0 ? colours.accent : colours.danger
 
   const asteriskDirection: 'up' | 'down' | 'neutral' =
@@ -76,9 +76,9 @@ export default function HoldingDetailScreen() {
       {/* Header — sticky */}
       <View style={[styles.header, { backgroundColor: theme.background }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={[styles.backChevron, { color: colours.textPrimary }]}>‹</Text>
+          <Text style={[styles.backChevron, { color: theme.textPrimary }]}>‹</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerName, { color: colours.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.headerName, { color: theme.textPrimary }]} numberOfLines={1}>
           {holding.name}
         </Text>
       </View>
@@ -88,7 +88,7 @@ export default function HoldingDetailScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Hero value */}
-        <Text style={[styles.heroValue, { color: colours.textPrimary }]}>
+        <Text style={[styles.heroValue, { color: theme.textPrimary }]}>
           {formatCurrency(holding.currentValue, holding.currency)}
         </Text>
 
@@ -104,7 +104,7 @@ export default function HoldingDetailScreen() {
 
         {/* Portfolio allocation */}
         {portfolioPct !== null && (
-          <Text style={styles.allocationText}>
+          <Text style={[styles.allocationText, { color: theme.textSecondary }]}>
             {portfolioPct}% of live portfolio
           </Text>
         )}
@@ -114,18 +114,20 @@ export default function HoldingDetailScreen() {
         {/* Details rows */}
         <View style={{ marginTop: 4 }}>
           {holding.quantity !== undefined && (
-            <DetailRow label="Units / Quantity" value={holding.quantity.toString()} />
+            <DetailRow label="Units / Quantity" value={holding.quantity.toString()} theme={theme} />
           )}
           {pricePerUnit !== undefined && (
             <DetailRow
               label="Price per unit"
               value={formatCurrency(pricePerUnit, holding.currency)}
+              theme={theme}
             />
           )}
           {holding.purchasePrice !== undefined && (
             <DetailRow
               label="Purchase price"
               value={formatCurrency(holding.purchasePrice, holding.currency)}
+              theme={theme}
             />
           )}
           {gain !== undefined && (
@@ -133,31 +135,32 @@ export default function HoldingDetailScreen() {
               label={gain >= 0 ? 'Unrealised gain' : 'Unrealised loss'}
               value={formatCurrency(Math.abs(gain), holding.currency)}
               valueColor={gain >= 0 ? colours.accent : colours.danger}
+              theme={theme}
             />
           )}
-          <DetailRow label="Asset type" value={holding.assetSubtype} />
-          <DetailRow label="Geography" value={holding.geography} />
+          <DetailRow label="Asset type" value={holding.assetSubtype} theme={theme} />
+          <DetailRow label="Geography" value={holding.geography} theme={theme} />
           {holding.taxWrapper !== undefined && holding.taxWrapper !== 'none' && (
-            <DetailRow label="Tax wrapper" value={holding.taxWrapper} />
+            <DetailRow label="Tax wrapper" value={holding.taxWrapper} theme={theme} />
           )}
-          <DetailRow label="Data source" value="Manual" />
-          <DetailRow label="Last updated" value={lastUpdatedDisplay} />
+          <DetailRow label="Data source" value="Manual" theme={theme} />
+          <DetailRow label="Last updated" value={lastUpdatedDisplay} theme={theme} />
         </View>
 
         <MacronRule style={{ marginTop: 8 }} />
 
         {/* Purpose bucket row */}
         <View style={styles.bucketRow}>
-          <Text style={styles.bucketLabel}>Purpose bucket</Text>
+          <Text style={[styles.bucketLabel, { color: theme.textSecondary }]}>Purpose bucket</Text>
           <TouchableOpacity
             style={styles.bucketRight}
             onPress={() => setReassignSheet({ visible: true, holding })}
             activeOpacity={0.7}
           >
-            <Text style={[styles.bucketName, { color: colours.textPrimary }]}>
+            <Text style={[styles.bucketName, { color: theme.textPrimary }]}>
               {holding.bucket}
             </Text>
-            <Text style={[styles.bucketChevron, { color: colours.textDim }]}>›</Text>
+            <Text style={[styles.bucketChevron, { color: theme.textDim }]}>›</Text>
           </TouchableOpacity>
         </View>
 
@@ -179,7 +182,7 @@ export default function HoldingDetailScreen() {
             onPress={() => console.log('Edit holding:', holding.id)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.outlineButtonText, { color: colours.textPrimary }]}>
+            <Text style={[styles.outlineButtonText, { color: theme.textPrimary }]}>
               Edit holding
             </Text>
           </TouchableOpacity>
@@ -189,7 +192,7 @@ export default function HoldingDetailScreen() {
             onPress={() => setReassignSheet({ visible: true, holding })}
             activeOpacity={0.7}
           >
-            <Text style={[styles.outlineButtonText, { color: colours.textPrimary }]}>
+            <Text style={[styles.outlineButtonText, { color: theme.textPrimary }]}>
               Reassign bucket
             </Text>
           </TouchableOpacity>
@@ -199,7 +202,7 @@ export default function HoldingDetailScreen() {
             onPress={() => console.log('Remove holding:', holding.id)}
             activeOpacity={0.7}
           >
-            <Text style={styles.removeLink}>Remove holding</Text>
+            <Text style={[styles.removeLink, { color: colours.danger }]}>Remove holding</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -223,15 +226,17 @@ function DetailRow({
   label,
   value,
   valueColor,
+  theme,
 }: {
   label: string
   value: string
   valueColor?: string
+  theme: ReturnType<typeof useTheme>
 }) {
   return (
     <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={[styles.detailValue, valueColor ? { color: valueColor } : {}]}>
+      <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: valueColor ?? theme.textPrimary }]}>
         {value}
       </Text>
     </View>
@@ -282,7 +287,6 @@ const styles = StyleSheet.create({
   allocationText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
-    color: colours.textSecondary,
     marginTop: 4,
   },
   detailRow: {
@@ -293,12 +297,10 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textSecondary,
   },
   detailValue: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textPrimary,
     textAlign: 'right',
     flex: 1,
     marginLeft: 16,
@@ -312,7 +314,6 @@ const styles = StyleSheet.create({
   bucketLabel: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
-    color: colours.textSecondary,
   },
   bucketRight: {
     flexDirection: 'row',
@@ -340,7 +341,6 @@ const styles = StyleSheet.create({
   removeLink: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.danger,
     textAlign: 'center',
   },
 })

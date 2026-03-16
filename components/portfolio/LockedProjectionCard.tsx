@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { useTheme } from '../../context/ThemeContext'
-import colours from '../../constants/colours'
 import { PortfolioHolding, AssetSubtype } from '../../types/portfolio'
 import { formatCurrency } from '../../constants/formatters'
 
@@ -48,25 +47,25 @@ export default function LockedProjectionCard({ holding }: Props) {
 
   return (
     <View style={[styles.outer, { backgroundColor: theme.surface }]}>
-      <Text style={styles.header}>🔒 Projected at unlock</Text>
+      <Text style={[styles.header, { color: theme.textDim }]}>🔒 Projected at unlock</Text>
 
       {isAlternative ? (
         <>
-          <Text style={styles.lastKnown}>
+          <Text style={[styles.lastKnown, { color: theme.textSecondary }]}>
             Last known valuation: {formatCurrency(holding.currentValue, holding.currency)}
           </Text>
-          <Text style={styles.illiquid}>Illiquid alternative — outcome uncertain</Text>
+          <Text style={[styles.illiquid, { color: theme.textDim }]}>Illiquid alternative — outcome uncertain</Text>
         </>
       ) : (
         <>
-          <Text style={[styles.projectedValue, { color: colours.accent }]}>
+          <Text style={[styles.projectedValue, { color: theme.accent }]}>
             {formatCurrency(projectedValue, holding.currency)}
           </Text>
-          <Text style={styles.rateSource}>
+          <Text style={[styles.rateSource, { color: theme.textSecondary }]}>
             at {(rate * 100).toFixed(1)}% {label} rate (current)
           </Text>
-          <Text style={styles.unlockDate}>Unlocks {unlockDisplay}</Text>
-          <Text style={styles.disclaimer}>Projection only — actual returns may vary</Text>
+          <Text style={[styles.unlockDate, { color: theme.textSecondary }]}>Unlocks {unlockDisplay}</Text>
+          <Text style={[styles.disclaimer, { color: theme.textDim }]}>Projection only — actual returns may vary</Text>
         </>
       )}
     </View>
@@ -82,7 +81,6 @@ const styles = StyleSheet.create({
   header: {
     fontFamily: 'Inter_500Medium',
     fontSize: 13,
-    color: colours.textDim,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 12,
@@ -94,30 +92,25 @@ const styles = StyleSheet.create({
   rateSource: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
-    color: colours.textSecondary,
     marginTop: 4,
   },
   unlockDate: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
-    color: colours.textSecondary,
     marginTop: 2,
   },
   disclaimer: {
     fontFamily: 'Inter_400Regular',
     fontSize: 11,
-    color: colours.textDim,
     marginTop: 8,
   },
   lastKnown: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textSecondary,
   },
   illiquid: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
-    color: colours.textDim,
     marginTop: 4,
   },
 })

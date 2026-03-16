@@ -240,6 +240,6 @@ const styles = StyleSheet.create({
   pillText: {
     fontFamily: 'SpaceGrotesk_600SemiBold',
     fontSize: 14,
-    color: colours.textPrimary,
+    color: colours.textOnAccent,
   },
 })

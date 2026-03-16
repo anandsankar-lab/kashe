@@ -40,11 +40,11 @@ const TABS: { key: ViewMode; label: string }[] = [
   { key: 'geography', label: 'Geography' },
 ];
 
-function getRiskBarColour(actual: number, target: number): string {
+function getRiskBarColour(actual: number, target: number, textDim: string): string {
   const diff = actual - target;
   if (Math.abs(diff) <= VARIANCE_THRESHOLD) return colours.accent;
   if (diff > 0) return colours.warning;
-  return colours.textDim;
+  return textDim;
 }
 
 interface AnimatedBarProps {
@@ -85,19 +85,22 @@ function AnimatedBar({ pct, colour, viewKey }: AnimatedBarProps) {
 interface ViewProps {
   viewKey: string;
   trackColor: string;
+  textPrimary: string;
+  textSecondary: string;
+  textDim: string;
   isRedacted?: boolean;
 }
 
-function RiskView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
+function RiskView({ viewKey, trackColor, textPrimary: _textPrimary, textSecondary, textDim, isRedacted = false }: ViewProps) {
   return (
     <View style={{ gap: Spacing.lg }}>
       {RISK_DATA.map(item => {
         const diff = item.actual - item.target;
-        const barColour = getRiskBarColour(item.actual, item.target);
+        const barColour = getRiskBarColour(item.actual, item.target, textDim);
         const isOver = diff > VARIANCE_THRESHOLD;
         const isUnder = diff < -VARIANCE_THRESHOLD;
         const hasVariance = isOver || isUnder;
-        const varianceColour = isOver ? colours.warning : colours.textDim;
+        const varianceColour = isOver ? colours.warning : textDim;
 
         return (
           <View key={item.key}>
@@ -108,13 +111,13 @@ function RiskView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
                 marginBottom: Spacing.xs,
               }}
             >
-              <Text style={[Typography.label, { color: colours.textSecondary }]}>
+              <Text style={[Typography.label, { color: textSecondary }]}>
                 {item.label}
               </Text>
               {isRedacted ? (
                 <RedactedNumber length={2} style={{ fontSize: 12 }} />
               ) : (
-                <Text style={[Typography.caption, { color: colours.textSecondary }]}>
+                <Text style={[Typography.caption, { color: textSecondary }]}>
                   {item.actual}%
                 </Text>
               )}
@@ -136,7 +139,7 @@ function RiskView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
                     top: 0,
                     height: BAR_HEIGHT,
                     width: `${item.target}%`,
-                    backgroundColor: colours.textSecondary,
+                    backgroundColor: textSecondary,
                     borderRadius: borderRadius.pill,
                     opacity: 0.2,
                   }}
@@ -176,7 +179,7 @@ function RiskView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
   );
 }
 
-function VehicleView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
+function VehicleView({ viewKey, trackColor, textPrimary, textSecondary, textDim: _textDim, isRedacted = false }: ViewProps) {
   return (
     <View style={{ gap: Spacing.md }}>
       {VEHICLE_DATA.map(item => (
@@ -188,13 +191,13 @@ function VehicleView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
               marginBottom: Spacing.xs,
             }}
           >
-            <Text style={[Typography.caption, { color: colours.textPrimary }]}>
+            <Text style={[Typography.caption, { color: textPrimary }]}>
               {item.label}
             </Text>
             {isRedacted ? (
               <RedactedNumber length={2} style={{ fontSize: 12 }} />
             ) : (
-              <Text style={[Typography.caption, { color: colours.textSecondary }]}>
+              <Text style={[Typography.caption, { color: textSecondary }]}>
                 {item.pct}%
               </Text>
             )}
@@ -215,7 +218,7 @@ function VehicleView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
   );
 }
 
-function GeographyView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
+function GeographyView({ viewKey, trackColor, textPrimary, textSecondary, textDim: _textDimGeo, isRedacted = false }: ViewProps) {
   return (
     <View style={{ gap: Spacing.md }}>
       {GEOGRAPHY_DATA.map(item => (
@@ -227,13 +230,13 @@ function GeographyView({ viewKey, trackColor, isRedacted = false }: ViewProps) {
               marginBottom: Spacing.xs,
             }}
           >
-            <Text style={[Typography.caption, { color: colours.textPrimary }]}>
+            <Text style={[Typography.caption, { color: textPrimary }]}>
               {item.flag} {item.label}
             </Text>
             {isRedacted ? (
               <RedactedNumber length={2} style={{ fontSize: 12 }} />
             ) : (
-              <Text style={[Typography.caption, { color: colours.textSecondary }]}>
+              <Text style={[Typography.caption, { color: textSecondary }]}>
                 {item.pct}%
               </Text>
             )}
@@ -264,6 +267,9 @@ export default function SegregationToggle({ isRedacted = false }: SegregationTog
 
   const selectorBg = theme.background;
   const trackColor = theme.border;
+  const textPrimary = theme.textPrimary;
+  const textSecondary = theme.textSecondary;
+  const textDim = theme.textDim;
 
   return (
     <Card style={{ backgroundColor: theme.surface, padding: 16, borderRadius: 16 }}>
@@ -296,7 +302,7 @@ export default function SegregationToggle({ isRedacted = false }: SegregationTog
                 style={[
                   Typography.label,
                   {
-                    color: isSelected ? colours.textPrimary : colours.textSecondary,
+                    color: isSelected ? theme.textOnAccent : textSecondary,
                   },
                 ]}
               >
@@ -308,9 +314,9 @@ export default function SegregationToggle({ isRedacted = false }: SegregationTog
       </View>
 
       {/* View content */}
-      {view === 'risk' && <RiskView viewKey={view} trackColor={trackColor} isRedacted={isRedacted} />}
-      {view === 'vehicle' && <VehicleView viewKey={view} trackColor={trackColor} isRedacted={isRedacted} />}
-      {view === 'geography' && <GeographyView viewKey={view} trackColor={trackColor} isRedacted={isRedacted} />}
+      {view === 'risk' && <RiskView viewKey={view} trackColor={trackColor} textPrimary={textPrimary} textSecondary={textSecondary} textDim={textDim} isRedacted={isRedacted} />}
+      {view === 'vehicle' && <VehicleView viewKey={view} trackColor={trackColor} textPrimary={textPrimary} textSecondary={textSecondary} textDim={textDim} isRedacted={isRedacted} />}
+      {view === 'geography' && <GeographyView viewKey={view} trackColor={trackColor} textPrimary={textPrimary} textSecondary={textSecondary} textDim={textDim} isRedacted={isRedacted} />}
     </Card>
   );
 }

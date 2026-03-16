@@ -188,14 +188,14 @@ export default function TransactionEditSheet({
         >
           {/* Merchant header */}
           <View style={styles.merchantHeader}>
-            <Text style={[styles.merchantName, { color: colours.textPrimary }]}>
+            <Text style={[styles.merchantName, { color: theme.textPrimary }]}>
               {transaction.merchant}
             </Text>
             <View style={styles.amountDateRow}>
-              <Text style={[styles.amount, { color: colours.textPrimary }]}>
+              <Text style={[styles.amount, { color: theme.textPrimary }]}>
                 €{transaction.amount.toFixed(2)}
               </Text>
-              <Text style={[styles.dateText, { color: colours.textDim }]}>
+              <Text style={[styles.dateText, { color: theme.textDim }]}>
                 {formatDate(transaction.date)}
               </Text>
             </View>
@@ -206,7 +206,7 @@ export default function TransactionEditSheet({
 
           {/* Category section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: colours.textDim }]}>
+            <Text style={[styles.sectionLabel, { color: theme.textDim }]}>
               CATEGORY
             </Text>
 
@@ -224,13 +224,13 @@ export default function TransactionEditSheet({
                 <CategoryIcon
                   categoryId={selectedCategory}
                   size={18}
-                  color={colours.textSecondary}
+                  color={theme.textSecondary}
                 />
-                <Text style={[styles.selectorText, { color: colours.textPrimary }]}>
+                <Text style={[styles.selectorText, { color: theme.textPrimary }]}>
                   {categoryName}
                 </Text>
               </View>
-              <Text style={[styles.changeText, { color: colours.accent }]}>
+              <Text style={[styles.changeText, { color: theme.accent }]}>
                 Change →
               </Text>
             </TouchableOpacity>
@@ -260,7 +260,7 @@ export default function TransactionEditSheet({
                         styles.pickerRow,
                         {
                           backgroundColor: isCatSelected
-                            ? colours.accent
+                            ? theme.accent
                             : 'transparent',
                           borderBottomColor: border,
                           borderBottomWidth:
@@ -272,15 +272,15 @@ export default function TransactionEditSheet({
                       <CategoryIcon
                         categoryId={cat.id}
                         size={16}
-                        color={isCatSelected ? '#111110' : colours.textSecondary}
+                        color={isCatSelected ? theme.textOnAccent : theme.textSecondary}
                       />
                       <Text
                         style={[
                           styles.pickerRowText,
                           {
                             color: isCatSelected
-                              ? '#111110'
-                              : colours.textPrimary,
+                              ? theme.textOnAccent
+                              : theme.textPrimary,
                           },
                         ]}
                       >
@@ -308,13 +308,13 @@ export default function TransactionEditSheet({
                     <CategoryIcon
                       categoryId={selectedCategory}
                       size={16}
-                      color={colours.textDim}
+                      color={theme.textDim}
                     />
-                    <Text style={[styles.subcategoryRowText, { color: colours.textPrimary }]}>
+                    <Text style={[styles.subcategoryRowText, { color: theme.textPrimary }]}>
                       {subcategoryName || 'Select subcategory'}
                     </Text>
                   </View>
-                  <Text style={[styles.changeText, { color: colours.accent }]}>
+                  <Text style={[styles.changeText, { color: theme.accent }]}>
                     Change →
                   </Text>
                 </TouchableOpacity>
@@ -342,7 +342,7 @@ export default function TransactionEditSheet({
                             styles.pickerRow,
                             {
                               backgroundColor: isSubSelected
-                                ? colours.accent
+                                ? theme.accent
                                 : 'transparent',
                               borderBottomColor: border,
                               borderBottomWidth:
@@ -354,15 +354,15 @@ export default function TransactionEditSheet({
                           <CategoryIcon
                             categoryId={selectedCategory}
                             size={16}
-                            color={isSubSelected ? '#111110' : colours.textSecondary}
+                            color={isSubSelected ? theme.textOnAccent : theme.textSecondary}
                           />
                           <Text
                             style={[
                               styles.pickerRowText,
                               {
                                 color: isSubSelected
-                                  ? '#111110'
-                                  : colours.textPrimary,
+                                  ? theme.textOnAccent
+                                  : theme.textPrimary,
                               },
                             ]}
                           >
@@ -379,7 +379,7 @@ export default function TransactionEditSheet({
 
           {/* Tags section */}
           <View style={styles.tagsSection}>
-            <Text style={[styles.sectionLabel, { color: colours.textDim }]}>
+            <Text style={[styles.sectionLabel, { color: theme.textDim }]}>
               TAGS
             </Text>
 
@@ -387,7 +387,7 @@ export default function TransactionEditSheet({
               fontFamily: 'Inter_400Regular',
               fontSize: 12,
               letterSpacing: -0.1,
-              color: colours.textDim,
+              color: theme.textDim,
               marginBottom: 12,
               marginTop: 4,
             }}>
@@ -397,7 +397,7 @@ export default function TransactionEditSheet({
             {/* Existing tags */}
             <View style={styles.existingTags}>
               {tags.length === 0 ? (
-                <Text style={[styles.noTagsText, { color: colours.textDim }]}>
+                <Text style={[styles.noTagsText, { color: theme.textDim }]}>
                   No tags yet
                 </Text>
               ) : (
@@ -409,7 +409,7 @@ export default function TransactionEditSheet({
                     <Text
                       style={[
                         styles.tagChipText,
-                        { color: colours.textPrimary },
+                        { color: theme.textPrimary },
                       ]}
                     >
                       {tag}
@@ -424,7 +424,7 @@ export default function TransactionEditSheet({
                       <Text
                         style={[
                           styles.tagChipRemove,
-                          { color: colours.textDim },
+                          { color: theme.textDim },
                         ]}
                       >
                         ×
@@ -443,18 +443,18 @@ export default function TransactionEditSheet({
                   {
                     backgroundColor: bg,
                     borderColor: border,
-                    color: colours.textPrimary,
+                    color: theme.textPrimary,
                   },
                 ]}
                 placeholder="Add a tag..."
-                placeholderTextColor={colours.textDim}
+                placeholderTextColor={theme.textDim}
                 value={tagInput}
                 onChangeText={setTagInput}
               />
               <TouchableOpacity
                 style={[
                   styles.addTagBtn,
-                  { backgroundColor: colours.accent },
+                  { backgroundColor: theme.accent },
                   tagInput.trim().length === 0 && styles.addTagBtnDisabled,
                   Platform.OS === 'web' && ({ outline: 'none' } as object),
                 ]}
@@ -492,7 +492,7 @@ export default function TransactionEditSheet({
                     <Text
                       style={[
                         styles.suggestionText,
-                        { color: colours.textSecondary },
+                        { color: theme.textSecondary },
                       ]}
                     >
                       {s}
@@ -512,7 +512,7 @@ export default function TransactionEditSheet({
               ]}
             >
               <Text
-                style={[styles.memoryNoteText, { color: colours.textSecondary }]}
+                style={[styles.memoryNoteText, { color: theme.textSecondary }]}
               >
                 ↻ {transaction.merchant} will always be categorised as{' '}
                 {categoryName} going forward
@@ -539,10 +539,10 @@ export default function TransactionEditSheet({
           <Animated.View
             style={[
               styles.toast,
-              { backgroundColor: colours.textPrimary, opacity: toastOpacity },
+              { backgroundColor: colours.textOnLight, opacity: toastOpacity },
             ]}
           >
-            <View style={[styles.toastCheck, { backgroundColor: colours.accent }]}>
+            <View style={[styles.toastCheck, { backgroundColor: theme.accent }]}>
               <Text style={styles.toastCheckIcon}>✓</Text>
             </View>
             <Text style={[styles.toastText, { color: surface }]}>

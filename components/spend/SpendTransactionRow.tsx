@@ -98,29 +98,29 @@ export default function SpendTransactionRow({
         {/* Row 1: merchant + amount */}
         <View style={styles.topRow}>
           <Text
-            style={[styles.merchant, { color: colours.textPrimary }]}
+            style={[styles.merchant, { color: theme.textPrimary }]}
             numberOfLines={1}
           >
             {transaction.merchant}
           </Text>
-          <Text style={[styles.amount, { color: colours.textPrimary }]}>
+          <Text style={[styles.amount, { color: theme.textPrimary }]}>
             {formatAmount(transaction.amount, transaction.currency)}
           </Text>
         </View>
 
         {/* Row 2: date + tags + fx */}
         <View style={styles.bottomRow}>
-          <Text style={[styles.date, { color: colours.textDim }]}>
+          <Text style={[styles.date, { color: theme.textDim }]}>
             {formatDate(transaction.date)}
           </Text>
 
           {hasTags && (
-            <View style={[styles.dot, { backgroundColor: colours.textDim }]} />
+            <View style={[styles.dot, { backgroundColor: theme.textDim }]} />
           )}
 
           {tags.map((tag) => (
             <View key={tag} style={[styles.tagPill, { backgroundColor: borderColor }]}>
-              <Text style={[styles.tagText, { color: colours.textSecondary }]}>
+              <Text style={[styles.tagText, { color: theme.textSecondary }]}>
                 {tag}
               </Text>
             </View>
@@ -131,10 +131,10 @@ export default function SpendTransactionRow({
               <View
                 style={[
                   styles.dot,
-                  { backgroundColor: colours.textDim, marginLeft: showDotBeforeFx ? 0 : 0 },
+                  { backgroundColor: theme.textDim, marginLeft: showDotBeforeFx ? 0 : 0 },
                 ]}
               />
-              <Text style={[styles.fxLabel, { color: colours.textDim }]}>converted</Text>
+              <Text style={[styles.fxLabel, { color: theme.textDim }]}>converted</Text>
             </>
           )}
         </View>
@@ -142,13 +142,13 @@ export default function SpendTransactionRow({
 
       {/* Recurring indicator */}
       {transaction.isRecurring && (
-        <Text style={[styles.recurringIcon, { color: colours.textDim }]}>↻</Text>
+        <Text style={[styles.recurringIcon, { color: theme.textDim }]}>↻</Text>
       )}
 
       {/* Edit affordance — signal, not a button */}
       {!isSelectionMode && (
         <View style={styles.pencilContainer} pointerEvents="none">
-          <PencilIcon size={13} color={colours.textDim} />
+          <PencilIcon size={13} color={theme.textDim} />
         </View>
       )}
     </TouchableOpacity>

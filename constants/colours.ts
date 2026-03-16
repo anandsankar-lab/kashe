@@ -58,7 +58,7 @@ export type Theme = {
 export const darkTheme: Theme = {
   background:    palette.nearBlack,
   surface:       palette.darkSurface,
-  border:        palette.darkBorder,
+  border:        '#3A3A38',
   textPrimary:   palette.snow,
   textSecondary: palette.mid,
   textDim:       palette.dim,
@@ -121,10 +121,12 @@ const colours = {
   borderDark:     darkTheme.border,
 
   // Text (same in both modes)
-  textPrimary:   '#1A1A18',
+  textPrimary:   '#F5F4F0',
   textSecondary: '#8A8A85',
   textDim:       '#C4C4BF',
   textOnAccent:  '#1A1A18',
+  textOnDark:    '#F5F4F0',
+  textOnLight:   '#1A1A18',
 
   // Brand (same in both modes)
   accent:  '#C8F04A',

@@ -27,7 +27,7 @@ export default function ProtectionStatusCard({ holding, avgMonthlySpend }: Props
   } else if (months <= 6) {
     coverageColor = colours.accent
   } else {
-    coverageColor = colours.textSecondary
+    coverageColor = theme.textSecondary
   }
 
   useEffect(() => {
@@ -42,13 +42,13 @@ export default function ProtectionStatusCard({ holding, avgMonthlySpend }: Props
 
   return (
     <View style={[styles.outer, { backgroundColor: theme.surface }]}>
-      <Text style={styles.header}>🛡️ Emergency fund</Text>
+      <Text style={[styles.header, { color: theme.textDim }]}>🛡️ Emergency fund</Text>
 
       <Text style={[styles.coverageNumber, { color: coverageColor }]}>
         {months.toFixed(1)}
       </Text>
 
-      <Text style={styles.coverageLabel}>{months.toFixed(1)} months covered</Text>
+      <Text style={[styles.coverageLabel, { color: theme.textSecondary }]}>{months.toFixed(1)} months covered</Text>
 
       <View
         style={[styles.barTrack, { backgroundColor: theme.border }]}
@@ -60,18 +60,18 @@ export default function ProtectionStatusCard({ holding, avgMonthlySpend }: Props
       </View>
 
       <View style={styles.rangeRow}>
-        <Text style={styles.rangeLabel}>Recommended</Text>
-        <Text style={[styles.rangeValue, { color: colours.textPrimary }]}>
+        <Text style={[styles.rangeLabel, { color: theme.textSecondary }]}>Recommended</Text>
+        <Text style={[styles.rangeValue, { color: theme.textPrimary }]}>
           {formatCurrency(min, 'EUR')} – {formatCurrency(max, 'EUR')}
         </Text>
       </View>
 
-      <Text style={styles.basedOn}>
+      <Text style={[styles.basedOn, { color: theme.textDim }]}>
         Based on {formatCurrency(avgMonthlySpend, 'EUR')} avg monthly spend
       </Text>
 
       {months > 6 && (
-        <Text style={styles.surplusNote}>
+        <Text style={[styles.surplusNote, { color: theme.textDim }]}>
           You may have more than you need here. Consider investing the surplus.
         </Text>
       )}
@@ -83,10 +83,10 @@ export default function ProtectionStatusCard({ holding, avgMonthlySpend }: Props
         onPress={() => console.log('Remove protection designation')}
         activeOpacity={0.7}
       >
-        <Text style={styles.removeLink}>Remove protection designation</Text>
+        <Text style={[styles.removeLink, { color: theme.textSecondary }]}>Remove protection designation</Text>
       </TouchableOpacity>
 
-      <Text style={styles.removeSubNote}>
+      <Text style={[styles.removeSubNote, { color: theme.textDim }]}>
         This won't delete the holding, just the designation.
       </Text>
     </View>
@@ -102,7 +102,6 @@ const styles = StyleSheet.create({
   header: {
     fontFamily: 'Inter_500Medium',
     fontSize: 13,
-    color: colours.textDim,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 12,
@@ -114,7 +113,6 @@ const styles = StyleSheet.create({
   coverageLabel: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: colours.textSecondary,
     marginTop: 2,
   },
   barTrack: {
@@ -136,7 +134,6 @@ const styles = StyleSheet.create({
   rangeLabel: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
-    color: colours.textSecondary,
   },
   rangeValue: {
     fontFamily: 'Inter_500Medium',
@@ -145,25 +142,21 @@ const styles = StyleSheet.create({
   basedOn: {
     fontFamily: 'Inter_400Regular',
     fontSize: 11,
-    color: colours.textDim,
     marginTop: 4,
   },
   surplusNote: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
-    color: colours.textDim,
     marginTop: 8,
   },
   removeLink: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
-    color: colours.textSecondary,
     textAlign: 'center',
   },
   removeSubNote: {
     fontFamily: 'Inter_400Regular',
     fontSize: 11,
-    color: colours.textDim,
     textAlign: 'center',
     marginTop: 4,
   },

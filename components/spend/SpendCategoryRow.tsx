@@ -97,11 +97,11 @@ export default function SpendCategoryRow({
 
   const trackColor = theme.border;
   const nameColor =
-    variant === 'mortgage' ? colours.textSecondary : colours.textPrimary;
+    variant === 'mortgage' ? theme.textSecondary : theme.textPrimary;
   const amountColor =
-    variant === 'mortgage' ? colours.textSecondary : colours.textPrimary;
+    variant === 'mortgage' ? theme.textSecondary : theme.textPrimary;
   const insightColor =
-    variant === 'mortgage' ? colours.textDim : colours.textSecondary;
+    variant === 'mortgage' ? theme.textDim : theme.textSecondary;
 
   return (
     <TouchableOpacity
@@ -113,7 +113,7 @@ export default function SpendCategoryRow({
       <View style={styles.rowContent}>
         {/* Icon */}
         <View style={styles.iconWrapper}>
-          <CategoryIcon categoryId={category.id} size={22} color={colours.textSecondary} />
+          <CategoryIcon categoryId={category.id} size={22} color={theme.textSecondary} />
         </View>
 
         {/* Name */}
@@ -133,7 +133,7 @@ export default function SpendCategoryRow({
               {category.amount.toLocaleString()}
             </Text>
           )}
-          <Text style={styles.chevron}>›</Text>
+          <Text style={[styles.chevron, { color: theme.textDim }]}>›</Text>
         </View>
       </View>
 
@@ -206,7 +206,6 @@ const styles = StyleSheet.create({
   chevron: {
     fontFamily: 'Inter_400Regular',
     fontSize: 18,
-    color: colours.textDim,
     marginLeft: 6,
   },
   insightLineContainer: {

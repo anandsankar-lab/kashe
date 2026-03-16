@@ -46,7 +46,7 @@ export default function SpendSnapshot({ spent, budget, currency = '€', isRedac
             fontSize: 11,
             letterSpacing: 0.8,
             textTransform: 'uppercase',
-            color: colours.textSecondary,
+            color: theme.textSecondary,
           }}
         >
           Spend this month
@@ -56,7 +56,7 @@ export default function SpendSnapshot({ spent, budget, currency = '€', isRedac
             style={{
               fontFamily: 'Inter_400Regular',
               fontSize: 12,
-              color: colours.textDim,
+              color: theme.textDim,
             }}
           >
             of {currency}{isRedacted ? <RedactedNumber length={4} style={{ fontSize: 12 }} /> : budget.toLocaleString()} budget
@@ -73,7 +73,7 @@ export default function SpendSnapshot({ spent, budget, currency = '€', isRedac
             style={{
               fontFamily: 'SpaceGrotesk_600SemiBold',
               fontSize: 20,
-              color: colours.textPrimary,
+              color: theme.textPrimary,
             }}
           >
             {currency}{spent.toLocaleString()} spent
@@ -86,7 +86,7 @@ export default function SpendSnapshot({ spent, budget, currency = '€', isRedac
             style={{
               fontFamily: 'Inter_500Medium',
               fontSize: 13,
-              color: colours.textSecondary,
+              color: theme.textSecondary,
             }}
           >
             {Math.round(ratio * 100)}%

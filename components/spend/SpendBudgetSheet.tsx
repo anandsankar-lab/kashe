@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import colours from '../../constants/colours';
 import CategoryIcon from './CategoryIcon';
 import Button from '../ui/Button';
 import { SpendCategoryData, CATEGORY_META } from '../../types/spend';
@@ -153,7 +152,7 @@ export default function SpendBudgetSheet({
               style={{
                 fontFamily: 'SpaceGrotesk_600SemiBold',
                 fontSize: 18,
-                color: colours.textPrimary,
+                color: theme.textPrimary,
               }}
             >
               Monthly budgets
@@ -165,7 +164,7 @@ export default function SpendBudgetSheet({
             style={{
               fontFamily: 'Inter_400Regular',
               fontSize: 13,
-              color: colours.textDim,
+              color: theme.textDim,
               paddingHorizontal: 20,
               marginBottom: 16,
             }}
@@ -208,13 +207,13 @@ export default function SpendBudgetSheet({
                     <CategoryIcon
                       categoryId={cat.id}
                       size={20}
-                      color={colours.textSecondary}
+                      color={theme.textSecondary}
                     />
                     <Text
                       style={{
                         fontFamily: 'Inter_500Medium',
                         fontSize: 15,
-                        color: colours.textPrimary,
+                        color: theme.textPrimary,
                       }}
                     >
                       {cat.name}
@@ -229,7 +228,7 @@ export default function SpendBudgetSheet({
                       style={{
                         fontFamily: 'Inter_400Regular',
                         fontSize: 15,
-                        color: colours.textDim,
+                        color: theme.textDim,
                         marginRight: 2,
                       }}
                     >
@@ -239,13 +238,13 @@ export default function SpendBudgetSheet({
                       style={{
                         fontFamily: 'SpaceGrotesk_600SemiBold',
                         fontSize: 15,
-                        color: colours.textPrimary,
+                        color: theme.textPrimary,
                         textAlign: 'right',
                         minWidth: 60,
                       }}
                       keyboardType="numeric"
                       placeholder="—"
-                      placeholderTextColor={colours.textDim}
+                      placeholderTextColor={theme.textDim}
                       value={hasValue ? String(value) : ''}
                       onChangeText={(v) => updateBudget(cat.id, v)}
                     />
@@ -262,7 +261,7 @@ export default function SpendBudgetSheet({
                           style={{
                             fontFamily: 'Inter_400Regular',
                             fontSize: 16,
-                            color: colours.textDim,
+                            color: theme.textDim,
                           }}
                         >
                           ×
@@ -289,7 +288,7 @@ export default function SpendBudgetSheet({
                 style={{
                   fontFamily: 'Inter_400Regular',
                   fontSize: 14,
-                  color: colours.textSecondary,
+                  color: theme.textSecondary,
                 }}
               >
                 Total budgeted
@@ -298,7 +297,7 @@ export default function SpendBudgetSheet({
                 style={{
                   fontFamily: 'SpaceGrotesk_600SemiBold',
                   fontSize: 14,
-                  color: colours.textPrimary,
+                  color: theme.textPrimary,
                 }}
               >
                 €{totalBudgeted.toLocaleString()}
@@ -324,7 +323,7 @@ export default function SpendBudgetSheet({
                   style={{
                     fontFamily: 'Inter_500Medium',
                     fontSize: 15,
-                    color: colours.textSecondary,
+                    color: theme.textSecondary,
                     textAlign: 'center',
                   }}
                 >

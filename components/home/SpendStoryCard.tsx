@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import colours from '../../constants/colours';
+import { useTheme } from '../../context/ThemeContext';
 import Card from '../ui/Card';
 import KasheAsterisk from '../shared/KasheAsterisk';
 import RedactedNumber from '../shared/RedactedNumber';
@@ -34,6 +35,7 @@ export default function SpendStoryCard({
   onInvestPress,
   isRedacted = false,
 }: Props) {
+  const theme = useTheme();
   const spendFontSize = 22;
 
   const asteriskDirection =
@@ -41,7 +43,7 @@ export default function SpendStoryCard({
 
   const dotColor =
     investmentTarget === null
-      ? colours.textDim
+      ? theme.textDim
       : investedAmount !== null && investedAmount >= investmentTarget
       ? colours.accent
       : colours.warning;
@@ -95,7 +97,7 @@ export default function SpendStoryCard({
           fontSize: 11,
           letterSpacing: 0.8,
           textTransform: 'uppercase',
-          color: colours.textDim,
+          color: theme.textDim,
           marginBottom: 14,
         }}
       >
@@ -130,7 +132,7 @@ export default function SpendStoryCard({
                 fontFamily: 'SpaceGrotesk_700Bold',
                 fontSize: spendFontSize,
                 letterSpacing: -1,
-                color: colours.textPrimary,
+                color: theme.textPrimary,
               }}
             >
               {`${currency}${totalSpend.toLocaleString()}`}
@@ -153,7 +155,7 @@ export default function SpendStoryCard({
                 style={{
                   fontFamily: 'Inter_400Regular',
                   fontSize: 13,
-                  color: colours.textSecondary,
+                  color: theme.textSecondary,
                 }}
               >
                 {`${vsAverage > 0 ? '+' : '\u2212'}${Math.abs(vsAverage)}% vs avg`}
@@ -199,7 +201,7 @@ export default function SpendStoryCard({
                   fontFamily: 'Inter_500Medium',
                   fontSize: 15,
                   letterSpacing: -0.3,
-                  color: colours.textPrimary,
+                  color: theme.textPrimary,
                 }}
               >
                 {`€${investedAmount.toLocaleString()} invested`}
@@ -230,7 +232,7 @@ export default function SpendStoryCard({
               fontSize: 13,
               marginRight: 8,
               marginTop: 1,
-              color: colours.textSecondary,
+              color: theme.textSecondary,
             }}
           >
             ⚡
@@ -241,7 +243,7 @@ export default function SpendStoryCard({
                 style={{
                   fontFamily: 'Inter_400Regular',
                   fontSize: 13,
-                  color: colours.textSecondary,
+                  color: theme.textSecondary,
                   letterSpacing: -0.2,
                 }}
               >
@@ -257,7 +259,7 @@ export default function SpendStoryCard({
                 flex: 1,
                 fontFamily: 'Inter_400Regular',
                 fontSize: 13,
-                color: colours.textSecondary,
+                color: theme.textSecondary,
                 letterSpacing: -0.2,
               }}
             >

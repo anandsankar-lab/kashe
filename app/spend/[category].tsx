@@ -12,7 +12,6 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import colours from '../../constants/colours';
 import { MOCK_SUBCATEGORIES, MOCK_SUBCATEGORIES_BY_CATEGORY, MOCK_TAGS } from '../../constants/mockData';
 import { SpendTransaction } from '../../types/spend';
 import SpendTransactionRow from '../../components/spend/SpendTransactionRow';
@@ -206,10 +205,10 @@ export default function CategoryDetailScreen() {
             onPress={handleCancelSelection}
             style={[styles.headerSideBtn, Platform.OS === 'web' && ({ outline: 'none' } as object)]}
           >
-              <Text style={[styles.cancelText, { color: colours.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.cancelText, { color: theme.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
 
-            <Text style={[styles.selectionCount, { color: colours.textPrimary }]}>
+            <Text style={[styles.selectionCount, { color: theme.textPrimary }]}>
               {selectedTransactions.length} selected
             </Text>
 
@@ -217,7 +216,7 @@ export default function CategoryDetailScreen() {
               onPress={handleSelectAll}
               style={[styles.headerSideBtn, Platform.OS === 'web' && ({ outline: 'none' } as object)]}
             >
-              <Text style={[styles.selectAllText, { color: colours.accent }]}>All</Text>
+              <Text style={[styles.selectAllText, { color: theme.accent }]}>All</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -226,10 +225,10 @@ export default function CategoryDetailScreen() {
               onPress={() => router.back()}
               style={[styles.backBtn, Platform.OS === 'web' && ({ outline: 'none' } as object)]}
             >
-              <Text style={[styles.backChevron, { color: colours.textPrimary }]}>‹</Text>
+              <Text style={[styles.backChevron, { color: theme.textPrimary }]}>‹</Text>
             </TouchableOpacity>
 
-            <Text style={[styles.title, { color: colours.textPrimary }]} numberOfLines={1}>
+            <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={1}>
               {categoryLabel}
             </Text>
           </>
@@ -238,15 +237,15 @@ export default function CategoryDetailScreen() {
 
       {/* ── SUMMARY ROW ── */}
       <View style={[styles.summaryRow, { borderBottomColor: border }]}>
-        <Text style={[styles.summaryCount, { color: colours.textDim }]}>
+        <Text style={[styles.summaryCount, { color: theme.textDim }]}>
           {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
         </Text>
         {activeTags.length > 0 ? (
-          <Text style={[styles.summaryAmount, { color: colours.textPrimary }]}>
+          <Text style={[styles.summaryAmount, { color: theme.textPrimary }]}>
             {formatTotal(filteredTotal)} of {formatTotal(totalAmount)}
           </Text>
         ) : (
-          <Text style={[styles.summaryAmount, { color: colours.textPrimary }]}>
+          <Text style={[styles.summaryAmount, { color: theme.textPrimary }]}>
             {formatTotal(totalAmount)} this month
           </Text>
         )}
@@ -256,16 +255,16 @@ export default function CategoryDetailScreen() {
       {showEditTip && !isSelectionMode && (
         <View style={[styles.editTip, { backgroundColor: surface, borderBottomColor: border }]}>
           <View style={styles.editTipPencil}>
-            <Text style={{ color: colours.textDim, fontSize: 12 }}>✏</Text>
+            <Text style={{ color: theme.textDim, fontSize: 12 }}>✏</Text>
           </View>
-          <Text style={[styles.editTipText, { color: colours.textDim }]}>
+          <Text style={[styles.editTipText, { color: theme.textDim }]}>
             Tap to edit · Long press to select multiple
           </Text>
           <TouchableOpacity
             onPress={() => setShowEditTip(false)}
             style={[styles.editTipDismiss, Platform.OS === 'web' && ({ outline: 'none' } as object)]}
           >
-            <Text style={[styles.editTipDismissText, { color: colours.textDim }]}>×</Text>
+            <Text style={[styles.editTipDismissText, { color: theme.textDim }]}>×</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -276,10 +275,10 @@ export default function CategoryDetailScreen() {
           onPress={handlePrevMonth}
           style={[styles.monthChevronBtn, Platform.OS === 'web' && ({ outline: 'none' } as object)]}
         >
-          <Text style={[styles.monthChevron, { color: colours.textSecondary }]}>‹</Text>
+          <Text style={[styles.monthChevron, { color: theme.textSecondary }]}>‹</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.monthLabel, { color: colours.textPrimary }]}>
+        <Text style={[styles.monthLabel, { color: theme.textPrimary }]}>
           {MONTH_NAMES[selectedMonth.month]} {selectedMonth.year}
         </Text>
 
@@ -291,7 +290,7 @@ export default function CategoryDetailScreen() {
           <Text
             style={[
               styles.monthChevron,
-              { color: isAtCurrentMonth ? colours.textDim : colours.textSecondary },
+              { color: isAtCurrentMonth ? theme.textDim : theme.textSecondary },
             ]}
           >
             ›
@@ -347,25 +346,25 @@ export default function CategoryDetailScreen() {
                   <CategoryIcon
                     categoryId={getSubcategoryIcon(sub.id, category ?? '')}
                     size={16}
-                    color={colours.textDim}
+                    color={theme.textDim}
                   />
-                  <Text style={[styles.subcategoryName, { color: colours.textPrimary, marginLeft: 10 }]}>
+                  <Text style={[styles.subcategoryName, { color: theme.textPrimary, marginLeft: 10 }]}>
                     {sub.name}
                   </Text>
-                  <Text style={[styles.subcategoryCount, { color: colours.textDim }]}>
+                  <Text style={[styles.subcategoryCount, { color: theme.textDim }]}>
                     {' · '}
                     {sub.transactionCount} transaction{sub.transactionCount !== 1 ? 's' : ''}
                   </Text>
                 </View>
 
                 <View style={styles.subcategoryRight}>
-                  <Text style={[styles.subcategoryAmount, { color: colours.textPrimary }]}>
+                  <Text style={[styles.subcategoryAmount, { color: theme.textPrimary }]}>
                     {formatTotal(sub.amount)}
                   </Text>
                   <Animated.Text
                     style={[
                       styles.expandChevron,
-                      { color: colours.textDim, transform: [{ rotate: rotation }] },
+                      { color: theme.textDim, transform: [{ rotate: rotation }] },
                     ]}
                   >
                     ›
@@ -417,7 +416,7 @@ export default function CategoryDetailScreen() {
           <TouchableOpacity
             style={[
               styles.bulkBtn,
-              { backgroundColor: colours.accent },
+              { backgroundColor: theme.accent },
               bulkDisabled && styles.bulkDisabled,
               Platform.OS === 'web' && ({ outline: 'none' } as object),
             ]}
@@ -439,7 +438,7 @@ export default function CategoryDetailScreen() {
             disabled={bulkDisabled}
             activeOpacity={0.8}
           >
-            <Text style={[styles.bulkBtnText, { color: colours.textPrimary }]}>
+            <Text style={[styles.bulkBtnText, { color: theme.textPrimary }]}>
               ↩ Recategorise
             </Text>
           </TouchableOpacity>
