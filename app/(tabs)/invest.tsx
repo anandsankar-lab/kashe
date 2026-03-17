@@ -9,7 +9,8 @@ import MonthlyReviewCard from '../../components/invest/MonthlyReviewCard'
 import MonthlyReviewSheet from '../../components/invest/MonthlyReviewSheet'
 import MacronRule from '../../components/shared/MacronRule'
 import FIRETeaserCard from '../../components/invest/FIRETeaserCard'
-import { MOCK_INVESTMENT_PLAN } from '../../constants/mockData'
+import InstrumentDiscoverySection from '../../components/invest/InstrumentDiscoverySection'
+import { MOCK_INVESTMENT_PLAN, MOCK_PORTFOLIO_HOLDINGS } from '../../constants/mockData'
 import { RiskProfileType } from '../../types/riskProfile'
 
 export default function InvestScreen() {
@@ -48,6 +49,13 @@ export default function InvestScreen() {
         <InvestmentPlanFull
           plan={MOCK_INVESTMENT_PLAN}
           riskProfile="balanced"
+        />
+
+        <MacronRule style={{ marginTop: 24 }} />
+        <InstrumentDiscoverySection
+          riskProfile={riskProfile ?? 'balanced'}
+          holdings={MOCK_PORTFOLIO_HOLDINGS}
+          userGeography="NL"
         />
 
         <MacronRule style={{ marginTop: 24 }} />

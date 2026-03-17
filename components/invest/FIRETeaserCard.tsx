@@ -45,7 +45,7 @@ export default function FIRETeaserCard({
         </View>
 
         <Text style={[styles.headline, { color: theme.textPrimary }]}>
-          When could you stop working?
+          When could you choose not to work?
         </Text>
 
         <Text style={[styles.subtext, { color: theme.textSecondary }]}>
