@@ -1,8 +1,9 @@
 # Kāshe — CLAUDE-state.md
 *Current build state. Read this before any new session.*
-*Last updated: 17 March 2026 — PORT-10b complete, full colour
-audit done, visual standardisation across Portfolio, Session 07
-(Invest tab + PORT-11) ready to build.*
+*Last updated: 17 March 2026 — Session 09 complete.
+Instrument catalogue type system rebuilt. Universal AppHeader locked.
+Living database architecture decided. KasheScore introduced.
+Spend categorisation Layer 1/2/3 architecture decided.*
 
 ---
 
@@ -86,27 +87,46 @@ Git commands always run manually by Anand. Never through Claude Code.
 ### Session 07 — Colour Audit + PORT-10b + Visual Standardisation
 ✅ TASK 0: insights.tsx → invest.tsx, _layout.tsx updated
 ✅ Full colour audit — all components now use theme tokens correctly
-   Root cause: colours.textPrimary was hardcoded to light mode ink.
-   Fixed globally. darkTheme.border bumped for visible outlines.
 ✅ /constants/displayLabels.ts — PORT-10b Fix 1
-   getAssetTypeLabel(), getGeographyLabel()
-   All raw subtype keys removed from UI everywhere.
 ✅ /components/portfolio/HoldingPriceChart.tsx — PORT-10b Fix 2
-   SVG line chart, 1M/6M/1Y tabs, mock history, accent/danger colour
 ✅ /components/portfolio/HoldingInsightCard.tsx — PORT-10b Fix 3
-   Holding-specific AI insight, mock content per assetSubtype
 ✅ /app/portfolio/[holdingId].tsx — PORT-10b Fix 4
-   Dark hero card (matches PositionHeroCard pattern)
-   Light screen background (matches Spend category detail)
-   Standardised card/spacing system throughout
-✅ Visual standardisation pass:
-   PortfolioTotalsCard: dark gradient hero + KasheAsterisk watermark
-   All Portfolio cards/rows: standardised spacing + tokens
-   All Portfolio screens: consistent with Home + Spend visual language
+✅ Visual standardisation pass complete
+
+### Session 08 — PORT-11 + Mock Data Overhaul + Invest shell
+✅ PORT-11: Portfolio empty state
+✅ Mock data overhaul — geography-neutral holdings
+✅ Tab 4 confirmed as Invest
+✅ /app/(tabs)/invest.tsx — shell only
+
+### Session 09 — INV-01 + Catalogue Type System + Universal Header
+✅ /types/riskProfile.ts — RiskProfileType + RISK_PROFILES constants
+✅ /components/invest/RiskProfileCard.tsx — two states
+   STATE 1: "What kind of investor are you?" + Balanced recommendation
+   STATE 2: Set profile showing label + description + allocation pills
+✅ /components/invest/RiskProfileSheet.tsx — three-option picker
+✅ /types/instrumentCatalogue.ts — FULL type system rebuild
+   RegulatoryRegime, AccountWrapper, InstrumentType — three distinct concepts
+   GeographyCode, RiskTier, LiquidityHorizon, PlatformName
+   CatalogueRole (suggest / track_only / educational)
+   InstrumentCatalogueEntry — complete interface
+   TRACK_ONLY_TYPES, HIGH_RISK_TYPES constants
+✅ /constants/instrumentCatalogue.ts — ~40 curated entries
+   Coverage: NL/BE/DE/LU, India, US, UK, GLOBAL fallback
+   track_only: Crowdcube, Seedrs, Bitcoin
+   suggest: ETFs, index funds, pensions, govt schemes
+   Helpers: getInstrumentsForGeography(), getSuggestableInstruments(),
+            getInstrumentsByTierAndBucket(), isKnownGeography()
+   TER_FOOTNOTE and UNKNOWN_GEOGRAPHY_MESSAGE constants
+✅ /components/shared/AppHeader.tsx — UNIVERSAL header
+   Replaces all inline tab headers
+   Props: title, showAvatar, avatarInitial, showOverflow, showAdd
+   Used in: index.tsx, spend.tsx, portfolio.tsx, invest.tsx
+✅ invest.tsx — Invest header added, STATE 1 copy updated
 
 ---
 
-## CONFIRMED FILE TREE (as of Session 07)
+## CONFIRMED FILE TREE (as of Session 09)
 
 ```
 app/
@@ -114,23 +134,28 @@ app/
     _layout.tsx           ✅
     index.tsx             ✅ Home (complete)
     spend.tsx             ✅ Spend (complete)
-    portfolio.tsx         ✅ PORT-01 through PORT-10b wired
-    invest.tsx            ⬜ Shell only — build Session 08
+    portfolio.tsx         ✅ PORT-01 through PORT-10b + PORT-11
+    invest.tsx            🔄 INV-01 done, INV-02 through INV-08 pending
+
   _layout.tsx             ✅
   spend/
     [category].tsx        ✅
   portfolio/
     [holdingId].tsx       ✅ PORT-10b complete
   invest/
-    fire.tsx              ⬜ Session 09
+    fire.tsx              ⬜ Session 10
 
 components/
   home/                   ✅ All complete
-  shared/                 ✅ All complete
-    ⚠️ KasheAsterisk k-stroke prominence — Polish session
+  shared/
+    AppHeader.tsx         ✅ Universal — used by all four tabs
+    KasheAsterisk.tsx     ✅ ⚠️ k-stroke prominence — Polish session
+    MacronRule.tsx        ✅
+    RedactedNumber.tsx    ✅
+    EmptyState.tsx        ✅
   spend/                  ✅ All complete
   portfolio/
-    PortfolioTotalsCard.tsx        ✅ dark hero + watermark
+    PortfolioTotalsCard.tsx        ✅
     PortfolioSectionHeader.tsx     ✅
     PortfolioHoldingRow.tsx        ✅
     PortfolioInsightStrip.tsx      ✅
@@ -139,30 +164,35 @@ components/
     BucketReassignSheet.tsx        ✅
     LockedProjectionCard.tsx       ✅
     ProtectionStatusCard.tsx       ✅
-    HoldingPriceChart.tsx          ✅ PORT-10b
-    HoldingInsightCard.tsx         ✅ PORT-10b
-  invest/                 ⬜ All new — Session 08
-    RiskProfileCard.tsx
-    RiskProfileSheet.tsx
-    InvestmentPlanFull.tsx
-    MonthlyReviewCard.tsx
-    MonthlyReviewSheet.tsx
-    FIRETeaserCard.tsx
+    HoldingPriceChart.tsx          ✅
+    HoldingInsightCard.tsx         ✅
+  invest/
+    RiskProfileCard.tsx   ✅ INV-01
+    RiskProfileSheet.tsx  ✅ INV-01
+    InvestmentPlanFull.tsx        ⬜ INV-02
+    MonthlyReviewCard.tsx         ⬜ INV-03
+    MonthlyReviewSheet.tsx        ⬜ INV-03
+    FIRETeaserCard.tsx            ⬜ INV-04
+    InstrumentDiscoverySection.tsx ⬜ INV-05
+    FinancialEducationSection.tsx  ⬜ INV-06
   ui/                     ✅ All complete
 
 constants/
   colours.ts              ✅ audited + fixed Session 07
   formatters.ts           ✅
-  displayLabels.ts        ✅ PORT-10b
+  displayLabels.ts        ✅
   mockData.ts             ✅
   spacing.ts              ✅
   typography.ts           ✅
-  fireDefaults.ts         ⬜ Session 09
+  instrumentCatalogue.ts  ✅ Session 09 — ~40 entries, 6 geographies
+  fireDefaults.ts         ⬜ Session 10
 
 types/
   spend.ts                ✅
   portfolio.ts            ✅
-  riskProfile.ts          ⬜ Session 08
+  riskProfile.ts          ✅ Session 09
+  instrumentCatalogue.ts  ✅ Session 09 — full type system
+  fire.ts                 ⬜ Session 10
 
 docs/                     ✅ Updated 17 March 2026
 ```
@@ -175,8 +205,7 @@ docs/                     ✅ Updated 17 March 2026
 - useColorScheme() ONLY in context/ThemeContext.tsx
 - const theme = useTheme() — never destructured
 - theme.* for surface/border/background/text
-- colours.* for all static tokens (accent, danger, warning,
-  hero tokens, textOnAccent)
+- colours.* for all static tokens (accent, danger, warning, hero tokens)
 - No raw hex in any component. Ever.
 
 ### Hero Card Pattern (LOCKED 17 March 2026)
@@ -186,9 +215,7 @@ docs/                     ✅ Updated 17 March 2026
 - KasheAsterisk watermark: position absolute, top -45, right -45,
   size 200×200, opacity 0.07, all strokes colours.accent
   strokeWidth 14, animated=false, pointerEvents none
-- All text inside: colours.hero* tokens only. Never theme.*.
-- Components: PositionHeroCard, SpendHeroCard, PortfolioTotalsCard,
-  HoldingDetailScreen hero section
+- All text inside: colours.hero* tokens only. Never theme.*
 
 ### Standard Card Pattern (LOCKED 17 March 2026)
 - backgroundColor: theme.surface
@@ -201,13 +228,16 @@ docs/                     ✅ Updated 17 March 2026
   paddingHorizontal 20, paddingTop 16, paddingBottom 48
 - Gap between cards: marginTop 16
 - Gap before section headers: marginTop 32
+- MacronRule between major sections: marginTop 24
 - Reference: spend.tsx — match exactly
 
-### Detail Screen Pattern (LOCKED 17 March 2026)
-- Light background (theme.background) — same as Spend category detail
-- Dark hero card at very top — always
-- All cards below: standard card pattern (theme.surface, radius 16)
-- Reference: /app/spend/[category].tsx — match exactly
+### Universal Header (LOCKED 17 March 2026)
+- /components/shared/AppHeader.tsx used by ALL four tabs
+- Props: title, showAvatar, avatarInitial, showOverflow, showAdd
+- No inline header code in any tab file
+- Avatar: acid green circle, 40×40, SpaceGrotesk_600SemiBold initial
+- Overflow: dark surface circle with notification dot (warning)
+- Add button: acid green circle, 36×36, + sign
 
 ### Import Paths
 - Relative imports only. No @/ alias. Ever.
@@ -221,14 +251,147 @@ docs/                     ✅ Updated 17 March 2026
 - Intl.NumberFormat — permanently banned
 - Template literals with raw numbers — never
 
-### Display Labels
-- Never show raw subtype keys (in_mutual_fund, india) in any UI
-- Always use getAssetTypeLabel() / getGeographyLabel()
-  from /constants/displayLabels.ts
-
 ### Animation
 - React Native Animated API only
 - react-native-reanimated — banned from web builds
+
+---
+
+## INSTRUMENT CATALOGUE ARCHITECTURE (LOCKED 17 March 2026)
+
+### Type System — Three Distinct Concepts
+```
+RegulatoryRegime  The legal framework the instrument is issued under
+                  UCITS / SEBI / SEC / FCA / BaFin / AFM / FSMA /
+                  RBI / EPFO / PFRDA / MoF_IN / exchange_listed /
+                  unregulated / other / unknown
+
+AccountWrapper    The tax/account structure it can sit inside
+                  ISA / LISA / SIPP / Roth_IRA / 401k / PPF / EPF /
+                  NPS / ELSS / NRE / NRO / FCNR / Pension_NL / bAV_DE /
+                  Pensioensparen_BE / taxable / other / unknown
+                  (full list in /types/instrumentCatalogue.ts)
+
+InstrumentType    What the instrument actually is
+                  etf / index_fund / active_mutual_fund / bond_etf /
+                  direct_equity / fractional_equity / employer_rsu /
+                  equity_crowdfunding / govt_savings_scheme /
+                  pension_scheme / crypto_spot / p2p_lending /
+                  other / unknown
+                  (full list in /types/instrumentCatalogue.ts)
+```
+
+### CatalogueRole — Critical Distinction
+```
+suggest      → shown in InstrumentDiscoverySection
+track_only   → recordable in portfolio, NEVER suggested
+educational  → shown in FinancialEducationSection only
+
+TRACK_ONLY forever:
+  equity_crowdfunding, angel_investment, venture_fund,
+  private_equity, nft, stock_options, futures,
+  structured_product, employer_rsu, employer_espp,
+  crypto_spot (track only — never suggest crypto)
+```
+
+### KasheScore (0–100) — Internal Quality Score
+Built from objective criteria. Never shown to user as a number.
+Drives ordering within a tier — best score shown first.
+Updated quarterly via Supabase dashboard.
+
+```
+Cost efficiency       25pts  TER relative to category peers
+Diversification       25pts  Holdings count + index breadth
+Liquidity/access      20pts  AUM proxy, platform count, settlement
+Regulatory strength   15pts  UCITS/SEBI/SEC=15, unregulated=0
+Track record          15pts  Inception date depth
+```
+
+### Geography Coverage
+```
+NL / BE / DE / LU    EU residents — DeGiro, IBKR, Trade Republic,
+                     Scalable Capital, Bolero, Comdirect, DKB
+IN                   Zerodha, Groww, Kuvera, MFCentral, INDmoney
+US                   Fidelity, Vanguard, Schwab, IBKR US
+GB                   Vanguard UK, HL, AJ Bell, InvestEngine, Freetrade
+GLOBAL               IBKR International — fallback for unknown geographies
+```
+
+### Unknown Geography Flow
+When user's residence country is not in catalogue:
+  Show GLOBAL entries (VWCE + AGGH via IBKR)
+  Message: UNKNOWN_GEOGRAPHY_MESSAGE constant
+  "We're building your region's instrument list.
+   Here's what works globally while we do."
+
+### Living Database — V1 → V2 Migration Path
+```
+V1:  /constants/instrumentCatalogue.ts (static seed, offline fallback)
+V2:  Supabase table instrument_catalogue (identical schema)
+     catalogueService.ts fetches from Supabase, falls back to static
+     Supabase Realtime pushes updates to all users instantly
+     No app release required for catalogue updates
+```
+
+---
+
+## SPEND CATEGORISATION ARCHITECTURE (LOCKED 17 March 2026)
+
+Three-layer system — each layer improves the next:
+
+```
+LAYER 1 — Keyword rules (fast, free, offline)
+  /constants/merchantKeywords.ts (geography-aware)
+  NL rules, IN rules, US rules, GB rules
+  Updated via Supabase → all users benefit immediately
+  MerchantConfidence: 1.0
+
+LAYER 2 — Claude API enrichment (unrecognised merchants only)
+  Triggered only when Layer 1 fails to match
+  Cost: ~€0.001 per unrecognised transaction
+  Result cached permanently in merchantOverrides
+  That merchant never sent to API again
+  MerchantConfidence: 0.8
+
+LAYER 3 — User correction (highest signal)
+  User recategorises → MerchantOverride saved
+  PostHog: category_corrected event
+  Monthly review: corrections appearing 5+ times →
+    promoted to Layer 1 keyword rules
+  MerchantConfidence: 1.0
+```
+
+---
+
+## LEARNING LOOPS (LOCKED 17 March 2026)
+
+Four distinct loops — not behaviour-only, inherent quality baked in:
+
+```
+LOOP 1 — Catalogue freshness
+  KasheScore updated quarterly by PM
+  TER changes auto-flagged by Supabase Edge Function (weekly)
+  review_queue table in Supabase — PM reviews weekly (15 min)
+  Supabase Realtime → all users get updates without app release
+
+LOOP 2 — Spend category accuracy
+  Layer 1 keywords promoted from Layer 3 user corrections
+  PostHog: category_corrected events reviewed monthly
+  Merchant keyword updates pushed via Supabase
+
+LOOP 3 — AI insight quality
+  PostHog: insight_viewed / insight_actioned / insight_dismissed
+  Monthly review: dismiss rate by insight type
+  High dismiss rate → tighten trigger threshold or prompt
+  NOT just dismissal — actioned / time_visible also tracked
+
+LOOP 4 — Instrument discovery signal
+  PostHog: instrument_tapped / instrument_added / instrument_skipped
+  Monthly review: tap rate + add rate per instrument
+  High tap + low add → description needs work
+  High add rate → consider bumping tier
+  This supplements KasheScore — never replaces it
+```
 
 ---
 
@@ -236,43 +399,43 @@ docs/                     ✅ Updated 17 March 2026
 
 ### Tab Structure (16 March 2026 — LOCKED)
 Four tabs: Home / Spend / Portfolio / Invest
-No standalone Insights tab.
-AI insights live on their native screens.
-Invest tab = Risk Profile + Investment Plan + Monthly Review
-  + optional FIRE entry.
-Route: /app/(tabs)/invest.tsx
+No standalone Insights tab. AI insights live on native screens.
+
+### Universal AppHeader (17 March 2026 — LOCKED)
+/components/shared/AppHeader.tsx used by ALL four tabs.
+No inline header code in any tab screen file.
 
 ### Risk Profile (16 March 2026 — LOCKED)
 Three levels: Conservative / Balanced / Growth
-Plain language — not numbers, not a quiz. Default: Balanced.
-Conservative: 40/40/20   Balanced: 60/20/20   Growth: 80/10/10
-Drives allocation targets, instrument suggestions, health alerts.
-Captured in onboarding screen 5. Stored in householdStore.
+Default: Balanced — RECOMMENDED not silently assumed
+STATE 1 shows: "Most people in your situation start with Balanced."
+Never pre-select without showing the question.
 
-### Product Vision (16 March 2026 — LOCKED)
-For ALL globally mobile professionals — not India-specific.
-Any expat with multi-geography finances is the target user.
-Mock data must feel relevant to any nationality.
+### Instrument Catalogue Type System (17 March 2026 — LOCKED)
+Three distinct concepts: RegulatoryRegime + AccountWrapper + InstrumentType
+Every union type ends with 'other' | 'unknown' — nothing unclassifiable
+CatalogueRole: suggest / track_only / educational
+TRACK_ONLY_TYPES never appear in suggestions — ever
+KasheScore: objective quality score, drives ordering, never shown to user
 
-### Display Labels (16 March 2026 — LOCKED)
-Never show raw subtype keys (in_mutual_fund, india) in UI.
-All labels from /constants/displayLabels.ts.
+### Living Database Architecture (17 March 2026 — LOCKED)
+V1: static file = seed + offline fallback
+V2: Supabase table = live source, identical schema
+catalogueService.ts: tries Supabase first, falls back to static
+review_queue: Supabase table, PM reviews weekly
+
+### Spend Categorisation (17 March 2026 — LOCKED)
+Layer 1 (keywords) → Layer 2 (Claude API) → Layer 3 (user correction)
+Layer 3 corrections promoted to Layer 1 after 5+ occurrences
+MerchantConfidence score: 1.0 / 0.8 / 1.0
 
 ### Visual Standardisation (17 March 2026 — LOCKED)
-Hero card pattern, standard card pattern, screen layout,
-and detail screen pattern are now locked.
-All future screens must match these patterns.
-Reference: SpendHeroCard (hero), SpendCategoryRow (standard card),
-  spend/[category].tsx (detail screen).
+Hero card pattern, standard card pattern, screen layout locked.
+Detail screen pattern locked.
 
 ### FIRE is Optional
-FIRE planner at /app/invest/fire.tsx.
 Entry from Invest tab via single low-pressure row.
-Not shown prominently until user opts in.
-
-### BucketReassign Entry Point
-Only from HoldingDetailScreen PURPOSE bucket row or back-compat
-[Reassign bucket] button. Never from holding list.
+Route: /app/invest/fire.tsx
 
 ### Empty State Pattern
 Ghost at 0.5 opacity. RedactedNumber. Floating accent pill. NOT blur.
@@ -281,23 +444,25 @@ Ghost at 0.5 opacity. RedactedNumber. Floating accent pill. NOT blur.
 
 ## KNOWN BUG REGISTRY
 
-### 🔴 Data / correctness (fix before beta)
-1. PPF Account showing ₹420,000 instead of EUR equivalent
-   on portfolio list row — data layer session
-2. GROWTH section total inflated — mock data arithmetic —
-   data layer session
-3. Dutch brand names in Spend mock data — fix before data
-   layer session (Albert Heijn → "Supermarket" etc)
+### 🔴 Fix before beta
+1. Hero number wrapping: €123,500 splits across two lines
+   in PortfolioTotalsCard two-column layout.
+   Fix: reduce hero font size to fit column width. Polish session.
 
-### 🟡 Visual / polish (fix in polish session)
+2. GROWTH section total (€102,400) may be inflated.
+   Verify when data layer is wired. Data layer session.
+
+3. Dutch brand names in Spend mock data:
+   Albert Heijn/Jumbo → "Supermarket" etc.
+   Fix: before data layer session.
+
+### 🟡 Polish session
 4. Chart spike at end of 1M view — mock random walk issue
-5. KasheAsterisk watermark on PortfolioTotalsCard alignment
-   vs Home hero — minor
+5. KasheAsterisk watermark alignment minor offset
 6. KasheAsterisk k-stroke needs more visual prominence
-7. Vertical MacronRule in PortfolioTotalsCard is plain View —
-   standardise to MacronRule component
-8. TextInput monthly target not through currency formatter
-9. Category detail screen gap between month selector + pills
+7. Vertical MacronRule in TotalsCard (plain View)
+8. TextInput monthly target not currency-formatted
+9. Category detail screen gap between month selector and tag pills
 
 ### 🟢 Deferred by design
 10. Dark mode not yet device-verified (web preview limitation)
@@ -306,60 +471,42 @@ Ghost at 0.5 opacity. RedactedNumber. Floating accent pill. NOT blur.
 
 ---
 
-## V1.5 / V2 / NEVER BACKLOG
-*(Review at end of V1 before starting V1b planning)*
-
-### V1.5 candidates
-- SMS parsing for Indian bank accounts (CRED-style) — high
-  value for Indian expat users, low GDPR risk for SMS
-
-### V2 (already in plan)
-- Open banking (Nordigen EU, Account Aggregator India, Plaid US)
-- Email parsing for financial data (GDPR-careful)
-- Couple sync via Supabase Edge Functions
-- ML spend categorisation
-- Conversational advisor
-- Push notifications
-- Year-end wrapped
-- Real price chart data
-
-### Never
-See CLAUDE.md [NEVER] list.
-
----
-
 ## REMAINING BUILD ORDER
 
 ```
-Session 08  PORT-11 + Invest Tab
-              PORT-11: Portfolio empty state
-              INV-01: RiskProfileCard + RiskProfileSheet
+Session 10  Invest Tab — INV-02 through INV-08
               INV-02: InvestmentPlanFull
               INV-03: MonthlyReviewCard + MonthlyReviewSheet
               INV-04: FIRETeaserCard
-              INV-05: Wire invest.tsx
-              INV-06: Invest empty state
+              INV-05: InstrumentDiscoverySection
+              INV-06: FinancialEducationSection
+              INV-07: Wire invest.tsx
+              INV-08: Invest tab empty state
 
-Session 09  FIRE Planner screen
+Session 11  FIRE Planner screen
               /app/invest/fire.tsx
               FIREHouseholdToggle, FIRESliderHero,
               FIREInputsCard, FIREAssumptionsCard,
               FIREProfileSelector
               /constants/fireDefaults.ts
 
-Session 10  Data Layer (no UI)
+Session 12  Data Layer (no UI)
               All services and stores
+              catalogueService.ts — Supabase + static fallback
+              spendCategoriser.ts — Layer 1/2/3 architecture
+              merchantKeywords.ts — geography-aware keyword rules
+              PostHog event instrumentation — four learning loops
 
-Session 11  Wire UI to Data Layer
+Session 13  Wire UI to Data Layer
               Real CSV data flows — first real test
 
-Session 12  Onboarding (10 screens + UniversalAddSheet)
+Session 14  Onboarding (10 screens + UniversalAddSheet)
 
-Session 13  Sources Screen
+Session 15  Sources Screen
 
-Session 14  Settings + Polish
+Session 16  Settings + Polish
 
-Session 15  QA + Native Build Prep
+Session 17  QA + Native Build Prep
 
 --- YOUR OWN TESTING ---
 --- 10 FRIENDS BETA ---
@@ -378,24 +525,25 @@ Session 15  QA + Native Build Prep
 6.  formatCurrency() always. Never Intl.NumberFormat.
 7.  Default exports. Relative imports. No @/ alias.
 8.  TypeScript strict. Zero any.
-9.  Space Grotesk numbers/display. Inter body/UI. Never Syne/DM Sans.
+9.  Space Grotesk numbers/display. Inter body/UI.
 10. Hero card always dark — both modes. Hero tokens inside only.
 11. Standard card: theme.surface, borderRadius 16, no border.
 12. Screen layout: paddingH 20, paddingTop 16, paddingBottom 48.
     Card gap: marginTop 16. Section header gap: marginTop 32.
-13. Detail screens: light bg, dark hero at top. Matches Spend detail.
+    MacronRule between major sections: marginTop 24.
+13. Detail screens: light bg, dark hero at top.
 14. Hero watermark: KasheAsterisk absolute top -45 right -45,
     200×200, opacity 0.07, overflow hidden on parent.
-15. KasheAsterisk replaces ↑↓ arrows everywhere.
+15. Universal AppHeader on every tab — never inline header code.
 16. Empty state = 0.5 opacity ghost + floating accent pill.
 17. Every commit = code + updated MD files together.
-18. Read reference component BEFORE building equivalent.
-    SpendHeroCard → any hero card
-    SpendCategoryRow → any list row
-    SpendInsightStrip → any insight card
-    spend/[category].tsx → any detail screen
-19. Git always manually. MD files replaced in full.
-20. Never show raw subtype keys — use displayLabels.ts.
-21. No standalone Insights tab. Insights on native screens.
-22. Tab 4 is Invest. Route: invest.tsx.
-23. Risk profile drives allocation. Never hardcoded 60/20/20.
+18. Git always manually. MD files replaced in full.
+19. Never show raw subtype keys — use displayLabels.ts.
+20. No standalone Insights tab. Tab 4 is Invest.
+21. Risk profile drives all allocation targets. Never hardcoded.
+22. Instrument suggestions: "worth exploring" framing only.
+    Never buy/sell. Never affiliate links.
+23. CatalogueRole: track_only instruments never suggested. Ever.
+24. KasheScore drives tier ordering — objective, not behaviour-based.
+25. Spend categorisation: Layer 1 → Layer 2 → Layer 3 pipeline.
+26. Default risk profile: RECOMMEND Balanced, never silently assume.
