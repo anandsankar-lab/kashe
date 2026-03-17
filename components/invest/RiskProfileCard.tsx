@@ -28,6 +28,9 @@ export default function RiskProfileCard({
         <Text style={[styles.body, { color: theme.textSecondary }]}>
           Tell us how you think about risk. We'll tailor your investment plan and suggestions.
         </Text>
+        <Text style={[styles.bodyHint, { color: theme.textDim }]}>
+          Most people in your situation start with Balanced.
+        </Text>
         <TouchableOpacity style={styles.ctaButton} onPress={onOpenSheet}>
           <Text style={styles.ctaText}>Set your risk profile →</Text>
         </TouchableOpacity>
@@ -90,6 +93,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     lineHeight: 20,
+  },
+  bodyHint: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    marginTop: 6,
   },
   ctaButton: {
     backgroundColor: '#C8F04A',

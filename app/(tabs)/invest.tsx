@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { View, ScrollView } from 'react-native'
 import { useTheme } from '../../context/ThemeContext'
+import AppHeader from '../../components/shared/AppHeader'
 import RiskProfileCard from '../../components/invest/RiskProfileCard'
 import RiskProfileSheet from '../../components/invest/RiskProfileSheet'
 import { RiskProfileType } from '../../types/riskProfile'
@@ -12,6 +13,16 @@ export default function InvestScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <AppHeader
+        title="Invest"
+        showAvatar={true}
+        avatarInitial="A"
+        showOverflow={true}
+        showAdd={true}
+        onAdd={() => console.log('add')}
+        onOverflow={() => console.log('overflow')}
+        onAvatar={() => console.log('avatar')}
+      />
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 20,

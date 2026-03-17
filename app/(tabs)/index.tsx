@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import HomeHeader from '../../components/home/HomeHeader';
+import AppHeader from '../../components/shared/AppHeader';
 import PositionHeroCard from '../../components/home/PositionHeroCard';
 import SpendStoryCard from '../../components/home/SpendStoryCard';
 import MarketsStrip from '../../components/home/MarketsStrip';
@@ -78,66 +78,71 @@ export default function HomeScreen() {
   );
 
   return (
-    <EmptyState
-      isVisible={!hasData}
-      headline={copy.headline}
-      ctaLabel={copy.ctaLabel}
-      secondaryLabel={copy.secondaryLabel}
-      onCta={() => {}}
-      onSecondary={() => {}}
-      invitationHeadline={copy.invitationHeadline}
-      invitationDescription={copy.invitationDescription}
-      invitationCtaLabel={copy.invitationCtaLabel}
-      invitationSecondaryLabel={copy.invitationSecondaryLabel}
-    >
-      <ScrollView
-        style={{ flex: 1, backgroundColor: theme.background }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 48, gap: 14 }}
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <AppHeader
+        title="Home"
+        showAvatar={true}
+        avatarInitial="A"
+        showOverflow={true}
+        showAdd={true}
+        onAdd={() => console.log('add')}
+        onOverflow={() => console.log('overflow')}
+        onAvatar={() => console.log('avatar')}
+      />
+      <EmptyState
+        isVisible={!hasData}
+        headline={copy.headline}
+        ctaLabel={copy.ctaLabel}
+        secondaryLabel={copy.secondaryLabel}
+        onCta={() => {}}
+        onSecondary={() => {}}
+        invitationHeadline={copy.invitationHeadline}
+        invitationDescription={copy.invitationDescription}
+        invitationCtaLabel={copy.invitationCtaLabel}
+        invitationSecondaryLabel={copy.invitationSecondaryLabel}
       >
-        <HomeHeader
-          name="Anand"
-          hasNotification={false}
-          notificationType={null}
-          onAvatarPress={() => {}}
-          onAddPress={() => {}}
-        />
-        <PositionHeroCard
-          position={450200}
-          savingsRate={45}
-          monthDelta={2340}
-          ytdDelta={18400}
-          liquidAssets={380200}
-          illiquidAssets={120000}
-          liabilities={50000}
-          currency="€"
-          isRedacted={!hasData}
-        />
-        <SpendStoryCard
-          totalSpend={2847}
-          currency="€"
-          vsAverage={12}
-          investedAmount={1500}
-          investmentTarget={1500}
-          topInsight={{
-            categoryName: 'Eating out',
-            vsAverage: 34,
-            topMerchant: 'Deliveroo',
-          }}
-          onSpendPress={() => console.log('→ Spend tab')}
-          onInvestPress={() => console.log('→ Portfolio tab')}
-          isRedacted={!hasData}
-        />
-        <SegregationToggle isRedacted={!hasData} />
-        <MarketsStrip items={MARKETS_DATA} isRedacted={!hasData} />
-        <PortfolioPulse items={PULSE_DATA} isRedacted={!hasData} />
-        <FIREProgress percentage={63} projectedYear={2036} isSetUp={true} isRedacted={!hasData} />
-        <MonthlyReviewLink
-          month={reviewMonth}
-          isVisible={reviewVisible}
-          isRedacted={!hasData}
-          onPress={() => {}}
-        />
-      </ScrollView>
-    </EmptyState>
+        <ScrollView
+          style={{ flex: 1, backgroundColor: theme.background }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 48, gap: 14 }}
+        >
+          <PositionHeroCard
+            position={450200}
+            savingsRate={45}
+            monthDelta={2340}
+            ytdDelta={18400}
+            liquidAssets={380200}
+            illiquidAssets={120000}
+            liabilities={50000}
+            currency="€"
+            isRedacted={!hasData}
+          />
+          <SpendStoryCard
+            totalSpend={2847}
+            currency="€"
+            vsAverage={12}
+            investedAmount={1500}
+            investmentTarget={1500}
+            topInsight={{
+              categoryName: 'Eating out',
+              vsAverage: 34,
+              topMerchant: 'Deliveroo',
+            }}
+            onSpendPress={() => console.log('→ Spend tab')}
+            onInvestPress={() => console.log('→ Portfolio tab')}
+            isRedacted={!hasData}
+          />
+          <SegregationToggle isRedacted={!hasData} />
+          <MarketsStrip items={MARKETS_DATA} isRedacted={!hasData} />
+          <PortfolioPulse items={PULSE_DATA} isRedacted={!hasData} />
+          <FIREProgress percentage={63} projectedYear={2036} isSetUp={true} isRedacted={!hasData} />
+          <MonthlyReviewLink
+            month={reviewMonth}
+            isVisible={reviewVisible}
+            isRedacted={!hasData}
+            onPress={() => {}}
+          />
+        </ScrollView>
+      </EmptyState>
+    </View>
   );
 }

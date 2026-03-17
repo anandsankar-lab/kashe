@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import SpendScreenHeader from '../../components/spend/SpendScreenHeader';
+import AppHeader from '../../components/shared/AppHeader';
 import SpendHeroCard from '../../components/spend/SpendHeroCard';
 import SpendInsightStrip from '../../components/spend/SpendInsightStrip';
 import SpendCategoryList from '../../components/spend/SpendCategoryList';
@@ -227,13 +227,15 @@ export default function SpendScreen() {
         { backgroundColor: theme.background },
       ]}
     >
-      <SpendScreenHeader
-        onAddPress={() => {}}
-        onBudgetsPress={handleDotsPress}
-        notificationDot={null}
-        onAvatarPress={() => console.log('Avatar pressed')}
+      <AppHeader
+        title="Spend"
+        showAvatar={true}
         avatarInitial="A"
-        hasStaleData={hasStaleData && hasData}
+        showOverflow={true}
+        showAdd={true}
+        onAdd={() => console.log('add')}
+        onOverflow={() => console.log('overflow')}
+        onAvatar={() => console.log('avatar')}
       />
 
       <EmptyState

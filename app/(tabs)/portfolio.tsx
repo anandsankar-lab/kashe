@@ -2,8 +2,6 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { useState } from 'react'
 import { useRouter } from 'expo-router'
 import { useTheme } from '@/context/ThemeContext'
-import Typography from '@/constants/typography'
-import { borderRadius } from '@/constants/spacing'
 import colours from '../../constants/colours'
 import AppHeader from '@/components/shared/AppHeader'
 import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
@@ -75,51 +73,6 @@ const MOCK_PORTFOLIO_INSIGHT = {
   body: 'Your employer stock is 18% of your live portfolio. Consider diversifying to reduce concentration risk.',
 }
 
-function DotsButton({ onPress }: { onPress: () => void }) {
-  const theme = useTheme()
-  return (
-    <TouchableOpacity
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: borderRadius.pill,
-        backgroundColor: theme.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-      onPress={onPress}
-      activeOpacity={0.7}
-      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-    >
-      <Text style={[Typography.bodyMedium, { color: theme.textSecondary, fontSize: 14, letterSpacing: 1, lineHeight: 18 }]}>
-        ···
-      </Text>
-    </TouchableOpacity>
-  )
-}
-
-function PlusButton({ onPress }: { onPress: () => void }) {
-  const theme = useTheme()
-  return (
-    <TouchableOpacity
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: borderRadius.pill,
-        backgroundColor: theme.accent,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-      onPress={onPress}
-      activeOpacity={0.8}
-      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-    >
-      <Text style={[Typography.heading, { fontSize: 20, color: theme.textOnAccent, lineHeight: 24 }]}>
-        +
-      </Text>
-    </TouchableOpacity>
-  )
-}
 
 export default function PortfolioScreen() {
   const theme = useTheme()
@@ -135,15 +88,13 @@ export default function PortfolioScreen() {
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <AppHeader
         title="Portfolio"
-        showGreeting={false}
-        onAvatarPress={() => {}}
+        showAvatar={true}
         avatarInitial="A"
-        rightActions={
-          <>
-            <DotsButton onPress={() => {}} />
-            <PlusButton onPress={() => {}} />
-          </>
-        }
+        showOverflow={true}
+        showAdd={true}
+        onAdd={() => console.log('add')}
+        onOverflow={() => console.log('overflow')}
+        onAvatar={() => console.log('avatar')}
       />
       <ScrollView
         style={{ flex: 1 }}
