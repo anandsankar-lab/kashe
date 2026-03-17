@@ -8,6 +8,7 @@ import { MOCK_PORTFOLIO_HOLDINGS, MOCK_PORTFOLIO_TOTALS } from '../../constants/
 import MacronRule from '../../components/shared/MacronRule'
 import KasheAsterisk from '../../components/shared/KasheAsterisk'
 import BucketReassignSheet from '../../components/portfolio/BucketReassignSheet'
+import HoldingPriceChart from '../../components/portfolio/HoldingPriceChart'
 import LockedProjectionCard from '../../components/portfolio/LockedProjectionCard'
 import ProtectionStatusCard from '../../components/portfolio/ProtectionStatusCard'
 import { PortfolioHolding, BucketType } from '../../types/portfolio'
@@ -109,6 +110,8 @@ export default function HoldingDetailScreen() {
             {portfolioPct}% of live portfolio
           </Text>
         )}
+
+        <HoldingPriceChart holding={holding} currency={holding.currency ?? 'EUR'} />
 
         <MacronRule style={{ marginTop: 16 }} />
 
