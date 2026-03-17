@@ -4,6 +4,9 @@ import { useTheme } from '../../context/ThemeContext'
 import AppHeader from '../../components/shared/AppHeader'
 import RiskProfileCard from '../../components/invest/RiskProfileCard'
 import RiskProfileSheet from '../../components/invest/RiskProfileSheet'
+import InvestmentPlanFull from '../../components/invest/InvestmentPlanFull'
+import MacronRule from '../../components/shared/MacronRule'
+import { MOCK_INVESTMENT_PLAN } from '../../constants/mockData'
 import { RiskProfileType } from '../../types/riskProfile'
 
 export default function InvestScreen() {
@@ -31,16 +34,16 @@ export default function InvestScreen() {
           gap: 16,
         }}
       >
-        {/* STATE 1 — null profile */}
         <RiskProfileCard
           riskProfile={null}
           onOpenSheet={() => setSheetVisible(true)}
         />
 
-        {/* STATE 2 — balanced profile */}
-        <RiskProfileCard
+        <MacronRule style={{ marginTop: 24 }} />
+
+        <InvestmentPlanFull
+          plan={MOCK_INVESTMENT_PLAN}
           riskProfile="balanced"
-          onOpenSheet={() => setSheetVisible(true)}
         />
       </ScrollView>
 
