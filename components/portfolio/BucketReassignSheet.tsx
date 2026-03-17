@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { Theme } from '../../constants/colours';
 import { BucketType, PortfolioHolding } from '../../types/portfolio';
+import { getAssetTypeLabel } from '../../constants/displayLabels';
 import MacronRule from '../shared/MacronRule';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -229,7 +230,7 @@ export default function BucketReassignSheet({ holding, isVisible, onClose, onCon
 
           {/* System reasoning */}
           <Text style={styles.reasoningText}>
-            We placed this in {holding?.bucket ?? ''} because it{"'"}s a {holding?.assetSubtype ?? ''}. Change it if that doesn{"'"}t fit how you think about this money.
+            We placed this in {holding?.bucket ?? ''} because it{"'"}s a {getAssetTypeLabel(holding?.assetSubtype ?? holding?.assetType ?? '')}. Change it if that doesn{"'"}t fit how you think about this money.
           </Text>
 
           {/* Divider */}

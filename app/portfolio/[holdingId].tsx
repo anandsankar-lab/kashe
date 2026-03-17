@@ -11,6 +11,7 @@ import BucketReassignSheet from '../../components/portfolio/BucketReassignSheet'
 import LockedProjectionCard from '../../components/portfolio/LockedProjectionCard'
 import ProtectionStatusCard from '../../components/portfolio/ProtectionStatusCard'
 import { PortfolioHolding, BucketType } from '../../types/portfolio'
+import { getAssetTypeLabel, getGeographyLabel } from '../../constants/displayLabels'
 
 export default function HoldingDetailScreen() {
   const { holdingId } = useLocalSearchParams<{ holdingId: string }>()
@@ -138,8 +139,8 @@ export default function HoldingDetailScreen() {
               theme={theme}
             />
           )}
-          <DetailRow label="Asset type" value={holding.assetSubtype} theme={theme} />
-          <DetailRow label="Geography" value={holding.geography} theme={theme} />
+          <DetailRow label="Asset type" value={getAssetTypeLabel(holding.assetSubtype ?? holding.assetType ?? '')} theme={theme} />
+          <DetailRow label="Geography" value={getGeographyLabel(holding.geography ?? '')} theme={theme} />
           {holding.taxWrapper !== undefined && holding.taxWrapper !== 'none' && (
             <DetailRow label="Tax wrapper" value={holding.taxWrapper} theme={theme} />
           )}
