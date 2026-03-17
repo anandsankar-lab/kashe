@@ -1,6 +1,9 @@
 # Kāshe — Engineering Rules
 *Read this before starting any ticket. No exceptions.*
 *These rules apply to every agent, every session, every component.*
+*Last updated: 17 March 2026 — Universal AppHeader locked,
+Monthly Review format locked, Invest tab copy principles locked,
+instrument catalogue rules added, KasheAsterisk usage rules added.*
 
 ---
 
@@ -14,6 +17,9 @@ Every piece of data or configuration has exactly one home.
 - Typography → `constants/typography.ts`
 - Mock data → `constants/mockData.ts`
 - Currency formatting → `constants/formatters.ts`
+- Instrument catalogue → `constants/instrumentCatalogue.ts`
+- Risk profiles → `types/riskProfile.ts`
+- Display labels → `constants/displayLabels.ts`
 
 If you find yourself defining the same thing in two places, stop.
 One of them is wrong. Fix the source, not the symptom.
@@ -27,6 +33,7 @@ They do NOT:
 - Call `useColorScheme()` directly
 - Access `Colors.dark.X` or any colour object directly
 - Contain raw hex values
+- Read from instrumentCatalogue.ts directly (use hooks in Session 12+)
 
 All of those decisions belong in hooks, services, or context.
 Components receive values via props and hooks. They render those values.
@@ -39,9 +46,9 @@ The hooks are the contract between data and UI.
 - `useHousehold()` → profile and household state
 - `useInsights()` → insight state and cache
 - `useFirePlanner()` → FIRE inputs and outputs
+- `useInstrumentCatalogue()` → catalogue data (Session 12+)
 
 Screens never calculate inline. They call a hook, get a value, render it.
-If a calculation needs to happen, it belongs in a hook or service.
 
 ### 4. Types are the spec
 If the TypeScript interface doesn't exist in `/types/`, the component
@@ -53,49 +60,135 @@ Build order:
 3. Build the component that renders it
 
 Never build a component and then figure out its types afterwards.
-That produces `any` creep and structural debt.
 
 ### 5. Mock data is production-shaped
-Mock data in `constants/mockData.ts` uses the same types, same field names,
-and same structure as real production data will have.
+Mock data in `constants/mockData.ts` uses the same types, same field
+names, and same structure as real production data will have.
 
 Mock data rules:
-- Never Dutch-specific brand names. International neutral only:
-  ✅ "Food Delivery App" not "Thuisbezorgd"
-  ✅ "Supermarket" not "Albert Heijn" or "Jumbo"
-  ✅ "Online Store" not "Bol.com"
-  ✅ "Public Transport" not "NS" or "GVB"
+- Never Dutch-specific brand names. International neutral only.
 - Never random/generated numbers — always fixed constants
-- Must look like a real, plausible user (38-year-old Indian engineer
-  in Amsterdam with Indian MFs, DeGiro ETFs, NRE savings)
-- Same mock data used everywhere — Home ghost, Spend ghost, Portfolio ghost
+- Must look like a real, plausible globally mobile professional
+- Same mock data used everywhere — all screens, all empty states
 
 ### 6. No raw hex values in components. Ever.
 This is the ThemeContext rule. It is non-negotiable.
 
 ```typescript
-// WRONG — never do this
+// WRONG
 backgroundColor: '#C8F04A'
-color: '#FF5C5C'
-borderColor: Colors.dark.border
-const { theme } = useTheme()    // WRONG — useTheme() returns theme DIRECTLY
+const { theme } = useTheme()    // WRONG — never destructure
 
-// RIGHT — always do this
-const theme = useTheme()        // returns the theme object directly
-backgroundColor: theme.accent   // theme.* for surface/border/background
-color: colours.danger           // colours.* for static tokens (textPrimary,
-borderColor: theme.border       //   textSecondary, accent, danger, warning)
-                                // import colours from '../../constants/colours'
+// RIGHT
+const theme = useTheme()        // returns theme object directly
+backgroundColor: colours.accent // colours.* for static tokens
+borderColor: theme.border       // theme.* for mode-adaptive tokens
 ```
 
 `useColorScheme()` is called ONLY in `context/ThemeContext.tsx`.
-Every other file in the entire codebase calls `useTheme()` instead.
-`useTheme()` returns the theme object DIRECTLY — never destructure it.
-`theme.*` is used for dynamic surface/border/background values.
-`colours.*` (imported from constants/colours.ts) is used for static
-colour values that don't change with mode (textPrimary, accent, danger, etc).
-This pattern is locked and visible in SpendCategoryRow.tsx.
-This rule applies to every component, every screen, every hook.
+`theme.*` for dynamic surface/border/background values.
+`colours.*` for static tokens (accent, danger, warning, hero tokens).
+
+---
+
+## UNIVERSAL HEADER RULE — LOCKED (17 March 2026)
+
+```
+ALL four tab screens use AppHeader from /components/shared/AppHeader.tsx
+NEVER write inline header code in any tab screen file.
+
+Correct:
+  import AppHeader from '../../components/shared/AppHeader'
+  <AppHeader title="Invest" showAvatar showOverflow showAdd ... />
+
+Wrong:
+  <View style={styles.header}>
+    <Text>Invest</Text>
+    ...
+  </View>
+
+AppHeader props:
+  title: string
+  showAvatar?: boolean       // default false
+  avatarInitial?: string     // default 'A'
+  showOverflow?: boolean     // default false
+  showAdd?: boolean          // default true
+  onAdd?: () => void
+  onOverflow?: () => void
+  onAvatar?: () => void
+```
+
+---
+
+## MONTHLY REVIEW FORMAT — LOCKED (17 March 2026)
+
+```
+MonthlyReviewSheet is an EXECUTIVE BRIEF — four storytelling levels.
+NEVER revert to text document / scrollable paragraphs format.
+
+L1: Hero stat + SVG sparkline
+L2: Animated allocation bars per bucket
+L3: Priority action card with accent left border
+L4: FIRE year + watchlist bullets
+
+Mode: System-responsive (follows device dark/light) — intentional.
+      Do NOT force light or dark background.
+
+Reference: /components/invest/MonthlyReviewSheet.tsx
+```
+
+---
+
+## INVEST TAB COPY RULES — LOCKED (17 March 2026)
+
+```
+PRINCIPLE: Visuals do the work. Copy is minimal and confident.
+
+Rules:
+- No verbose explanatory paragraphs in any Invest component
+- Use fraction format for progress: €920/€1,500 not "€580 short"
+- KasheAsterisk punctuates AI-generated insights and recommendations
+- "Worth exploring" always — never "Buy" or "Invest in"
+- FIRE framing: "choose not to work" — freedom, not stopping
+- Risk profile recommendation: "Balanced is a good starting point"
+  Not: "Tell us how you think about risk. We'll tailor your..."
+
+KasheAsterisk usage:
+  ✓ Before AI-generated recommendations ("* Balanced is a good...")
+  ✓ Before "why" text in instrument cards
+  ✓ In MonthlyReviewSheet hero stat row
+  ✓ Top-right of FIRE year section
+  ✗ As random decoration — only where Kāshe is "speaking"
+```
+
+---
+
+## INSTRUMENT CATALOGUE RULES — LOCKED (17 March 2026)
+
+```
+track_only instruments NEVER appear in InstrumentDiscoverySection.
+EVER. Not even with a disclaimer. Not even at TIER 3.
+
+track_only forever:
+  equity_crowdfunding, angel_investment, venture_fund,
+  private_equity, nft, stock_options, futures,
+  structured_product, employer_rsu, employer_espp, crypto_spot
+
+KasheScore:
+  Never shown to user as a number.
+  Drives ordering within a tier — best score first.
+  Objective criteria only — never derived from user behaviour.
+
+"Worth exploring" framing:
+  Every instrument card must use the entry.why field.
+  Never write custom copy that recommends buying or selling.
+  The catalogue content is the spec — render it, don't override it.
+
+Geography filtering:
+  Always filter suggestions by user's residence geography.
+  Never show instruments from unrelated geographies unless GLOBAL.
+  Unknown geography → show GLOBAL entries + UNKNOWN_GEOGRAPHY_MESSAGE.
+```
 
 ---
 
@@ -106,26 +199,13 @@ ALWAYS use formatCurrency() from /constants/formatters.ts
 NEVER use Intl.NumberFormat — unreliable in Expo web bundler
 NEVER use template literals with raw numbers: `€${amount}`
 
-import { formatCurrency } from '../../constants/formatters'
-
-// Correct:
 formatCurrency(1500, 'EUR')     // → "€1,500"
 formatCurrency(420000, 'INR')   // → "₹4,20,000"
 formatCurrency(48200, 'EUR')    // → "€48,200"
 
-// Wrong:
-`€${amount.toLocaleString()}`   // Intl — breaks in Expo web
-`€${amount}`                    // No formatting at all
-new Intl.NumberFormat(...)      // Banned permanently
-```
-
-This decision was made in Session 05 after Intl.NumberFormat
-produced inconsistent results in the Expo web bundler.
-The manual regex formatter in formatters.ts is the permanent solution.
-It handles EUR, INR, GBP, USD symbols and comma separators correctly.
-
 TextInput fields: format on blur, parse on save.
-Never try to format a live TextInput value — it breaks cursor position.
+Never format a live TextInput value — breaks cursor position.
+```
 
 ---
 
@@ -133,24 +213,19 @@ Never try to format a live TextInput value — it breaks cursor position.
 
 ```
 npm install     ALWAYS use --legacy-peer-deps
-                SDK 55 ships with React 19.2 — it breaks without this
                 Example: npm install some-package --legacy-peer-deps
-                Via expo: npx expo install some-package -- --legacy-peer-deps
 
 Animations      NEVER install react-native-reanimated for web preview
-                It breaks the web bundler completely
                 Use React Native built-in Animated API only
                 Reanimated returns in QA session (native builds only)
 
-TypeScript      Strict mode throughout. Zero `any` types.
-                If you can't type it, you don't understand it yet.
+TypeScript      Strict mode throughout. Zero any types.
 
 Preview         npx expo start → w → localhost:8081
                 Every ticket must be visually confirmed before committing
 
 Git             ALWAYS run git commands manually in a normal terminal
                 NEVER run git through Claude Code
-                Claude Code is for writing files only
 ```
 
 ---
@@ -159,16 +234,15 @@ Git             ALWAYS run git commands manually in a normal terminal
 
 ```
 Format:   [TICKET-ID] Brief description
-Example:  [PORT-06] PortfolioInsightStrip — conditional insight card
+Example:  [INV-05] InstrumentDiscoverySection — live catalogue
 
 Rules:
 - One commit per logical ticket
 - Always preview before committing
 - Never commit broken code
 - Never commit API keys or tokens
-- Never commit .env files
-- Push at end of every session
 - Every commit includes code + updated MD files together
+- Push at end of every session
 ```
 
 ---
@@ -181,9 +255,7 @@ Rules:
 4. Check that the TypeScript type exists in `/types/` before building
 5. Check that mock data exists in `/constants/mockData.ts` before building
 
-**If you find yourself reading all spec files upfront — stop.**
-That is not the process. Read CLAUDE-state.md and the handoff doc.
-That is enough to start.
+**Read CLAUDE-state.md and the handoff doc. That is enough to start.**
 
 ---
 
@@ -209,9 +281,17 @@ These are permanent. Do not ask. Do not suggest workarounds.
 [NEVER] Named exports from component files — default exports only
 [NEVER] Inline style objects — StyleSheet.create() only
 [NEVER] Hardcoded hex colour values in components
+[NEVER] Raw subtype keys in UI — always use displayLabels.ts
+[NEVER] KasheScore shown to user as a number
+[NEVER] track_only instruments in InstrumentDiscoverySection
+[NEVER] Crypto suggested to user (track_only only)
+[NEVER] Equity crowdfunding suggested to user (track_only only)
+[NEVER] Inline header code in any tab screen (use AppHeader)
+[NEVER] MonthlyReviewSheet as text document (executive brief only)
+[NEVER] Buy/sell language in instrument cards
 ```
 
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 16 March 2026*
+*Last updated: 17 March 2026*

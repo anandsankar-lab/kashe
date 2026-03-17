@@ -1,9 +1,8 @@
 # Kāshe — CLAUDE.md
 *Read this before starting any task in this project.*
-*Last updated: 17 March 2026 — Instrument catalogue type system locked,
-KasheScore introduced, living database architecture decided,
-spend categorisation Layer 1/2/3 locked, universal AppHeader locked,
-learning loops formalised, product vision fully articulated.*
+*Last updated: 17 March 2026 — Session 10 complete.
+Monthly Review executive brief format locked. Invest tab copy principles
+locked. FIRE copy locked. File structure updated.*
 
 ---
 
@@ -33,24 +32,16 @@ When in doubt — do less, ask the PM.
 ## The User We Are Building For
 
 A globally mobile professional, 30–50, living in one country with
-financial roots in another (or several). This is not an India-specific
-product — it is for any expat professional with a multi-geography
-financial life.
+financial roots in another (or several). Not India-specific — for
+any expat professional with a multi-geography financial life.
 
 Example profiles:
 - Indian engineer in Amsterdam: Indian MFs, DeGiro ETFs, NRE savings,
-  PPF, employer RSUs, EUR mortgage, Dutch pension (pensioenfonds)
-- Nigerian product manager in London: Nigerian bonds, ISA, UK pension,
-  Revolut savings, GBP + NGN exposure
+  PPF, employer RSUs, EUR mortgage, Dutch pension
+- Nigerian PM in London: Nigerian bonds, ISA, UK pension, GBP + NGN
 - Brazilian designer in Berlin: Brazilian CDB, German ETF Sparplan,
-  bAV pension, EUR + BRL exposure
-- Filipino nurse in Dubai: Philippine bonds, UAE savings, remittances,
-  USD + PHP + AED exposure
-
-What they share: investments in multiple geographies, two or more
-currencies always in play, no single app that shows the full picture.
-They know they're doing okay. They can't see exactly how okay.
-Kāshe is that picture — and a trusted advisor alongside it.
+  bAV pension, EUR + BRL
+- Filipino nurse in Dubai: Philippine bonds, UAE savings, USD + PHP
 
 **North star test:** Would a 38-year-old expat professional with
 investments in two countries trust this with their full financial
@@ -59,7 +50,7 @@ picture, find it genuinely insightful, and willingly pay for it?
 ---
 
 ## Non-Negotiables
-- Never hardcode a colour value. Use tokens from /constants/colours.ts
+- Never hardcode a colour. Use tokens from /constants/colours.ts
 - Every component handles both dark AND light mode
 - Every screen has an empty state (ghost pattern — 0.5 opacity, NOT blur)
 - [V2] and [NEVER] tags mean: do not build
@@ -72,6 +63,7 @@ picture, find it genuinely insightful, and willingly pay for it?
 - Git commands always run manually by Anand. Never through Claude Code.
 - MD files always downloaded and replaced in full. Never edited inline.
 - Universal AppHeader — never inline header code in any tab screen.
+- Monthly Review: executive brief format. Never revert to text document.
 
 ---
 
@@ -81,31 +73,22 @@ Framework:      React Native via Expo (managed workflow)
 Language:       TypeScript (strict)
 Navigation:     Expo Router (file-based routing)
 State:          Zustand
-Storage:        react-native-encrypted-storage
-                (iOS Keychain / Android Keystore — AES-256)
+Storage:        react-native-encrypted-storage (AES-256)
 Auth:           Google OAuth only via expo-auth-session
-                No passwords. Ever.
-Fonts:          Expo Google Fonts — Space Grotesk + Inter
-                Space Grotesk: display numbers, headings
-                Inter: body, labels, captions, all UI text
+Fonts:          Space Grotesk (display/numbers) + Inter (body/UI)
                 NEVER: Syne, DM Sans — permanently retired
 Animation:      React Native Animated API only
                 react-native-reanimated — banned from web builds
-                Returns for native-only builds in QA session
-Price APIs:     Alpha Vantage (stocks/ETFs, free tier 25/day)
-                Finnhub (news + prices, free tier 60/min)
-                AMFI NAV feed (Indian MFs, free, no key)
-                CoinGecko (crypto, free, no key)
-FX:             ExchangeRate-API (free, no key for basic)
+Price APIs:     Alpha Vantage / Finnhub / AMFI NAV / CoinGecko
+FX:             ExchangeRate-API
 AI Insights:    Claude API (claude-sonnet-4-20250514)
                 Hard budget cap: €5.00/month client-side
                 API key in encrypted storage — never in bundle
-Analytics:      PostHog (anonymised, no PII)
-                Four learning loops — see LEARNING LOOPS section
+Analytics:      PostHog (anonymised, no PII) — four learning loops
 Backend:        Supabase
                 V1b: couple sync (E2E encrypted)
                 V2: instrument catalogue live feed + merchant keywords
-                    Edge Functions for catalogue freshness checks
+                    Edge Functions for catalogue freshness
 ```
 
 ---
@@ -120,84 +103,65 @@ Invest      Risk profile + investment plan + discovery +
             monthly review + optional FIRE planner
 ```
 
-**There is no standalone Insights tab.**
-AI insights live on the screen they are relevant to.
-The Invest tab is for planning and forward-looking guidance.
+No standalone Insights tab. AI insights live on native screens.
 
-Tab bar labels: Home / Spend / Portfolio / Invest
 Routes:
-  /app/(tabs)/index.tsx        Home
-  /app/(tabs)/spend.tsx        Spend
-  /app/(tabs)/portfolio.tsx    Portfolio
-  /app/(tabs)/invest.tsx       Invest
+  /app/(tabs)/index.tsx     Home
+  /app/(tabs)/spend.tsx     Spend
+  /app/(tabs)/portfolio.tsx Portfolio
+  /app/(tabs)/invest.tsx    Invest
 
 ---
 
-## Invest Tab — What Lives Here
+## Invest Tab — What Lives Here (LOCKED)
 
 ```
-RiskProfileCard          First thing on the tab
-                         Conservative / Balanced / Growth
-                         Default: recommend Balanced (never silently set)
-                         Drives allocation targets + suggestions
+RiskProfileCard          First. KasheAsterisk + "Balanced is a good
+                         starting point for most". Never verbose.
 
-InvestmentPlanFull       Always-expanded monthly plan
-                         Gap analysis per bucket, salary contributions
-                         Allocation targets from risk profile (not hardcoded)
+InvestmentPlanFull       Fraction format (€920/€1,500). Risk-profile-
+                         driven targets. "Explore →" CTA. No gap prose.
 
-InstrumentDiscovery      Tier-based suggestions filtered by:
-                         - Risk profile
-                         - Most underfunded bucket
-                         - User's existing holding geographies
-                         - KasheScore ordering within tier
-                         "Worth exploring" framing always
-                         Never buy/sell. Never affiliate links.
+InstrumentDiscoverySection
+                         Tier/bucket/geography filtered from catalogue.
+                         KasheAsterisk on "why" text. Risk tier pill.
+                         "Worth exploring" always. Never buy/sell.
 
-FinancialEducation       Tier-matched content
-                         Never shows concepts user already demonstrates
-                         Cycles through relevant topics
+MonthlyReviewCard        "March review ready" / "Read now →"
+                         Four states: available/viewed/pending/insufficient
 
-MonthlyReviewCard        Cross-domain review (spend + portfolio + FIRE)
-                         Generated once per calendar month
-                         Cached — never regenerates mid-month
+MonthlyReviewSheet       Executive brief. Four storytelling levels.
+                         L1: hero stat + sparkline
+                         L2: animated bucket allocation bars
+                         L3: priority action card (accent border)
+                         L4: FIRE year + watchlist
+                         System-responsive mode (intentional).
 
-FIRETeaserCard           Optional. Single low-pressure entry.
-                         Full planner at /app/invest/fire.tsx
+FinancialEducationSection Tier-matched content. Collapsible articles.
+                         Never shows what user already demonstrates.
+
+FIRETeaserCard           "When could you choose not to work?"
+                         Freedom framing. Single low-pressure entry.
 ```
 
 ---
 
 ## AI Insights — Where They Live
 
-**Insights are baked into their native screens. Not centralised.**
-
 ```
-Spend screen:
-  SpendInsightStrip       Spend pattern insight
-                          e.g. "Eating out up 40% — 3-month high"
-
-Portfolio screen:
-  PortfolioInsightStrip   Portfolio health + market event alerts
-
-HoldingDetailScreen:
-  HoldingInsightCard      Holding-specific market news + analysis
-  HoldingPriceChart       Line chart with 1M/6M/1Y tabs
-
-Invest tab:
-  InvestmentPlanFull      Gap analysis + allocation suggestions
-  MonthlyReviewCard       Cross-domain monthly synthesis
+Spend screen:     SpendInsightStrip
+Portfolio screen: PortfolioInsightStrip
+Holding detail:   HoldingInsightCard + HoldingPriceChart
+Invest tab:       InvestmentPlanFull + MonthlyReviewCard
 ```
 
-**Five insight types, priority ordered:**
+**Five types, priority ordered:**
 ```
-1. MARKET_EVENT_ALERT      Time-sensitive, web search
-                           Tiered sources: RBI/ECB/Reuters (T1) →
-                           Morningstar/ValueResearch (T2) →
-                           Reddit/Bogleheads (T3)
+1. MARKET_EVENT_ALERT      Time-sensitive, web search, tiered sources
 2. PORTFOLIO_HEALTH        Action-needed, local calc + Claude
 3. FIRE_TRAJECTORY         Important, not urgent
-4. INVESTMENT_OPPORTUNITY  Helpful, fully templated, zero API cost
-5. MONTHLY_REVIEW          Scheduled, own card in Invest tab
+4. INVESTMENT_OPPORTUNITY  Helpful, zero API cost, fully templated
+5. MONTHLY_REVIEW          Scheduled, executive brief format
 ```
 
 ---
@@ -205,312 +169,192 @@ Invest tab:
 ## Risk Profile — LOCKED
 
 ```
-Three levels:
-  Conservative   "Protect what I have, grow slowly"
-                  GROWTH 40% / STABILITY 40% / LOCKED 20%
-  Balanced       "Grow steadily, some volatility is fine"
-                  GROWTH 60% / STABILITY 20% / LOCKED 20%
-  Growth         "Maximise growth, I can ride out dips"
-                  GROWTH 80% / STABILITY 10% / LOCKED 10%
+Conservative   40% Growth / 40% Stability / 20% Locked
+Balanced       60% Growth / 20% Stability / 20% Locked
+Growth         80% Growth / 10% Stability / 10% Locked
 
-Default: Recommend Balanced — never silently pre-select
-STATE 1 copy: "Most people in your situation start with Balanced."
-RiskProfileSheet: pre-selects Balanced but user sees the question
-Drives: allocation targets, instrument suggestions, health triggers
-Stored: in householdStore per profile
+Default: RECOMMEND Balanced — never silently pre-select
+STATE 1: KasheAsterisk + "Balanced is a good starting point for most"
+Drives: targets, suggestions, health alerts
 ```
 
 ---
 
-## Instrument Catalogue — Architecture LOCKED
+## Instrument Catalogue — LOCKED
 
-### The three concepts
+### Three concepts
 ```
-RegulatoryRegime  Legal framework the instrument is issued under
-                  UCITS / SEBI / SEC / FCA / BaFin / AFM / FSMA /
-                  RBI / EPFO / PFRDA / MoF_IN / exchange_listed /
-                  unregulated / other / unknown
+RegulatoryRegime  Legal framework (UCITS/SEBI/SEC/FCA/BaFin/
+                  AFM/FSMA/RBI/EPFO/PFRDA/MoF_IN/
+                  exchange_listed/unregulated/other/unknown)
 
-AccountWrapper    Tax or account structure it can sit inside
-                  Full list: /types/instrumentCatalogue.ts
-                  Includes all UK / US / India / NL / DE / BE wrappers
-                  Every type ends with 'other' | 'unknown'
+AccountWrapper    Tax structure (ISA/LISA/SIPP/Roth_IRA/401k/PPF/
+                  EPF/NPS/ELSS/NRE/NRO/FCNR/Pension_NL/bAV_DE/
+                  Pensioensparen_BE/taxable/other/unknown)
 
-InstrumentType    What the instrument actually is
-                  Full list: /types/instrumentCatalogue.ts
-                  Covers all public + private + alternative instruments
-                  Every type ends with 'other' | 'unknown'
+InstrumentType    What it is (etf/index_fund/active_mutual_fund/
+                  bond_etf/direct_equity/fractional_equity/
+                  equity_crowdfunding/govt_savings_scheme/
+                  pension_scheme/crypto_spot/p2p_lending/
+                  other/unknown)
 ```
 
 ### CatalogueRole
 ```
-suggest      → shown in InstrumentDiscoverySection
-track_only   → recordable in portfolio, NEVER suggested
-educational  → shown in FinancialEducationSection only
+suggest      → InstrumentDiscoverySection (shown to user)
+track_only   → portfolio only, NEVER suggested
+educational  → FinancialEducationSection only
 
-TRACK_ONLY forever — never suggest these:
-  equity_crowdfunding (Crowdcube, Seedrs, Republic)
-  angel_investment, venture_fund, private_equity
-  employer_rsu, employer_espp (track holdings, never suggest)
-  crypto_spot, nft
-  stock_options, futures, structured_product
-  other, unknown
+TRACK_ONLY forever: equity_crowdfunding, angel_investment,
+  venture_fund, private_equity, nft, stock_options, futures,
+  structured_product, employer_rsu, employer_espp, crypto_spot
 ```
 
 ### KasheScore (0–100)
-Internal quality score. Never shown to user as a number.
-Drives ordering within a tier — highest score shown first.
-Updated quarterly by PM via Supabase dashboard.
+Objective quality. Never shown as number. Drives ordering within tier.
+PM updates quarterly. Cost(25) + Diversification(25) + Liquidity(20)
++ Regulatory(15) + Track record(15).
 
+### Geography
 ```
-Cost efficiency       25pts  TER vs category peers
-Diversification       25pts  Holdings count + index breadth
-Liquidity/access      20pts  AUM proxy + platform count
-Regulatory strength   15pts  UCITS/SEBI/SEC = 15, unregulated = 0
-Track record          15pts  Inception date depth
-```
-
-### Geography coverage
-```
-NL/BE/DE/LU   DeGiro, IBKR, Trade Republic, Scalable Capital,
-              Bolero, Comdirect, DKB, Flatex, ING
-IN            Zerodha, Groww, Kuvera, MFCentral, INDmoney
-US            Fidelity, Vanguard, Schwab, IBKR US
-GB            Vanguard UK, Hargreaves Lansdown, AJ Bell,
-              InvestEngine, Freetrade
-GLOBAL        IBKR International — fallback for unknown geographies
+NL/BE/DE/LU / IN / US / GB / GLOBAL (IBKR fallback)
+Unknown geography: show GLOBAL entries +
+  "We're building your region — here's what works globally"
 ```
 
-### Unknown geography
-Show GLOBAL entries (VWCE + AGGH via IBKR).
-Message: "We're building your region's instrument list.
-          Here's what works globally while we do."
-
-### V1 → V2 migration path
-```
-V1:  /constants/instrumentCatalogue.ts — static seed + offline fallback
-V2:  Supabase table instrument_catalogue — identical schema
-     catalogueService.ts fetches Supabase, falls back to static
-     Supabase Realtime pushes updates — no app release needed
-```
+### V1 → V2
+V1: static file = seed + offline fallback
+V2: Supabase table (identical schema) — Realtime, no release needed
 
 ---
 
-## Spend Categorisation — Architecture LOCKED
-
-Three-layer pipeline. Each layer improves over time.
+## Spend Categorisation — LOCKED
 
 ```
-Layer 1 — Keyword rules
-  Geography-aware merchant keyword matching
-  /constants/merchantKeywords.ts
-  Fast, free, offline
-  Updated via Supabase → all users benefit immediately
-  MerchantConfidence: 1.0
-
-Layer 2 — Claude API enrichment
-  Triggered only when Layer 1 fails
-  Cost: ~€0.001 per unrecognised transaction
-  Result cached permanently → never sent to API again
-  MerchantConfidence: 0.8
-
-Layer 3 — User correction
-  User recategorises → MerchantOverride saved
-  PostHog: category_corrected event logged
-  Corrections appearing 5+ times → promoted to Layer 1
-  MerchantConfidence: 1.0 (highest confidence)
+Layer 1 → keyword rules (geography-aware, offline) — confidence 1.0
+Layer 2 → Claude API (unrecognised only, ~€0.001) — confidence 0.8
+Layer 3 → user correction (5+ occurrences → Layer 1) — confidence 1.0
 ```
 
 ---
 
 ## Living Database — Three Pillars
 
-### Pillar 1 — Instrument Catalogue (Invest tab)
 ```
-AUTOMATED (weekly, Supabase Edge Function):
-  Check TER changes for all catalogue entries
-  Flag instruments where TER drifted > 0.05%
-  Check platform availability changes
-  Create review_queue entries for PM
-
-MANUAL (PM, quarterly — 30 minutes):
-  Review review_queue in Supabase dashboard
-  Update TERs, add new instruments, retire stale ones
-  Update KasheScores based on objective criteria
-  → Supabase Realtime pushes to all users instantly
-```
-
-### Pillar 2 — Spend Categories (Spend tab)
-```
-AUTOMATED (continuous):
-  Layer 2 Claude API catches unrecognised merchants
-  Cached permanently → improves for all future uploads
-
-MANUAL (PM, monthly — 15 minutes):
-  Review PostHog category_corrected events
-  Promote high-frequency corrections to Layer 1
-  → Supabase keyword update → all users benefit
-```
-
-### Pillar 3 — Portfolio Intelligence (Portfolio tab)
-```
-AUTOMATED (continuous):
-  Price refresh: Alpha Vantage, AMFI NAV, CoinGecko, FX
-  Already in spec — runs on app open
-
-AUTOMATED (monthly, on Monthly Review generation):
-  Claude API call with user's actual holdings + catalogue KasheScores
-  Honest assessment of portfolio composition vs catalogue quality
-  Surfaces if better alternatives exist within same tier
-
-MANUAL (PM, quarterly):
-  Update KasheScores for instruments users actually hold
-  Ensures portfolio insight quality stays high
+Invest catalogue:  KasheScore quarterly + TER auto-flag weekly
+                   review_queue Supabase table (PM: 15 min/week)
+Spend categories:  PostHog corrections → Layer 1 promotion monthly
+Portfolio intel:   Monthly Review includes KasheScore of held instruments
 ```
 
 ---
 
 ## Four Learning Loops — LOCKED
 
-Quality is baked in via KasheScore (objective).
-Behaviour signal supplements but never replaces it.
+Quality baked in via KasheScore (objective). Behaviour supplements only.
 
 ```
-LOOP 1 — Catalogue freshness
-  KasheScore: objective quarterly update by PM
-  TER changes: auto-flagged weekly by Edge Function
-  review_queue: PM reviews weekly (15 minutes)
-  Updates push via Supabase Realtime — no release needed
-
-LOOP 2 — Spend category accuracy
-  PostHog: category_corrected { merchant_norm, from, to, geography }
-  Monthly review: corrections appearing 5+ times → Layer 1 keywords
-  Layer 2 cache: self-improving, no manual action needed
-
-LOOP 3 — AI insight quality
-  PostHog: insight_viewed, insight_actioned, insight_dismissed
-           time_visible tracked alongside dismissal
-  Monthly review: actioned rate + time_visible by insight type
-  High dismiss + low time_visible → tighten trigger threshold
-  High dismiss + high time_visible → improve narrative prompt
-
-LOOP 4 — Instrument discovery signal
-  PostHog: instrument_tapped, instrument_added, instrument_skipped
-  Monthly review: tap rate + add rate per instrument per geography
-  High tap + low add → description/why copy needs work
-  High add rate → candidate for tier promotion
-  This is editorial signal — PM decides, not algorithm
-```
-
----
-
-## Sources Screen
-
-```
-Route:   /app/sources.tsx
-Entry:   Home header [⋯] overflow menu
-Purpose: All connected data sources, sync status,
-         future API connections
-NOT a tab — utility screen, accessed from overflow
+Loop 1: Catalogue freshness — KasheScore + Edge Function + review_queue
+Loop 2: Spend accuracy — category_corrected → Layer 1
+Loop 3: AI insight quality — viewed/actioned/dismissed + time_visible
+Loop 4: Discovery signal — tapped/added/skipped (editorial, not algo)
 ```
 
 ---
 
 ## Onboarding Stack — 10 Screens
 ```
-1. Welcome          Kāshe asterisk + tagline + Google OAuth
-2. Name             "What's your name?"
-3. Location         Country + base currency
-4. Age              Skippable. Used for FIRE calc only.
-5. Risk Profile     Conservative / Balanced / Growth
-                    Plain language. Not a quiz.
-                    Pre-selects Balanced. User sees the question.
-6. Teach [+]        Static illustration, introduce the gesture
-7. First Add        Guided universal add sheet (isOnboarding=true)
-8. First Payoff     Real data OR ghost
-9. Budget Suggest   Conditional — only if screen 7 upload succeeded
-10. Complete        "Tap [+] anytime" → main app
+1. Welcome      Kāshe asterisk + tagline + Google OAuth
+2. Name         "What's your name?"
+3. Location     Country + base currency (drives geography filtering)
+4. Age          Skippable. FIRE only.
+5. Risk Profile Conservative / Balanced / Growth
+                KasheAsterisk + "Balanced is a good starting point"
+6. Teach [+]    Static illustration
+7. First Add    Guided universal add sheet
+8. First Payoff Real data OR ghost
+9. Budget       Conditional on screen 7 upload success
+10. Complete    "Tap [+] anytime" → main app
 
-Screen 5 also captures residence country for:
+Screen 3+5 together drive:
   → Geography-filtered instrument suggestions
   → FIRE inflation defaults
   → Spend merchant keyword set
-  → If country unknown: show GLOBAL fallback + build queue entry
+  → Balanced recommendation (or user changes it)
 ```
 
 ---
 
 ## What NOT to Build
 ```
-[V2]    Open banking API sync (Nordigen EU, AA India, Plaid US)
+[V2]    Open banking API sync
 [V2]    Push notifications
-[V2]    Partner spend on Home screen
-[V2]    Real price chart data (chart shell built V1, data V2)
-[V2]    Tax field surface (data captured V1, shown V2)
-[V2]    Property market estimate API
-[V2]    Couple sync backend (Supabase E2E)
-[V2]    ML-based spend categorisation (Layer 2 is Claude API in V1)
-[V2]    Conversational advisor / "ask Kāshe anything"
-[V2]    Historical insight log beyond monthly reviews
+[V2]    Partner spend on Home
+[V2]    Real price chart data (shell V1, data V2)
+[V2]    Tax field surface
+[V2]    Property market estimate
+[V2]    Couple sync (Supabase E2E)
+[V2]    ML spend categorisation (Layer 2 is Claude API in V1)
+[V2]    Conversational advisor
+[V2]    Historical insight log
 [V2]    Year-end wrapped
-[V2]    Algorithmic catalogue personalisation (editorial in V1)
+[V2]    Algorithmic catalogue personalisation (editorial V1)
 [V2]    API connections in Sources screen
-[NEVER] Physical assets (car, art, jewellery, watches)
-[NEVER] Tax filing or tax calculations
+[NEVER] Physical assets
+[NEVER] Tax filing or calculations
 [NEVER] Money transfers or payments
 [NEVER] Social features or comparisons
-[NEVER] Ads, affiliate links, or data monetisation
+[NEVER] Ads, affiliate links, data monetisation
 [NEVER] Generic market news feed
-[NEVER] Gamification (badges, streaks, scores)
-[NEVER] Business or company finances
+[NEVER] Gamification
+[NEVER] Business finances
 [NEVER] Specific buy/sell recommendations
 [NEVER] Regulated financial advice
-[NEVER] Intl.NumberFormat anywhere in the codebase
+[NEVER] Intl.NumberFormat
 [NEVER] react-native-reanimated in web builds
-[NEVER] @/ import alias — relative imports only
-[NEVER] Inline style objects — StyleSheet.create() always
-[NEVER] Hardcoded hex colour values in components
-[NEVER] Raw subtype keys in UI — always use displayLabels.ts
+[NEVER] @/ import alias
+[NEVER] Inline style objects
+[NEVER] Hardcoded hex colours in components
+[NEVER] Raw subtype keys in UI (use displayLabels.ts)
+[NEVER] KasheScore shown to user as a number
+[NEVER] Crypto suggested (track_only only)
+[NEVER] Equity crowdfunding suggested (track_only only)
 ```
 
 ---
 
 ## Key Product Decisions — Do Not Re-Debate
 ```
-"Your Position" not "Net Worth" — everywhere
-Physical assets — NEVER build
-CSV only — no Excel, PDF, OFX ever
-Smart universal CSV parser — works with any bank worldwide
+"Your Position" not "Net Worth" everywhere
+CSV only — no Excel, PDF, OFX
 Local-first storage — privacy by architecture
-Google OAuth only — no passwords ever
+Google OAuth only — no passwords
 4 tabs: Home / Spend / Portfolio / Invest
-No standalone Insights tab — insights live on native screens
-Tab 4 is "Invest" — planning, risk profile, discovery, monthly review
-FIRE is optional — behind a single low-pressure entry point
-Risk profile: 3 levels — drives allocation (never hardcoded globally)
-  Conservative: 40/40/20  Balanced: 60/20/20  Growth: 80/10/10
-Default risk: RECOMMEND Balanced — never silently assume
-Product is for ALL globally mobile professionals — not India-specific
-FIRE calculator lives at /app/invest/fire.tsx
-FIRE is household-level by default, switchable to individual
-Monthly Review: generated once per calendar month, cached entire month
-HoldingDetailScreen: line chart + holding insight card (mock data V1)
-Instrument suggestions: "worth exploring" — never buy/sell
-Catalogue: KasheScore drives ordering — objective not behaviour-based
-Equity crowdfunding / crypto / angel: track_only, never suggest
-Unknown geography: show GLOBAL fallback, build region queue
-Spend categories: Layer 1 (keywords) → Layer 2 (Claude) → Layer 3 (user)
-Learning loops: four loops, inherent quality baked in via KasheScore
-Universal AppHeader: shared component, all four tabs
+No standalone Insights tab
+Tab 4 = Invest — planning, risk profile, discovery, monthly review
+FIRE optional — single low-pressure entry
+Risk profile: 3 levels — drives allocation (never hardcoded)
+Default: RECOMMEND Balanced — never silently assume
+Product for ALL globally mobile professionals — not India-specific
+Monthly Review: executive brief, four levels, system-responsive
+FIRE copy: "choose not to work" — freedom framing
+Invest copy: visuals first, no verbose paragraphs
+KasheAsterisk punctuates AI-generated insights
+"Worth exploring" always — never buy/sell
+track_only instruments never suggested
+KasheScore objective, editorial, never shown as number
+Unknown geography: GLOBAL fallback + "building your region"
+Spend: Layer 1 → Layer 2 → Layer 3 pipeline
+Four learning loops — quality baked in, behaviour supplements
+Supabase V2 schema identical to V1 static file
 Acid green #C8F04A — brand accent, used sparingly
-Space Grotesk (display/numbers) + Inter (body/UI) — locked
+Space Grotesk (display/numbers) + Inter (body/UI)
 Hero card always dark — both light and dark mode
-Directional KasheAsterisk replaces ↑↓ arrows everywhere
-Empty state: 0.5 opacity ghost + floating acid green pill (NOT blur)
-formatCurrency() always — Intl.NumberFormat permanently banned
-DataSource abstraction — CSVDataSource v1, open banking v2
-featureFlag system — freemium ready, don't gate in v1
-investment_transfer is NOT spend — excluded from savings rate
+Empty state: 0.5 opacity ghost + floating pill (NOT blur)
+formatCurrency() always — Intl.NumberFormat banned
+DataSource abstraction — CSVDataSource V1, open banking V2
+featureFlag system — freemium ready, don't gate in V1
+investment_transfer excluded from spend totals + savings rate
 ```
 
 ---
@@ -518,16 +362,13 @@ investment_transfer is NOT spend — excluded from savings rate
 ## Git Conventions
 ```
 Commit format:  [TICKET-ID] Brief description
-Example:        [INV-01] RiskProfileCard + RiskProfileSheet
-
 Rules:
 - One commit per logical ticket
 - Always preview before committing
 - Never commit broken code
 - Never commit API keys or tokens
 - Every commit includes code + updated MD files together
-- Git always run manually by Anand in normal terminal
-- Never run git through Claude Code
+- Git always run manually — never through Claude Code
 - MD files downloaded and replaced in full — never edited inline
 ```
 
@@ -536,99 +377,49 @@ Rules:
 ## File Structure Reference
 ```
 /app
-  (tabs)/
-    index.tsx            Home
-    spend.tsx            Spend
-    portfolio.tsx        Portfolio
-    invest.tsx           Invest
-  _layout.tsx
-  spend/
-    [category].tsx
-  portfolio/
-    [holdingId].tsx
-  invest/
-    fire.tsx
+  (tabs)/index.tsx spend.tsx portfolio.tsx invest.tsx
+  spend/[category].tsx
+  portfolio/[holdingId].tsx
+  invest/fire.tsx
   sources.tsx
 
 /components
-  /home
-  /spend
-  /portfolio
+  /home          ✅ complete
+  /spend         ✅ complete
+  /portfolio     ✅ complete
   /invest
-    RiskProfileCard.tsx       ✅
-    RiskProfileSheet.tsx      ✅
-    InvestmentPlanFull.tsx
-    MonthlyReviewCard.tsx
-    MonthlyReviewSheet.tsx
-    FIRETeaserCard.tsx
-    InstrumentDiscoverySection.tsx
-    FinancialEducationSection.tsx
+    RiskProfileCard.tsx            ✅
+    RiskProfileSheet.tsx           ✅
+    InvestmentPlanFull.tsx         ✅
+    MonthlyReviewCard.tsx          ✅
+    MonthlyReviewSheet.tsx         ✅ executive brief
+    FIRETeaserCard.tsx             ✅
+    InstrumentDiscoverySection.tsx ✅
+    FinancialEducationSection.tsx  ⬜ Session 11
   /shared
-    AppHeader.tsx             ✅ Universal — all four tabs
-    UniversalAddSheet.tsx
-    EmptyState.tsx            ✅
-    KasheAsterisk.tsx         ✅
-    MacronRule.tsx            ✅
-    RedactedNumber.tsx        ✅
-    DataSourceSheet.tsx       ✅
+    AppHeader.tsx     ✅ universal — all tabs
+    UniversalAddSheet.tsx ⬜
+    EmptyState.tsx    ✅
+    KasheAsterisk.tsx ✅
+    MacronRule.tsx    ✅
+    RedactedNumber.tsx ✅
 
 /constants
-  colours.ts                  ✅
-  typography.ts               ✅
-  spacing.ts                  ✅
-  formatters.ts               ✅
-  featureFlags.ts
-  mockData.ts                 ✅
-  fireDefaults.ts
-  instrumentCatalogue.ts      ✅ Session 09 — ~40 entries
-  merchantKeywords.ts         (Session 12 — data layer)
+  colours.ts typography.ts spacing.ts formatters.ts
+  featureFlags.ts mockData.ts displayLabels.ts
+  instrumentCatalogue.ts ✅
+  fireDefaults.ts ⬜ Session 11
+  merchantKeywords.ts ⬜ Session 12
 
 /types
-  spend.ts                    ✅
-  portfolio.ts                ✅
-  riskProfile.ts              ✅ Session 09
-  instrumentCatalogue.ts      ✅ Session 09 — full type system
-  fire.ts
-  profile.ts
-  insight.ts
-  investmentPlan.ts
+  spend.ts ✅  portfolio.ts ✅  riskProfile.ts ✅
+  instrumentCatalogue.ts ✅  fire.ts ⬜ Session 11
 
 /services
-  catalogueService.ts         (Session 12 — Supabase + static fallback)
-  spendCategoriser.ts         (Session 12 — Layer 1/2/3)
-  dataSource.ts
-  csvDataSource.ts
-  universalParser.ts
-  priceRefresh.ts
-  fxRefresh.ts
-  amfiNavFeed.ts
-  portfolioCalc.ts
-  savingsRate.ts
-  fireEngine.ts
-  aiInsights.ts
-  budgetCap.ts
-
-/store
-  householdStore.ts
-  portfolioStore.ts
-  spendStore.ts
-  investStore.ts
-  uiStore.ts
+  catalogueService.ts ⬜ Session 12 (Supabase + fallback)
+  spendCategoriser.ts ⬜ Session 12 (Layer 1/2/3)
+  [all other services] ⬜ Session 12
 
 /context
-  ThemeContext.tsx             ✅ useColorScheme() ONLY here
-
-/docs
-  CLAUDE.md
-  CLAUDE-state.md
-  CLAUDE-experience.md
-  CLAUDE-financial.md
-  CLAUDE-identity.md
-  engineering-rules.md
-  design-system.md
-  ai-insights.md
-  data-architecture.md
-  freemium-boundaries.md
-  kashe-prd-complete.md
-  kashe-handoff-session-XX.md
+  ThemeContext.tsx ✅ (useColorScheme() ONLY here)
 ```
