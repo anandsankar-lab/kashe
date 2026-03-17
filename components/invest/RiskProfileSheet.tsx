@@ -54,6 +54,10 @@ export default function RiskProfileSheet({
             Your risk profile
           </Text>
 
+          <Text style={[styles.allocationHeader, { color: theme.textDim }]}>
+            GROWTH · STABILITY · LOCKED
+          </Text>
+
           <ScrollView showsVerticalScrollIndicator={false}>
             {PROFILE_ORDER.map((type) => {
               const profile = RISK_PROFILES[type]
@@ -85,9 +89,7 @@ export default function RiskProfileSheet({
                     {profile.description}
                   </Text>
                   <Text style={[styles.optionAllocation, { color: theme.textDim }]}>
-                    Target: {profile.targetAllocation.growth}% Growth ·{' '}
-                    {profile.targetAllocation.stability}% Stability ·{' '}
-                    {profile.targetAllocation.locked}% Locked
+                    {profile.targetAllocation.growth} · {profile.targetAllocation.stability} · {profile.targetAllocation.locked}
                   </Text>
                 </TouchableOpacity>
               )
@@ -151,6 +153,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
     marginTop: 2,
+  },
+  allocationHeader: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textAlign: 'right',
+    marginBottom: 8,
   },
   optionAllocation: {
     fontFamily: 'Inter_400Regular',

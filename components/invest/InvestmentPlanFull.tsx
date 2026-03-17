@@ -22,10 +22,10 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
 
   const allocation = RISK_PROFILES[riskProfile].targetAllocation
 
-  const buckets: { label: string; key: keyof typeof allocation; colour: string; dimBar: boolean }[] = [
-    { label: 'GROWTH',    key: 'growth',    colour: colours.accent,        dimBar: false },
-    { label: 'STABILITY', key: 'stability', colour: theme.textSecondary,   dimBar: true  },
-    { label: 'LOCKED',    key: 'locked',    colour: theme.textDim,         dimBar: true  },
+  const buckets: { label: string; key: keyof typeof allocation; colour: string; dimBar: boolean; invested: number }[] = [
+    { label: 'GROWTH',    key: 'growth',    colour: colours.accent,        dimBar: false, invested: plan.investedThisMonth },
+    { label: 'STABILITY', key: 'stability', colour: theme.textSecondary,   dimBar: true,  invested: 0 },
+    { label: 'LOCKED',    key: 'locked',    colour: theme.textDim,         dimBar: true,  invested: 0 },
   ]
 
   return (
@@ -90,10 +90,10 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
           TARGET ALLOCATION
         </Text>
 
-        {buckets.map(({ label, key, colour, dimBar }) => {
+        {buckets.map(({ label, key, colour, dimBar, invested }) => {
           const allocationPct = allocation[key]
           const targetAmount = (allocationPct / 100) * monthlyTarget
-          const gap = targetAmount // mock: assume 0 invested per bucket this month
+          const gap = targetAmount - invested
 
           return (
             <View key={key} style={styles.bucketRow}>
@@ -121,12 +121,10 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
                 />
               </View>
 
-              {/* Gap row */}
-              {gap > 0 && (
-                <Text style={[styles.gapText, { color: theme.textSecondary, marginTop: 4 }]}>
-                  {`Invest ${formatCurrency(gap, 'EUR')} more to reach your ${label} target this month`}
-                </Text>
-              )}
+              {/* Progress fraction */}
+              <Text style={[styles.progressFraction, { color: theme.textDim, marginTop: 4 }]}>
+                {formatCurrency(invested, 'EUR')} / {formatCurrency(targetAmount, 'EUR')}
+              </Text>
 
               {/* CTA */}
               {gap > 0 && (
@@ -136,7 +134,7 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
                   style={{ marginTop: 4 }}
                 >
                   <Text style={[styles.ctaText, { color: colours.accent }]}>
-                    {`Explore ${label} options →`}
+                    Explore →
                   </Text>
                 </TouchableOpacity>
               )}
@@ -230,7 +228,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 999,
   },
-  gapText: {
+  progressFraction: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
   },

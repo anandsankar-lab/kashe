@@ -25,12 +25,12 @@ export default function RiskProfileCard({
         <Text style={[styles.headline, { color: theme.textPrimary }]}>
           What kind of investor are you?
         </Text>
-        <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Tell us how you think about risk. We'll tailor your investment plan and suggestions.
-        </Text>
-        <Text style={[styles.bodyHint, { color: theme.textDim }]}>
-          Most people in your situation start with Balanced.
-        </Text>
+        <View style={styles.hintRow}>
+          <KasheAsterisk size={12} animated={false} direction="neutral" />
+          <Text style={[styles.hintText, { color: theme.textDim }]}>
+            Balanced is a good starting point for most
+          </Text>
+        </View>
         <TouchableOpacity style={styles.ctaButton} onPress={onOpenSheet}>
           <Text style={styles.ctaText}>Set your risk profile →</Text>
         </TouchableOpacity>
@@ -88,16 +88,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: -0.5,
   },
-  body: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 8,
-    lineHeight: 20,
+    gap: 6,
   },
-  bodyHint: {
+  hintText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
-    marginTop: 6,
   },
   ctaButton: {
     backgroundColor: '#C8F04A',
