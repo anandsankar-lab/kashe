@@ -110,7 +110,7 @@ export default function InvestmentPlanCard({
     backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
-    marginTop: 12,
+    marginTop: 16,
   }
 
   // ── STATE 1: Collapsed, no target ───────────────────────────────────────────

@@ -461,6 +461,7 @@ const styles = StyleSheet.create({
   // ── Hero ──────────────────────────────────────────────────────────────────
   heroCard: {
     borderRadius: 24,
+    overflow: 'hidden',
     padding: 24,
   },
   heroTopRow: {
@@ -555,8 +556,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     marginTop: 24,
   },
   purposeLabel: {
