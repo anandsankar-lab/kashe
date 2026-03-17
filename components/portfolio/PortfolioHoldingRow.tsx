@@ -23,26 +23,21 @@ interface PortfolioHoldingRowProps {
   id?: string;
   variant: HoldingVariant;
   name: string;
-  assetType: string;         // e.g. "Mutual Fund", "Cash", "Provident Fund"
+  assetType: string;
   value: number;
-  currency: string;          // '€' or '₹'
+  currency: string;
   bucket: HoldingBucket;
-  geography: string;         // 'India', 'Europe', 'US', 'Global', etc.
-  allocationPct?: number;    // 0–1 float
+  geography: string;
+  allocationPct?: number;
   freshnessStatus: FreshnessStatus;
-  // live only
   dailyMovementPct?: number;
-  // locked only
-  unlockDate?: string;       // e.g. "Mar 2031"
-  // protection only
+  unlockDate?: string;
   monthsCovered?: number;
-  // empty state
   isRedacted?: boolean;
-  // navigation
   onPress?: (id: string) => void;
 }
 
-// ─── HoldingTypeIcon (internal — not exported) ────────────────────────────────
+// ─── HoldingTypeIcon ──────────────────────────────────────────────────────────
 
 interface HoldingTypeIconProps {
   variant: HoldingVariant;
@@ -65,20 +60,15 @@ function HoldingTypeIcon({ variant, geography, size, color }: HoldingTypeIconPro
     strokeLinejoin: 'round' as const,
   };
 
-  // Protection → shield + check
   if (variant === 'protection') {
     return (
       <Svg {...svgProps}>
-        <Path
-          d="M12 3 L20 7 V13 C20 17 12 21 12 21 C12 21 4 17 4 13 V7 Z"
-          {...strokeProps}
-        />
+        <Path d="M12 3 L20 7 V13 C20 17 12 21 12 21 C12 21 4 17 4 13 V7 Z" {...strokeProps} />
         <Path d="M9 13 L11.5 15.5 L16 10" {...strokeProps} />
       </Svg>
     );
   }
 
-  // Locked → padlock
   if (variant === 'locked') {
     return (
       <Svg {...svgProps}>
@@ -88,7 +78,6 @@ function HoldingTypeIcon({ variant, geography, size, color }: HoldingTypeIconPro
     );
   }
 
-  // Live — India → rupee sign
   if (geography === 'India') {
     return (
       <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -100,7 +89,6 @@ function HoldingTypeIcon({ variant, geography, size, color }: HoldingTypeIconPro
     );
   }
 
-  // Live — Europe / US / Global → trend line upward
   return (
     <Svg {...svgProps}>
       <Polyline points="3,18 8,12 13,15 21,6" {...strokeProps} />
@@ -120,39 +108,19 @@ function getDotColor(status: FreshnessStatus): string {
 }
 
 function getMovementColor(dailyMovementPct: number | undefined, textSecondary: string): string {
-  if (dailyMovementPct === undefined || dailyMovementPct === 0) {
-    return textSecondary;
-  }
+  if (dailyMovementPct === undefined || dailyMovementPct === 0) return textSecondary;
   return dailyMovementPct > 0 ? colours.success : colours.danger;
 }
 
 function getCoveredColor(monthsCovered: number | undefined): string {
-  if (monthsCovered === undefined || monthsCovered < 3) {
-    return colours.warning;
-  }
+  if (monthsCovered === undefined || monthsCovered < 3) return colours.warning;
   return colours.success;
 }
 
-function getBarColor(
-  variant: HoldingVariant,
-  dailyMovementPct: number | undefined,
-  monthsCovered: number | undefined,
-  textDim: string,
-): string {
-  if (variant === 'live') {
-    if (dailyMovementPct === undefined || dailyMovementPct === 0) {
-      return textDim;
-    }
-    return dailyMovementPct > 0 ? colours.success : colours.danger;
-  }
-  if (variant === 'locked') {
-    return textDim;
-  }
-  // protection
-  if (monthsCovered === undefined || monthsCovered < 3) {
-    return colours.warning;
-  }
-  return colours.success;
+function getBarFillColor(bucket: HoldingBucket, textDim: string): string {
+  if (bucket === 'GROWTH') return colours.accent;
+  if (bucket === 'STABILITY') return colours.warning;
+  return textDim;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -164,6 +132,7 @@ export default function PortfolioHoldingRow({
   assetType,
   value,
   currency,
+  bucket,
   geography,
   allocationPct,
   freshnessStatus,
@@ -177,7 +146,7 @@ export default function PortfolioHoldingRow({
   const barAnim = useRef(new Animated.Value(0)).current;
 
   const barFillPercent = isRedacted ? 0 : (allocationPct ?? 0);
-  const barColor = getBarColor(variant, dailyMovementPct, monthsCovered, theme.textDim);
+  const barColor = getBarFillColor(bucket, theme.textDim);
   const dotColor = getDotColor(freshnessStatus);
   const movementColor = getMovementColor(dailyMovementPct, theme.textSecondary);
   const coveredColor = getCoveredColor(monthsCovered);
@@ -197,11 +166,9 @@ export default function PortfolioHoldingRow({
     outputRange: ['0%', '100%'],
   });
 
-  // Sub-label
   const subLabelText =
     variant === 'locked' ? `Locked until ${unlockDate ?? ''}` : `${assetType} · ${geography}`;
 
-  // Asterisk direction (live variant only)
   let asteriskDirection: 'up' | 'down' | 'neutral';
   if (dailyMovementPct === undefined || dailyMovementPct === 0) {
     asteriskDirection = 'neutral';
@@ -214,12 +181,14 @@ export default function PortfolioHoldingRow({
   return (
     <TouchableOpacity
       activeOpacity={0.7}
-      style={Platform.OS === 'web' ? ({ outline: 'none' } as object) : undefined}
+      style={[
+        styles.outer,
+        Platform.OS === 'web' ? ({ outline: 'none' } as object) : undefined,
+      ]}
       onPress={onPress && id ? () => onPress(id) : undefined}
     >
       {/* Row content */}
       <View style={styles.rowContent}>
-        {/* Icon — direct, no wrapping container, marginRight via nameContainer marginLeft */}
         <HoldingTypeIcon
           variant={variant}
           geography={geography}
@@ -227,7 +196,6 @@ export default function PortfolioHoldingRow({
           color={theme.textSecondary}
         />
 
-        {/* Name + sub-label */}
         <View style={styles.nameContainer}>
           <Text style={[styles.holdingName, { color: theme.textPrimary }]}>
             {name}
@@ -237,9 +205,7 @@ export default function PortfolioHoldingRow({
           </Text>
         </View>
 
-        {/* Right column: value + meta */}
         <View style={styles.rightColumn}>
-          {/* Value row with freshness dot */}
           <View style={styles.valueRow}>
             <View style={[styles.freshnessDot, { backgroundColor: dotColor }]} />
             <Text style={[styles.valueText, { color: theme.textPrimary }]}>
@@ -247,7 +213,6 @@ export default function PortfolioHoldingRow({
             </Text>
           </View>
 
-          {/* Meta row */}
           <View style={styles.metaRow}>
             {variant === 'live' && (
               <>
@@ -284,11 +249,14 @@ export default function PortfolioHoldingRow({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  outer: {
+    marginBottom: 4,
+  },
   rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 0,
+    paddingVertical: 16,
   },
   nameContainer: {
     flex: 1,
@@ -296,9 +264,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   holdingName: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 15,
-    letterSpacing: -0.2,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 16,
+    letterSpacing: -0.5,
   },
   subLabel: {
     fontFamily: 'Inter_400Regular',
@@ -320,25 +288,26 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   valueText: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
-    fontSize: 15,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    fontSize: 16,
     letterSpacing: -0.5,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 2,
     gap: 3,
   },
   metaText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
     letterSpacing: -0.1,
-    marginTop: 3,
+    marginTop: 2,
   },
   barTrack: {
-    marginHorizontal: 20,
-    marginBottom: 2,
+    marginHorizontal: 0,
+    marginTop: 10,
+    marginBottom: 0,
     height: 3,
     borderRadius: 999,
     overflow: 'hidden',

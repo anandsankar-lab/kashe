@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useTheme } from '../../context/ThemeContext'
 import colours from '../../constants/colours'
@@ -12,8 +13,90 @@ import HoldingPriceChart from '../../components/portfolio/HoldingPriceChart'
 import HoldingInsightCard from '../../components/portfolio/HoldingInsightCard'
 import LockedProjectionCard from '../../components/portfolio/LockedProjectionCard'
 import ProtectionStatusCard from '../../components/portfolio/ProtectionStatusCard'
-import { PortfolioHolding, BucketType } from '../../types/portfolio'
+import { PortfolioHolding, BucketType, AssetSubtype } from '../../types/portfolio'
 import { getAssetTypeLabel, getGeographyLabel } from '../../constants/displayLabels'
+
+// ─── Projection rates (mirrors LockedProjectionCard) ─────────────────────────
+
+const LOCKED_RATES: Partial<Record<AssetSubtype, number>> = {
+  in_ppf: 0.071,
+  in_epf: 0.082,
+  in_fd: 0.065,
+  in_nsc: 0.072,
+  eu_pension: 0.05,
+}
+
+function computeProjectedValue(holding: PortfolioHolding): number | null {
+  if (!holding.unlockDate || holding.assetSubtype === 'alternative_general') return null
+  const rate = LOCKED_RATES[holding.assetSubtype] ?? 0.065
+  const yearsToUnlock =
+    (new Date(holding.unlockDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365.25)
+  if (yearsToUnlock <= 0) return null
+  return Math.round(holding.currentValue * Math.pow(1 + rate, yearsToUnlock))
+}
+
+function toUnlockLabel(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+
+function toPriceAgeLabel(isoDate: string): string {
+  const diffMs = Date.now() - new Date(isoDate).getTime()
+  const diffMins = Math.round(diffMs / 60000)
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins} min ago`
+  const diffHrs = Math.round(diffMins / 60)
+  if (diffHrs < 24) return `${diffHrs} hr ago`
+  const diffDays = Math.round(diffHrs / 24)
+  return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
+}
+
+function toShortDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function buildNarrative(
+  holding: PortfolioHolding,
+  portfolioPct: string | null,
+  lastUpdatedShort: string,
+): string {
+  if (holding.bucket === 'LOCKED') {
+    const unlockLabel = holding.unlockDate ? toUnlockLabel(holding.unlockDate) : '?'
+    const fv = computeProjectedValue(holding)
+    if (fv !== null) {
+      return `Locked until ${unlockLabel} · projected ${formatCurrency(fv, holding.currency)} at unlock`
+    }
+    return `Locked until ${unlockLabel}`
+  }
+
+  if (holding.isProtection === true) {
+    const pct = portfolioPct ?? '—'
+    return `Your emergency fund · ${pct}% of live portfolio`
+  }
+
+  if (holding.bucket === 'GROWTH') {
+    const pct = portfolioPct ?? '—'
+    const changePct = holding.dailyChangePercent
+    if (changePct !== undefined && changePct !== 0) {
+      const dir = changePct > 0 ? 'Up' : 'Down'
+      return `${dir} ${Math.abs(changePct).toFixed(2)}% this month · ${pct}% of your portfolio`
+    }
+    return `${pct}% of your portfolio`
+  }
+
+  // STABILITY
+  const pct = portfolioPct ?? '—'
+  return `${pct}% of live portfolio · last updated ${lastUpdatedShort}`
+}
+
+// ─── Row data type ────────────────────────────────────────────────────────────
+
+type RowData = { label: string; value: string; valueColor?: string }
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HoldingDetailScreen() {
   const { holdingId } = useLocalSearchParams<{ holdingId: string }>()
@@ -23,35 +106,37 @@ export default function HoldingDetailScreen() {
   const holding = MOCK_PORTFOLIO_HOLDINGS.find(h => h.id === holdingId)
 
   const [reassignSheet, setReassignSheet] = useState<{
-    visible: boolean;
-    holding: PortfolioHolding | null;
+    visible: boolean
+    holding: PortfolioHolding | null
   }>({ visible: false, holding: null })
 
   if (!holding) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 15, color: theme.textSecondary }}>
+      <View style={[styles.notFoundOuter, { backgroundColor: theme.background }]}>
+        <Text style={[styles.notFoundText, { color: theme.textSecondary }]}>
           Holding not found
         </Text>
       </View>
     )
   }
 
-  // Derived values
+  // ── Derived values ──────────────────────────────────────────────────────────
+
   const dailyChangePercent = holding.dailyChangePercent
-  const dailyChange = dailyChangePercent !== undefined
-    ? (holding.currentValue * dailyChangePercent) / 100
-    : undefined
+  const dailyChange =
+    dailyChangePercent !== undefined
+      ? (holding.currentValue * dailyChangePercent) / 100
+      : undefined
 
-  const changeColor =
-    dailyChangePercent === undefined || dailyChangePercent === 0
-      ? theme.textDim
-      : dailyChangePercent > 0 ? colours.accent : colours.danger
-
-  const asteriskDirection: 'up' | 'down' | 'neutral' =
+  const changeSign: 'positive' | 'negative' | 'neutral' =
     dailyChangePercent === undefined || dailyChangePercent === 0
       ? 'neutral'
-      : dailyChangePercent > 0 ? 'up' : 'down'
+      : dailyChangePercent > 0
+      ? 'positive'
+      : 'negative'
+
+  const asteriskDirection: 'up' | 'down' | 'neutral' =
+    changeSign === 'positive' ? 'up' : changeSign === 'negative' ? 'down' : 'neutral'
 
   const portfolioPct =
     holding.bucket !== 'LOCKED'
@@ -68,15 +153,90 @@ export default function HoldingDetailScreen() {
       ? holding.currentValue / holding.quantity
       : undefined
 
-  const lastUpdatedDisplay = new Date(holding.lastUpdated).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+  const lastUpdatedShort = toShortDate(holding.lastUpdated)
+  const priceAgeLabel = toPriceAgeLabel(holding.lastUpdated)
+  const narrative = buildNarrative(holding, portfolioPct, lastUpdatedShort)
+
+  // ── Hero change pill ────────────────────────────────────────────────────────
+
+  const changePillBg =
+    changeSign === 'positive'
+      ? 'rgba(200,240,74,0.12)'
+      : changeSign === 'negative'
+      ? 'rgba(255,92,92,0.10)'
+      : 'rgba(255,255,255,0.08)'
+
+  const changeTextColour =
+    changeSign === 'positive'
+      ? colours.accent
+      : changeSign === 'negative'
+      ? colours.heroDanger
+      : colours.heroTextSecondary
+
+  const changeLabel: string | undefined =
+    dailyChange !== undefined && dailyChangePercent !== undefined
+      ? `${changeSign === 'positive' ? '+' : changeSign === 'negative' ? '−' : ''}${formatCurrency(Math.abs(dailyChange), holding.currency)} (${Math.abs(dailyChangePercent).toFixed(2)}%)`
+      : undefined
+
+  // ── Bucket pill (hero top-right) ────────────────────────────────────────────
+
+  const bucketPillBg =
+    holding.bucket === 'GROWTH'
+      ? 'rgba(200,240,74,0.15)'
+      : holding.bucket === 'STABILITY'
+      ? 'rgba(255,181,71,0.15)'
+      : 'rgba(196,196,191,0.15)'
+
+  const bucketPillText =
+    holding.bucket === 'GROWTH'
+      ? colours.accent
+      : holding.bucket === 'STABILITY'
+      ? colours.warning
+      : colours.heroTextDim
+
+  // ── Purpose row colour bar ──────────────────────────────────────────────────
+
+  const bucketBarColor =
+    holding.bucket === 'GROWTH'
+      ? colours.accent
+      : holding.bucket === 'STABILITY'
+      ? colours.warning
+      : theme.textDim
+
+  // ── Detail row arrays ───────────────────────────────────────────────────────
+
+  const group1Rows: RowData[] = []
+  if (holding.quantity !== undefined) {
+    group1Rows.push({ label: 'Units held', value: holding.quantity.toString() })
+  }
+  if (pricePerUnit !== undefined) {
+    group1Rows.push({ label: 'Price per unit', value: formatCurrency(pricePerUnit, holding.currency) })
+  }
+  if (holding.purchasePrice !== undefined) {
+    group1Rows.push({ label: 'Purchase price', value: formatCurrency(holding.purchasePrice, holding.currency) })
+  }
+  if (gain !== undefined) {
+    group1Rows.push({
+      label: gain >= 0 ? 'Unrealised gain' : 'Unrealised loss',
+      value: formatCurrency(Math.abs(gain), holding.currency),
+      valueColor: gain >= 0 ? colours.accent : colours.danger,
+    })
+  }
+
+  const group2Rows: RowData[] = [
+    { label: 'Asset type', value: getAssetTypeLabel(holding.assetSubtype) },
+    { label: 'Geography', value: getGeographyLabel(holding.geography) },
+  ]
+  if (holding.taxWrapper !== undefined && holding.taxWrapper !== 'none') {
+    group2Rows.push({ label: 'Tax wrapper', value: holding.taxWrapper })
+  }
+  group2Rows.push({ label: 'Data source', value: 'Manual' })
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Header — sticky */}
+    <View style={[styles.outer, { backgroundColor: theme.background }]}>
+      {/* Sticky header */}
       <View style={[styles.header, { backgroundColor: theme.background }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
           <Text style={[styles.backChevron, { color: theme.textPrimary }]}>‹</Text>
@@ -87,95 +247,110 @@ export default function HoldingDetailScreen() {
       </View>
 
       <ScrollView
-        style={{ flex: 1 }}
+        style={[styles.scroll, { backgroundColor: theme.background }]}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Hero value */}
-        <Text style={[styles.heroValue, { color: theme.textPrimary }]}>
-          {formatCurrency(holding.currentValue, holding.currency)}
-        </Text>
-
-        {/* Daily change row */}
-        {dailyChange !== undefined && dailyChangePercent !== undefined && (
-          <View style={styles.changeRow}>
-            <KasheAsterisk direction={asteriskDirection} size={14} animated={false} />
-            <Text style={[styles.changeText, { color: changeColor }]}>
-              {formatCurrency(Math.abs(dailyChange), holding.currency)} ({Math.abs(dailyChangePercent).toFixed(2)}%)
+        {/* ── SECTION 1: Hero ─────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={[colours.heroGradientStart, colours.heroGradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          {/* Top row: name + bucket pill */}
+          <View style={styles.heroTopRow}>
+            <Text style={styles.heroHoldingName} numberOfLines={1}>
+              {holding.name}
             </Text>
+            <View style={[styles.bucketPill, { backgroundColor: bucketPillBg }]}>
+              <Text style={[styles.bucketPillText, { color: bucketPillText }]}>
+                {holding.bucket}
+              </Text>
+            </View>
           </View>
-        )}
 
-        {/* Portfolio allocation */}
-        {portfolioPct !== null && (
-          <Text style={[styles.allocationText, { color: theme.textSecondary }]}>
-            {portfolioPct}% of live portfolio
+          {/* Current value */}
+          <Text style={styles.heroValue}>
+            {formatCurrency(holding.currentValue, holding.currency)}
           </Text>
-        )}
 
+          {/* Daily change pill */}
+          {changeLabel !== undefined && (
+            <View style={[styles.changePill, { backgroundColor: changePillBg }]}>
+              <KasheAsterisk size={12} direction={asteriskDirection} animated={false} />
+              <Text style={[styles.changePillText, { color: changeTextColour }]}>
+                {changeLabel}
+              </Text>
+            </View>
+          )}
+
+          {/* Narrative */}
+          <Text style={styles.heroNarrative}>{narrative}</Text>
+
+          {/* Price age */}
+          <Text style={styles.heroPriceAge}>Prices updated {priceAgeLabel}</Text>
+        </LinearGradient>
+
+        {/* ── SECTION 2: Chart + Insight ──────────────────────────────────── */}
         <HoldingPriceChart holding={holding} currency={holding.currency ?? 'EUR'} />
 
         {holding.bucket !== 'LOCKED' && (
           <HoldingInsightCard holding={holding} />
         )}
 
-        <MacronRule style={{ marginTop: 16 }} />
+        {/* ── SECTION 3: Details ──────────────────────────────────────────── */}
 
-        {/* Details rows */}
-        <View style={{ marginTop: 4 }}>
-          {holding.quantity !== undefined && (
-            <DetailRow label="Units / Quantity" value={holding.quantity.toString()} theme={theme} />
-          )}
-          {pricePerUnit !== undefined && (
-            <DetailRow
-              label="Price per unit"
-              value={formatCurrency(pricePerUnit, holding.currency)}
-              theme={theme}
-            />
-          )}
-          {holding.purchasePrice !== undefined && (
-            <DetailRow
-              label="Purchase price"
-              value={formatCurrency(holding.purchasePrice, holding.currency)}
-              theme={theme}
-            />
-          )}
-          {gain !== undefined && (
-            <DetailRow
-              label={gain >= 0 ? 'Unrealised gain' : 'Unrealised loss'}
-              value={formatCurrency(Math.abs(gain), holding.currency)}
-              valueColor={gain >= 0 ? colours.accent : colours.danger}
-              theme={theme}
-            />
-          )}
-          <DetailRow label="Asset type" value={getAssetTypeLabel(holding.assetSubtype ?? holding.assetType ?? '')} theme={theme} />
-          <DetailRow label="Geography" value={getGeographyLabel(holding.geography ?? '')} theme={theme} />
-          {holding.taxWrapper !== undefined && holding.taxWrapper !== 'none' && (
-            <DetailRow label="Tax wrapper" value={holding.taxWrapper} theme={theme} />
-          )}
-          <DetailRow label="Data source" value="Manual" theme={theme} />
-          <DetailRow label="Last updated" value={lastUpdatedDisplay} theme={theme} />
+        {/* Group 1: Financial details (only if any row exists) */}
+        {group1Rows.length > 0 && (
+          <View style={styles.detailGroup}>
+            {group1Rows.map((row, i) => (
+              <View key={row.label}>
+                {i > 0 && <MacronRule style={[styles.detailRule, { backgroundColor: theme.border }]} />}
+                <DetailRow
+                  label={row.label}
+                  value={row.value}
+                  valueColor={row.valueColor}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Group 2: About */}
+        <View style={styles.aboutGroup}>
+          <Text style={[styles.sectionLabel, { color: theme.textDim }]}>ABOUT</Text>
+          {group2Rows.map((row, i) => (
+            <View key={row.label}>
+              {i > 0 && <MacronRule style={[styles.detailRule, { backgroundColor: theme.border }]} />}
+              <DetailRow
+                label={row.label}
+                value={row.value}
+                valueColor={row.valueColor}
+              />
+            </View>
+          ))}
         </View>
-
-        <MacronRule style={{ marginTop: 8 }} />
 
         {/* Purpose bucket row */}
-        <View style={styles.bucketRow}>
-          <Text style={[styles.bucketLabel, { color: theme.textSecondary }]}>Purpose bucket</Text>
-          <TouchableOpacity
-            style={styles.bucketRight}
-            onPress={() => setReassignSheet({ visible: true, holding })}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.bucketName, { color: theme.textPrimary }]}>
+        <TouchableOpacity
+          style={[styles.purposeRow, { backgroundColor: theme.surface }]}
+          onPress={() => setReassignSheet({ visible: true, holding })}
+          activeOpacity={0.7}
+        >
+          <View>
+            <Text style={[styles.purposeLabel, { color: theme.textDim }]}>PURPOSE</Text>
+            <Text style={[styles.purposeBucketName, { color: theme.textPrimary }]}>
               {holding.bucket}
             </Text>
-            <Text style={[styles.bucketChevron, { color: theme.textDim }]}>›</Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+          <View style={styles.purposeRight}>
+            <View style={[styles.bucketBar, { backgroundColor: bucketBarColor }]} />
+            <Text style={[styles.purposeChevron, { color: theme.textDim }]}>›</Text>
+          </View>
+        </TouchableOpacity>
 
-        <MacronRule style={{ marginTop: 8 }} />
-
-        {/* Conditional cards */}
+        {/* ── Locked + Protection cards ────────────────────────────────────── */}
         {holding.bucket === 'LOCKED' && holding.unlockDate !== undefined && (
           <LockedProjectionCard holding={holding} />
         )}
@@ -184,34 +359,24 @@ export default function HoldingDetailScreen() {
           <ProtectionStatusCard holding={holding} avgMonthlySpend={2847} />
         )}
 
-        {/* Action buttons */}
-        <View style={{ marginTop: 24 }}>
+        {/* ── SECTION 4: Actions ──────────────────────────────────────────── */}
+        <View style={styles.actionsGroup}>
           <TouchableOpacity
-            style={[styles.outlineButton, { borderColor: theme.border }]}
+            style={[styles.editButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
             onPress={() => console.log('Edit holding:', holding.id)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.outlineButtonText, { color: theme.textPrimary }]}>
+            <Text style={[styles.editButtonText, { color: theme.textPrimary }]}>
               Edit holding
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.outlineButton, { borderColor: theme.border, marginTop: 0 }]}
-            onPress={() => setReassignSheet({ visible: true, holding })}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.outlineButtonText, { color: theme.textPrimary }]}>
-              Reassign bucket
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{ marginTop: 8 }}
+            style={styles.removeRow}
             onPress={() => console.log('Remove holding:', holding.id)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.removeLink, { color: colours.danger }]}>Remove holding</Text>
+            <Text style={[styles.removeText, { color: colours.danger }]}>Remove holding</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -235,13 +400,12 @@ function DetailRow({
   label,
   value,
   valueColor,
-  theme,
 }: {
   label: string
   value: string
   valueColor?: string
-  theme: ReturnType<typeof useTheme>
 }) {
+  const theme = useTheme()
   return (
     <View style={styles.detailRow}>
       <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{label}</Text>
@@ -255,6 +419,18 @@ function DetailRow({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  outer: {
+    flex: 1,
+  },
+  notFoundOuter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notFoundText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -273,83 +449,161 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingTop: 16,
+    paddingBottom: 48,
+  },
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  heroCard: {
+    borderRadius: 24,
+    padding: 24,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroHoldingName: {
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 16,
+    color: colours.heroTextSecondary,
+    flex: 1,
+    marginRight: 8,
+  },
+  bucketPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  bucketPillText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
   },
   heroValue: {
     fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 36,
+    fontSize: 44,
     letterSpacing: -1.5,
-    marginTop: 20,
+    color: colours.heroTextPrimary,
+    marginTop: 16,
   },
-  changeRow: {
+  changePill: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     marginTop: 8,
+    gap: 6,
   },
-  changeText: {
+  changePillText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+  },
+  heroNarrative: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    marginLeft: 6,
+    color: colours.heroTextSecondary,
+    marginTop: 12,
   },
-  allocationText: {
+  heroPriceAge: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    marginTop: 4,
+    fontSize: 12,
+    color: colours.heroTextDim,
+    marginTop: 8,
   },
+
+  // ── Details ───────────────────────────────────────────────────────────────
+  detailGroup: {
+    marginTop: 24,
+  },
+  aboutGroup: {
+    marginTop: 24,
+  },
+  sectionLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  detailRule: {},
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   detailLabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
   },
   detailValue: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 15,
     textAlign: 'right',
     flex: 1,
     marginLeft: 16,
   },
-  bucketRow: {
+
+  // ── Purpose bucket row ────────────────────────────────────────────────────
+  purposeRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 24,
   },
-  bucketLabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
+  purposeLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  bucketRight: {
+  purposeBucketName: {
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 16,
+    marginTop: 2,
+  },
+  purposeRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  bucketName: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
+  bucketBar: {
+    width: 6,
+    height: 20,
+    borderRadius: 3,
   },
-  bucketChevron: {
+  purposeChevron: {
     fontSize: 18,
-    marginLeft: 4,
+    marginLeft: 8,
   },
-  outlineButton: {
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  actionsGroup: {
+    marginTop: 32,
+  },
+  editButton: {
     borderWidth: 1,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 12,
   },
-  outlineButtonText: {
+  editButtonText: {
     fontFamily: 'Inter_500Medium',
     fontSize: 15,
   },
-  removeLink: {
-    fontFamily: 'Inter_400Regular',
+  removeRow: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  removeText: {
+    fontFamily: 'Inter_500Medium',
     fontSize: 14,
-    textAlign: 'center',
   },
 })

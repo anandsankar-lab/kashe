@@ -41,8 +41,6 @@ export default function PortfolioInsightStrip({
       style={{
         backgroundColor: theme.surface,
         borderRadius: borderRadius.card,
-        borderWidth: 1,
-        borderColor: theme.border,
         padding: Spacing.lg,
         marginTop: Spacing.lg,
         marginBottom: Spacing.sm,

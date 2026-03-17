@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'expo-router'
 import { useTheme } from '@/context/ThemeContext'
 import Typography from '@/constants/typography'
-import Spacing, { borderRadius } from '@/constants/spacing'
+import { borderRadius } from '@/constants/spacing'
 import colours from '../../constants/colours'
 import AppHeader from '@/components/shared/AppHeader'
 import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
@@ -106,13 +106,15 @@ export default function PortfolioScreen() {
       />
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: Spacing.lg }}
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={{ opacity: hasData ? 1 : 0.5 }}>
-          <PortfolioTotalsCard
-            totals={MOCK_PORTFOLIO_TOTALS}
-            isRedacted={!hasData}
-          />
+          <View style={styles.totalsCardWrapper}>
+            <PortfolioTotalsCard
+              totals={MOCK_PORTFOLIO_TOTALS}
+              isRedacted={!hasData}
+            />
+          </View>
 
           <PortfolioInsightStrip
             insight={hasData ? activeInsight : null}
@@ -127,7 +129,7 @@ export default function PortfolioScreen() {
             isRedacted={!hasData}
           />
 
-          <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
+          <View>
             <PortfolioSectionHeader
               label="GROWTH"
               total={growthTotal}
@@ -149,7 +151,6 @@ export default function PortfolioScreen() {
               isRedacted={!hasData}
               onPress={(id) => router.push(`/portfolio/${id}`)}
             />
-            <View style={{ marginBottom: 16 }} />
             <PortfolioSectionHeader
               label="STABILITY"
               total={stabilityTotal}
@@ -171,7 +172,6 @@ export default function PortfolioScreen() {
               isRedacted={!hasData}
               onPress={(id) => router.push(`/portfolio/${id}`)}
             />
-            <View style={{ marginBottom: 16 }} />
             <PortfolioSectionHeader
               label="LOCKED"
               total={lockedTotal}
@@ -222,6 +222,14 @@ export default function PortfolioScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 48,
+  },
+  totalsCardWrapper: {
+    marginBottom: 0,
+  },
   emptyPill: {
     position: 'absolute',
     bottom: 24,

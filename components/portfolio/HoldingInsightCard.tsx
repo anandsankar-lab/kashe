@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native'
-import { useTheme } from '../../context/ThemeContext'
 import KasheAsterisk from '../shared/KasheAsterisk'
+import { useTheme } from '../../context/ThemeContext'
 import { PortfolioHolding } from '../../types/portfolio'
 
 interface Props {
@@ -46,7 +46,6 @@ const MOCK_HOLDING_INSIGHTS: Partial<Record<string, {
 
 export default function HoldingInsightCard({ holding }: Props) {
   const theme = useTheme()
-
   const insight = MOCK_HOLDING_INSIGHTS[holding.assetSubtype ?? '']
   if (!insight) return null
 
