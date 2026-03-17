@@ -98,6 +98,7 @@ export interface PortfolioHolding {
   unlockDate?: string
   lockedReason?: string
   projectedRate?: number        // e.g. 0.071 for PPF
+  domicile?: string             // e.g. 'Ireland', 'United States', 'Netherlands'
   // Employer stock
   vestingDate?: string
   unvested?: boolean            // excluded from FIRE PV if true

@@ -12,6 +12,7 @@ import Svg, { Path, Line, Polyline, Circle, Rect } from 'react-native-svg';
 import { useTheme } from '../../context/ThemeContext';
 import colours from '../../constants/colours';
 import KasheAsterisk from '../shared/KasheAsterisk';
+import { getGeographyLabel } from '../../constants/displayLabels';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ interface PortfolioHoldingRowProps {
   currency: string;
   bucket: HoldingBucket;
   geography: string;
+  domicile?: string;
   allocationPct?: number;
   freshnessStatus: FreshnessStatus;
   dailyMovementPct?: number;
@@ -134,6 +136,7 @@ export default function PortfolioHoldingRow({
   currency,
   bucket,
   geography,
+  domicile,
   allocationPct,
   freshnessStatus,
   dailyMovementPct,
@@ -166,8 +169,10 @@ export default function PortfolioHoldingRow({
     outputRange: ['0%', '100%'],
   });
 
-  const subLabelText =
-    variant === 'locked' ? `Locked until ${unlockDate ?? ''}` : `${assetType} · ${geography}`;
+  const lockedOutcomeUnknown = variant === 'locked' && !unlockDate;
+  const subLabelText = variant === 'locked'
+    ? (unlockDate ? `Locked until ${unlockDate}` : 'Outcome unknown')
+    : `${assetType} · ${domicile ?? getGeographyLabel(geography)}`;
 
   let asteriskDirection: 'up' | 'down' | 'neutral';
   if (dailyMovementPct === undefined || dailyMovementPct === 0) {
@@ -197,24 +202,32 @@ export default function PortfolioHoldingRow({
         />
 
         <View style={styles.nameContainer}>
-          <Text style={[styles.holdingName, { color: theme.textPrimary }]}>
-            {name}
-          </Text>
-          <Text style={[styles.subLabel, { color: theme.textSecondary }]}>
-            {subLabelText}
-          </Text>
+          {isRedacted ? (
+            <View style={[styles.redactedName, { backgroundColor: theme.border }]} />
+          ) : (
+            <Text style={[styles.holdingName, { color: theme.textPrimary }]}>
+              {name}
+            </Text>
+          )}
+          {!(variant === 'locked' && isRedacted) && (
+            <Text style={[styles.subLabel, { color: lockedOutcomeUnknown ? theme.textDim : theme.textSecondary }]}>
+              {subLabelText}
+            </Text>
+          )}
         </View>
 
         <View style={styles.rightColumn}>
           <View style={styles.valueRow}>
-            <View style={[styles.freshnessDot, { backgroundColor: dotColor }]} />
-            <Text style={[styles.valueText, { color: theme.textPrimary }]}>
-              {currency}{value.toLocaleString()}
-            </Text>
+            {!isRedacted && <View style={[styles.freshnessDot, { backgroundColor: dotColor }]} />}
+            {!isRedacted && (
+              <Text style={[styles.valueText, { color: theme.textPrimary }]}>
+                {currency}{value.toLocaleString()}
+              </Text>
+            )}
           </View>
 
           <View style={styles.metaRow}>
-            {variant === 'live' && (
+            {variant === 'live' && !isRedacted && (
               <>
                 <KasheAsterisk direction={asteriskDirection} size={11} />
                 <Text style={[styles.metaText, { color: movementColor }]}>
@@ -222,12 +235,12 @@ export default function PortfolioHoldingRow({
                 </Text>
               </>
             )}
-            {variant === 'locked' && (
+            {variant === 'locked' && !isRedacted && (
               <Text style={[styles.metaText, { color: theme.textSecondary }]}>
                 {((allocationPct ?? 0) * 100).toFixed(0)}% of portfolio
               </Text>
             )}
-            {variant === 'protection' && (
+            {variant === 'protection' && !isRedacted && (
               <Text style={[styles.metaText, { color: coveredColor }]}>
                 {monthsCovered?.toFixed(1)} months covered
               </Text>
@@ -267,6 +280,12 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceGrotesk_600SemiBold',
     fontSize: 16,
     letterSpacing: -0.5,
+  },
+  redactedName: {
+    width: 120,
+    height: 12,
+    borderRadius: 4,
+    marginBottom: 4,
   },
   subLabel: {
     fontFamily: 'Inter_400Regular',

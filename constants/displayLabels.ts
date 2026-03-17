@@ -36,11 +36,11 @@ export const ASSET_TYPE_LABELS: Record<string, string> = {
 export const GEOGRAPHY_LABELS: Record<string, string> = {
   india:   'India',
   europe:  'Europe',
-  us:      'United States',
-  uk:      'United Kingdom',
+  us:      'US',
+  uk:      'UK',
   global:  'Global',
   uae:     'UAE',
-  other:   'Other',
+  other:   'Global',
 }
 
 export function getAssetTypeLabel(subtype: string): string {

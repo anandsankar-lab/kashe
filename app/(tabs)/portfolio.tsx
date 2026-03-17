@@ -28,6 +28,47 @@ const lockedTotal = MOCK_PORTFOLIO_HOLDINGS
   .filter(h => h.bucket === 'LOCKED')
   .reduce((sum, h) => sum + h.currentValue, 0);
 
+const totalPortfolioValue = MOCK_PORTFOLIO_HOLDINGS.reduce((sum, h) => sum + h.currentValue, 0);
+
+const ASSET_TYPE_LABEL: Partial<Record<string, string>> = {
+  eu_etf: 'ETF',
+  eu_direct_equity: 'Stock',
+  eu_pension: 'Pension',
+  eu_savings: 'Savings',
+  employer_rsu: 'RSU',
+  employer_espp: 'ESPP',
+  cash_general: 'Cash',
+  us_401k: '401(k)',
+  us_roth_ira: 'Roth IRA',
+  us_ira: 'IRA',
+  us_brokerage: 'Brokerage',
+  alternative_general: 'Alternative',
+  in_mutual_fund: 'Mutual Fund',
+  in_ppf: 'Provident Fund',
+  in_epf: 'Provident Fund',
+  in_direct_equity: 'Stock',
+  in_nre_nro: 'Savings',
+  in_fd: 'Fixed Deposit',
+  crypto_general: 'Crypto',
+};
+
+function holdingVariant(h: typeof MOCK_PORTFOLIO_HOLDINGS[0]): 'live' | 'locked' | 'protection' {
+  if (h.bucket === 'LOCKED') return 'locked';
+  if (h.isProtection) return 'protection';
+  return 'live';
+}
+
+function holdingFreshness(s: string): 'green' | 'amber' | 'red' {
+  if (s === 'fresh') return 'green';
+  if (s === 'stale') return 'red';
+  return 'amber';
+}
+
+function holdingUnlockDate(date?: string): string | undefined {
+  if (!date) return undefined;
+  return new Date(date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+}
+
 const MOCK_PORTFOLIO_INSIGHT = {
   id: 'mock-insight-1',
   headline: 'Employer stock above 15% of portfolio',
@@ -136,42 +177,51 @@ export default function PortfolioScreen() {
               currency="€"
               isRedacted={!hasData}
             />
-            <PortfolioHoldingRow
-              id="h3"
-              variant="live"
-              name="Parag Parikh Flexi Cap"
-              assetType="Mutual Fund"
-              value={54200}
-              currency="€"
-              bucket="GROWTH"
-              geography="India"
-              allocationPct={0.33}
-              dailyMovementPct={2.3}
-              freshnessStatus="green"
-              isRedacted={!hasData}
-              onPress={(id) => router.push(`/portfolio/${id}`)}
-            />
+            {MOCK_PORTFOLIO_HOLDINGS.filter(h => h.bucket === 'GROWTH').map(h => (
+              <PortfolioHoldingRow
+                key={h.id}
+                id={h.id}
+                variant={holdingVariant(h)}
+                name={h.name}
+                assetType={ASSET_TYPE_LABEL[h.assetSubtype] ?? h.assetSubtype}
+                value={h.currentValue}
+                currency={h.currency === 'EUR' ? '€' : h.currency}
+                bucket={h.bucket}
+                geography={h.geography}
+                domicile={h.domicile}
+                allocationPct={h.currentValue / totalPortfolioValue}
+                dailyMovementPct={h.dailyChangePercent}
+                freshnessStatus={holdingFreshness(h.freshnessStatus)}
+                isRedacted={!hasData}
+                onPress={(id) => router.push(`/portfolio/${id}`)}
+              />
+            ))}
             <PortfolioSectionHeader
               label="STABILITY"
               total={stabilityTotal}
               currency="€"
               isRedacted={!hasData}
             />
-            <PortfolioHoldingRow
-              id="h4"
-              variant="protection"
-              name="Current Account"
-              assetType="Cash"
-              value={8400}
-              currency="€"
-              bucket="STABILITY"
-              geography="Europe"
-              allocationPct={0.05}
-              monthsCovered={2.8}
-              freshnessStatus="amber"
-              isRedacted={!hasData}
-              onPress={(id) => router.push(`/portfolio/${id}`)}
-            />
+            {MOCK_PORTFOLIO_HOLDINGS.filter(h => h.bucket === 'STABILITY').map(h => (
+              <PortfolioHoldingRow
+                key={h.id}
+                id={h.id}
+                variant={holdingVariant(h)}
+                name={h.name}
+                assetType={ASSET_TYPE_LABEL[h.assetSubtype] ?? h.assetSubtype}
+                value={h.currentValue}
+                currency={h.currency === 'EUR' ? '€' : h.currency}
+                bucket={h.bucket}
+                geography={h.geography}
+                domicile={h.domicile}
+                allocationPct={h.currentValue / totalPortfolioValue}
+                dailyMovementPct={h.dailyChangePercent}
+                freshnessStatus={holdingFreshness(h.freshnessStatus)}
+                monthsCovered={h.avgMonthlySpend ? h.currentValue / h.avgMonthlySpend : undefined}
+                isRedacted={!hasData}
+                onPress={(id) => router.push(`/portfolio/${id}`)}
+              />
+            ))}
             <PortfolioSectionHeader
               label="LOCKED"
               total={lockedTotal}
@@ -180,21 +230,25 @@ export default function PortfolioScreen() {
               isRedacted={!hasData}
               onAddPress={() => console.log('Add locked holding pressed')}
             />
-            <PortfolioHoldingRow
-              id="h6"
-              variant="locked"
-              name="PPF Account"
-              assetType="Provident Fund"
-              value={420000}
-              currency="₹"
-              bucket="LOCKED"
-              geography="India"
-              allocationPct={0.29}
-              unlockDate="Mar 2031"
-              freshnessStatus="red"
-              isRedacted={!hasData}
-              onPress={(id) => router.push(`/portfolio/${id}`)}
-            />
+            {MOCK_PORTFOLIO_HOLDINGS.filter(h => h.bucket === 'LOCKED').map(h => (
+              <PortfolioHoldingRow
+                key={h.id}
+                id={h.id}
+                variant={holdingVariant(h)}
+                name={h.name}
+                assetType={ASSET_TYPE_LABEL[h.assetSubtype] ?? h.assetSubtype}
+                value={h.currentValue}
+                currency={h.currency === 'EUR' ? '€' : h.currency}
+                bucket={h.bucket}
+                geography={h.geography}
+                domicile={h.domicile}
+                allocationPct={h.currentValue / totalPortfolioValue}
+                freshnessStatus={holdingFreshness(h.freshnessStatus)}
+                unlockDate={holdingUnlockDate(h.unlockDate)}
+                isRedacted={!hasData}
+                onPress={(id) => router.push(`/portfolio/${id}`)}
+              />
+            ))}
           </View>
         </View>
       </ScrollView>

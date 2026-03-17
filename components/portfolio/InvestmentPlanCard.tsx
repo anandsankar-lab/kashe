@@ -137,9 +137,6 @@ export default function InvestmentPlanCard({
   }
 
   // ── STATE 2 + 3: Has target — collapsed or expanded ─────────────────────────
-  const progressText = isRedacted
-    ? '••••• of •••••'
-    : `${formatCurrency(investedThisMonth, 'EUR')} of ${formatCurrency(monthlyTarget, 'EUR')} invested this month`
 
   return (
     <TouchableOpacity style={cardStyle} onPress={toggleExpand} activeOpacity={0.9}>
@@ -169,20 +166,22 @@ export default function InvestmentPlanCard({
             height: 4,
             borderRadius: 2,
             backgroundColor: theme.accent,
-            width: animatedProgressWidth,
+            width: isRedacted ? '0%' : animatedProgressWidth,
           }}
         />
       </View>
-      <Text
-        style={{
-          fontFamily: 'Inter_400Regular',
-          fontSize: 13,
-          color: theme.textSecondary,
-          marginTop: 6,
-        }}
-      >
-        {progressText}
-      </Text>
+      {!isRedacted && (
+        <Text
+          style={{
+            fontFamily: 'Inter_400Regular',
+            fontSize: 13,
+            color: theme.textSecondary,
+            marginTop: 6,
+          }}
+        >
+          {`${formatCurrency(investedThisMonth, 'EUR')} of ${formatCurrency(monthlyTarget, 'EUR')} invested this month`}
+        </Text>
+      )}
 
       {/* Expanded section — clipped by animated maxHeight */}
       <Animated.View style={{ maxHeight: animatedMaxHeight, overflow: 'hidden' }}>
@@ -202,32 +201,34 @@ export default function InvestmentPlanCard({
           >
             Monthly target
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-            <Text
-              style={{
-                fontFamily: 'SpaceGrotesk_700Bold',
-                fontSize: 28,
-                color: theme.textPrimary,
-              }}
-            >
-              €
-            </Text>
-            <TextInput
-              value={editableTarget}
-              onChangeText={setEditableTarget}
-              keyboardType="numeric"
-              onBlur={() => onSaveTarget(parseFloat(editableTarget) || 0)}
-              style={{
-                fontFamily: 'SpaceGrotesk_700Bold',
-                fontSize: 28,
-                color: theme.textPrimary,
-                minWidth: 80,
-                flex: 1,
-                padding: 0,
-                margin: 0,
-              }}
-            />
-          </View>
+          {!isRedacted && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Text
+                style={{
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontSize: 28,
+                  color: theme.textPrimary,
+                }}
+              >
+                €
+              </Text>
+              <TextInput
+                value={editableTarget}
+                onChangeText={setEditableTarget}
+                keyboardType="numeric"
+                onBlur={() => onSaveTarget(parseFloat(editableTarget) || 0)}
+                style={{
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontSize: 28,
+                  color: theme.textPrimary,
+                  minWidth: 80,
+                  flex: 1,
+                  padding: 0,
+                  margin: 0,
+                }}
+              />
+            </View>
+          )}
 
           <MacronRule style={{ marginTop: 12 }} />
 
