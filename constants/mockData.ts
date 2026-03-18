@@ -1097,7 +1097,7 @@ export const MOCK_INVESTMENT_PLAN: InvestmentPlan = {
   salaryContributions: [
     {
       id: 'sc1',
-      name: 'ABN Amro Pension',
+      name: 'Employer Pension',
       amountPerMonth: 380,
       currency: 'EUR',
       bucket: 'LOCKED',

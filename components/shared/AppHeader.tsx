@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import colours from '../../constants/colours';
 
@@ -25,6 +26,15 @@ export default function AppHeader({
   onAvatar,
 }: AppHeaderProps) {
   const theme = useTheme();
+  const router = useRouter();
+
+  const handleOverflow = () => {
+    if (onOverflow) {
+      onOverflow();
+    } else {
+      router.push('/settings');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -43,7 +53,7 @@ export default function AppHeader({
       {/* RIGHT */}
       <View style={styles.right}>
         {showOverflow && (
-          <TouchableOpacity onPress={onOverflow} activeOpacity={0.7}>
+          <TouchableOpacity onPress={handleOverflow} activeOpacity={0.7}>
             <View style={[styles.iconButton, { backgroundColor: theme.surface }]}>
               <Text style={[styles.dotsText, { color: theme.textPrimary }]}>···</Text>
               <View style={styles.notificationDot} />
