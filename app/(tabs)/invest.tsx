@@ -17,7 +17,6 @@ import InvestmentPlanFull from '../../components/invest/InvestmentPlanFull'
 import InstrumentDiscoverySection from '../../components/invest/InstrumentDiscoverySection'
 import MonthlyReviewCard from '../../components/invest/MonthlyReviewCard'
 import MonthlyReviewSheet from '../../components/invest/MonthlyReviewSheet'
-import FIRETeaserCard from '../../components/invest/FIRETeaserCard'
 import {
   MOCK_HOLDINGS,
   MOCK_INVESTMENT_PLAN,
@@ -88,13 +87,6 @@ export default function InvestScreen() {
             isRedacted={!hasData}
           />
 
-          {/* 5 — FIRE Teaser */}
-          <MacronRule style={styles.rule} />
-          <FIRETeaserCard
-            isSetUp={false}
-            onGetStarted={() => {}}
-            isRedacted={!hasData}
-          />
 
           <View style={styles.bottom} />
         </View>

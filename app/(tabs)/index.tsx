@@ -6,7 +6,6 @@ import PositionHeroCard from '../../components/home/PositionHeroCard';
 import SpendStoryCard from '../../components/home/SpendStoryCard';
 import MarketsStrip from '../../components/home/MarketsStrip';
 import PortfolioPulse from '../../components/home/PortfolioPulse';
-import FIREProgress from '../../components/home/FIREProgress';
 import SegregationToggle from '../../components/home/SegregationToggle';
 import MonthlyReviewLink from '../../components/home/MonthlyReviewLink';
 import EmptyState from '../../components/shared/EmptyState';
@@ -134,7 +133,6 @@ export default function HomeScreen() {
           <SegregationToggle isRedacted={!hasData} />
           <MarketsStrip items={MARKETS_DATA} isRedacted={!hasData} />
           <PortfolioPulse items={PULSE_DATA} isRedacted={!hasData} />
-          <FIREProgress percentage={63} projectedYear={2036} isSetUp={true} isRedacted={!hasData} />
           <MonthlyReviewLink
             month={reviewMonth}
             isVisible={reviewVisible}
