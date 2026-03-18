@@ -1002,7 +1002,7 @@ That is the moment Kāshe stops being a prototype.
 
 ## QUICK REFERENCE
 
-Repo: github.com/anandsandk-lab/kashe
+Repo: github.com/anandsankar-lab/kashe
 Local: ~/Documents/kashe
 Preview: npx expo start → w → localhost:8081
 TypeScript check: npx tsc --noEmit
