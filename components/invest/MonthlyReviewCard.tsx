@@ -12,6 +12,7 @@ interface MonthlyReview {
 interface MonthlyReviewCardProps {
   review: MonthlyReview
   onReadNow: () => void
+  isRedacted?: boolean
 }
 
 export default function MonthlyReviewCard({ review, onReadNow }: MonthlyReviewCardProps) {

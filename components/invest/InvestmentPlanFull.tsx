@@ -6,13 +6,15 @@ import { formatCurrency } from '../../constants/formatters'
 import { RISK_PROFILES } from '../../types/riskProfile'
 import type { RiskProfileType } from '../../types/riskProfile'
 import type { InvestmentPlan } from '../../types/portfolio'
+import RedactedNumber from '../shared/RedactedNumber'
 
 interface Props {
   plan: InvestmentPlan
   riskProfile: RiskProfileType
+  isRedacted?: boolean
 }
 
-export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
+export default function InvestmentPlanFull({ plan, riskProfile, isRedacted }: Props) {
   const theme = useTheme()
 
   const monthlyTarget = plan.monthlyTarget ?? 0
@@ -41,17 +43,29 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
           <Text style={[styles.targetLabel, { color: theme.textSecondary }]}>
             Monthly target
           </Text>
-          <Text style={[styles.targetAmount, { color: theme.textPrimary, marginTop: 2 }]}>
-            {formatCurrency(monthlyTarget, 'EUR')}
-          </Text>
+          {isRedacted ? (
+            <RedactedNumber style={styles.targetAmount} />
+          ) : (
+            <Text style={[styles.targetAmount, { color: theme.textPrimary, marginTop: 2 }]}>
+              {formatCurrency(monthlyTarget, 'EUR')}
+            </Text>
+          )}
         </View>
         <View style={styles.progressSummary}>
-          <Text style={[styles.investedText, { color: theme.textSecondary }]}>
-            {formatCurrency(plan.investedThisMonth, 'EUR')} invested
-          </Text>
-          <Text style={[styles.percentText, { color: colours.accent }]}>
-            {progressPercent.toFixed(0)}%
-          </Text>
+          {isRedacted ? (
+            <RedactedNumber style={styles.investedText} length={8} />
+          ) : (
+            <Text style={[styles.investedText, { color: theme.textSecondary }]}>
+              {formatCurrency(plan.investedThisMonth, 'EUR')} invested
+            </Text>
+          )}
+          {isRedacted ? (
+            <RedactedNumber style={styles.percentText} length={3} />
+          ) : (
+            <Text style={[styles.percentText, { color: colours.accent }]}>
+              {progressPercent.toFixed(0)}%
+            </Text>
+          )}
         </View>
       </View>
 
@@ -76,9 +90,13 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
               <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>
                 {contribution.name}
               </Text>
-              <Text style={[styles.contributionAmount, { color: theme.textSecondary }]}>
-                {formatCurrency(contribution.amountPerMonth, 'EUR')}/mo
-              </Text>
+              {isRedacted ? (
+                <RedactedNumber style={styles.contributionAmount} length={5} />
+              ) : (
+                <Text style={[styles.contributionAmount, { color: theme.textSecondary }]}>
+                  {formatCurrency(contribution.amountPerMonth, 'EUR')}/mo
+                </Text>
+              )}
             </View>
           ))}
         </View>
@@ -102,9 +120,13 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
                 <Text style={[styles.bucketLabel, { color: colour }]}>
                   {label}
                 </Text>
-                <Text style={[styles.bucketAmount, { color: theme.textPrimary }]}>
-                  {formatCurrency(targetAmount, 'EUR')}
-                </Text>
+                {isRedacted ? (
+                  <RedactedNumber style={styles.bucketAmount} length={5} />
+                ) : (
+                  <Text style={[styles.bucketAmount, { color: theme.textPrimary }]}>
+                    {formatCurrency(targetAmount, 'EUR')}
+                  </Text>
+                )}
               </View>
 
               {/* Allocation bar */}
@@ -122,9 +144,13 @@ export default function InvestmentPlanFull({ plan, riskProfile }: Props) {
               </View>
 
               {/* Progress fraction */}
-              <Text style={[styles.progressFraction, { color: theme.textDim, marginTop: 4 }]}>
-                {formatCurrency(invested, 'EUR')} / {formatCurrency(targetAmount, 'EUR')}
-              </Text>
+              {isRedacted ? (
+                <RedactedNumber style={styles.progressFraction} length={10} />
+              ) : (
+                <Text style={[styles.progressFraction, { color: theme.textDim, marginTop: 4 }]}>
+                  {formatCurrency(invested, 'EUR')} / {formatCurrency(targetAmount, 'EUR')}
+                </Text>
+              )}
 
               {/* CTA */}
               {gap > 0 && (

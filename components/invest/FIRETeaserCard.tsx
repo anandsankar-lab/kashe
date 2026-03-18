@@ -4,17 +4,20 @@ import { useTheme } from '../../context/ThemeContext'
 import colours from '../../constants/colours'
 import { formatCurrency } from '../../constants/formatters'
 import KasheAsterisk from '../shared/KasheAsterisk'
+import RedactedNumber from '../shared/RedactedNumber'
 
 interface FIRETeaserCardProps {
   isSetUp: boolean
   onGetStarted?: () => void
   onOpen?: () => void
+  isRedacted?: boolean
 }
 
 export default function FIRETeaserCard({
   isSetUp,
   onGetStarted,
   onOpen,
+  isRedacted,
 }: FIRETeaserCardProps) {
   const theme = useTheme()
   const progressAnim = useRef(new Animated.Value(0)).current
@@ -77,9 +80,13 @@ export default function FIRETeaserCard({
         Financial independence
       </Text>
 
-      <Text style={[styles.year, { color: theme.textPrimary }]}>
-        2036
-      </Text>
+      {isRedacted ? (
+        <RedactedNumber style={styles.year} length={4} />
+      ) : (
+        <Text style={[styles.year, { color: theme.textPrimary }]}>
+          2036
+        </Text>
+      )}
 
       <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
         <Animated.View
@@ -88,12 +95,20 @@ export default function FIRETeaserCard({
       </View>
 
       <View style={styles.progressRow}>
-        <Text style={[styles.progressLabel, { color: theme.textSecondary }]}>
-          34% of your independence number
-        </Text>
-        <Text style={[styles.progressAmount, { color: theme.textDim }]}>
-          {formatCurrency(583380, 'EUR')} to go
-        </Text>
+        {isRedacted ? (
+          <RedactedNumber style={styles.progressLabel} length={6} />
+        ) : (
+          <Text style={[styles.progressLabel, { color: theme.textSecondary }]}>
+            34% of your independence number
+          </Text>
+        )}
+        {isRedacted ? (
+          <RedactedNumber style={styles.progressAmount} length={8} />
+        ) : (
+          <Text style={[styles.progressAmount, { color: theme.textDim }]}>
+            {formatCurrency(583380, 'EUR')} to go
+          </Text>
+        )}
       </View>
 
       <TouchableOpacity

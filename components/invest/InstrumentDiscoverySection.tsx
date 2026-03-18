@@ -16,11 +16,13 @@ import type { PortfolioHolding } from '../../types/portfolio'
 import type { RiskProfileType } from '../../types/riskProfile'
 import { RISK_PROFILES } from '../../types/riskProfile'
 import KasheAsterisk from '../shared/KasheAsterisk'
+import RedactedNumber from '../shared/RedactedNumber'
 
 interface Props {
   riskProfile: RiskProfileType
   holdings: PortfolioHolding[]
   geography?: string
+  isRedacted?: boolean
 }
 
 type BucketKey = 'growth' | 'stability' | 'locked'
@@ -62,6 +64,7 @@ export default function InstrumentDiscoverySection({
   riskProfile,
   holdings,
   geography,
+  isRedacted,
 }: Props) {
   const theme = useTheme()
 
@@ -105,9 +108,13 @@ export default function InstrumentDiscoverySection({
           </Text>
         </View>
         <View style={styles.gapPill}>
-          <Text style={styles.gapPillText}>
-            {`${gapPercent}% below target`}
-          </Text>
+          {isRedacted ? (
+            <RedactedNumber style={styles.gapPillText} length={4} />
+          ) : (
+            <Text style={styles.gapPillText}>
+              {`${gapPercent}% below target`}
+            </Text>
+          )}
         </View>
       </View>
 

@@ -8,6 +8,7 @@ import { RiskProfileType, RISK_PROFILES } from '../../types/riskProfile'
 interface RiskProfileCardProps {
   riskProfile: RiskProfileType | null
   onSetProfile: () => void
+  isRedacted?: boolean
 }
 
 export default function RiskProfileCard({
