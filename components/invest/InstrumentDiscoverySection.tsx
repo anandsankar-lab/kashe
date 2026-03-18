@@ -20,7 +20,7 @@ import KasheAsterisk from '../shared/KasheAsterisk'
 interface Props {
   riskProfile: RiskProfileType
   holdings: PortfolioHolding[]
-  userGeography?: string
+  geography?: string
 }
 
 type BucketKey = 'growth' | 'stability' | 'locked'
@@ -61,7 +61,7 @@ function truncateName(name: string, max: number): string {
 export default function InstrumentDiscoverySection({
   riskProfile,
   holdings,
-  userGeography,
+  geography,
 }: Props) {
   const theme = useTheme()
 
@@ -89,8 +89,8 @@ export default function InstrumentDiscoverySection({
   )
   const tier = !hasGrowthHoldings ? 0 : hasGlobalETF ? 1 : 0
 
-  const geography = userGeography ?? 'NL'
-  const suggestions = getInstrumentsByTierAndBucket(bucketLabel, tier, geography).slice(0, 3)
+  const resolvedGeography = geography ?? 'NL'
+  const suggestions = getInstrumentsByTierAndBucket(bucketLabel, tier, resolvedGeography).slice(0, 3)
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface }]}>

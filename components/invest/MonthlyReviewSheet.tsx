@@ -19,7 +19,8 @@ import KasheAsterisk from '../shared/KasheAsterisk'
 
 interface Props {
   visible: boolean
-  onClose: () => void
+  review: { month: string; year: number; whereYouStand: string }
+  onDismiss: () => void
 }
 
 const MOCK_REVIEW = {
@@ -162,7 +163,7 @@ function AllocationBar({
   )
 }
 
-export default function MonthlyReviewSheet({ visible, onClose }: Props) {
+export default function MonthlyReviewSheet({ visible, review: _review, onDismiss }: Props) {
   const theme = useTheme()
   const review = MOCK_REVIEW
   const screenWidth = Dimensions.get('window').width
@@ -172,9 +173,9 @@ export default function MonthlyReviewSheet({ visible, onClose }: Props) {
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={onDismiss}
     >
-      <Pressable style={styles.scrim} onPress={onClose}>
+      <Pressable style={styles.scrim} onPress={onDismiss}>
         <Pressable
           style={[styles.sheet, { backgroundColor: theme.background }]}
           onPress={(e) => e.stopPropagation()}
@@ -196,7 +197,7 @@ export default function MonthlyReviewSheet({ visible, onClose }: Props) {
                   {review.month}
                 </Text>
               </View>
-              <TouchableOpacity onPress={onClose}>
+              <TouchableOpacity onPress={onDismiss}>
                 <Text style={[styles.closeBtn, { color: theme.textSecondary }]}>
                   ✕
                 </Text>

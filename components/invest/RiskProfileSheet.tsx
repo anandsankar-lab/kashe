@@ -15,8 +15,8 @@ import { RiskProfileType, RISK_PROFILES } from '../../types/riskProfile'
 interface RiskProfileSheetProps {
   visible: boolean
   currentProfile: RiskProfileType | null
-  onConfirm: (profile: RiskProfileType) => void
-  onClose: () => void
+  onSelect: (profile: RiskProfileType) => void
+  onDismiss: () => void
 }
 
 const PROFILE_ORDER: RiskProfileType[] = ['conservative', 'balanced', 'growth']
@@ -24,8 +24,8 @@ const PROFILE_ORDER: RiskProfileType[] = ['conservative', 'balanced', 'growth']
 export default function RiskProfileSheet({
   visible,
   currentProfile,
-  onConfirm,
-  onClose,
+  onSelect,
+  onDismiss,
 }: RiskProfileSheetProps) {
   const theme = useTheme()
   const [selected, setSelected] = useState<RiskProfileType>(
@@ -41,9 +41,9 @@ export default function RiskProfileSheet({
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={onDismiss}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={styles.backdrop} onPress={onDismiss}>
         <Pressable
           style={[styles.sheet, { backgroundColor: theme.surface }]}
           onPress={(e) => e.stopPropagation()}
@@ -98,12 +98,12 @@ export default function RiskProfileSheet({
 
           <TouchableOpacity
             style={styles.confirmButton}
-            onPress={() => onConfirm(selected)}
+            onPress={() => onSelect(selected)}
           >
             <Text style={styles.confirmText}>Confirm</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onDismiss}>
             <Text style={[styles.cancelText, { color: theme.textSecondary }]}>
               Cancel
             </Text>

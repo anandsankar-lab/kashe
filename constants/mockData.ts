@@ -483,7 +483,7 @@ export const MOCK_INSIGHT = {
 };
 
 export const MOCK_MONTHLY_REVIEW = {
-  month: 'February',
+  month: 'March',
   year: 2026,
   whereYouStand:
     'Your position grew €2,340 this month. Savings rate held at 45% — above your 3-month average of 41%.',
@@ -1081,6 +1081,8 @@ export const MOCK_PORTFOLIO_HOLDINGS: PortfolioHolding[] = [
   { id: 'h6', name: 'Roth IRA — S&P 500 Index', assetClass: 'retirement', assetSubtype: 'us_roth_ira', bucket: 'LOCKED', geography: 'us', domicile: 'United States', currentValue: 34600, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'fresh', isProtection: false, unlockDate: '2041-01-01' },
   { id: 'h7', name: 'Seedrs Portfolio', assetClass: 'alternative', assetSubtype: 'alternative_general', bucket: 'LOCKED', geography: 'europe', domicile: 'United Kingdom', currentValue: 13600, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'stale', isProtection: false },
 ];
+
+export const MOCK_HOLDINGS = MOCK_PORTFOLIO_HOLDINGS
 
 export const MOCK_PORTFOLIO_TOTALS: PortfolioTotals = {
   liveTotal: 123500,

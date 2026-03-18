@@ -6,35 +6,35 @@ import { formatCurrency } from '../../constants/formatters'
 import KasheAsterisk from '../shared/KasheAsterisk'
 
 interface FIRETeaserCardProps {
-  fireSetUp: boolean
-  onSetUp?: () => void
+  isSetUp: boolean
+  onGetStarted?: () => void
   onOpen?: () => void
 }
 
 export default function FIRETeaserCard({
-  fireSetUp,
-  onSetUp,
+  isSetUp,
+  onGetStarted,
   onOpen,
 }: FIRETeaserCardProps) {
   const theme = useTheme()
   const progressAnim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    if (!fireSetUp) return
+    if (!isSetUp) return
     Animated.timing(progressAnim, {
       toValue: 34,
       duration: 800,
       delay: 200,
       useNativeDriver: false,
     }).start()
-  }, [fireSetUp, progressAnim])
+  }, [isSetUp, progressAnim])
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 100],
     outputRange: ['0%', '100%'],
   })
 
-  if (!fireSetUp) {
+  if (!isSetUp) {
     return (
       <View style={[styles.card, { backgroundColor: theme.surface }]}>
         <View style={styles.topRow}>
@@ -45,7 +45,7 @@ export default function FIRETeaserCard({
         </View>
 
         <Text style={[styles.headline, { color: theme.textPrimary }]}>
-          When could you choose not to work?
+          How close are you to financial independence?
         </Text>
 
         <Text style={[styles.subtext, { color: theme.textSecondary }]}>
@@ -53,7 +53,7 @@ export default function FIRETeaserCard({
         </Text>
 
         <TouchableOpacity
-          onPress={onSetUp ?? (() => console.log('fire setup'))}
+          onPress={onGetStarted ?? (() => console.log('fire setup'))}
           style={styles.cta}
         >
           <Text style={[styles.ctaText, { color: colours.accent }]}>

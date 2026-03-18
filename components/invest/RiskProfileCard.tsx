@@ -7,12 +7,12 @@ import { RiskProfileType, RISK_PROFILES } from '../../types/riskProfile'
 
 interface RiskProfileCardProps {
   riskProfile: RiskProfileType | null
-  onOpenSheet: () => void
+  onSetProfile: () => void
 }
 
 export default function RiskProfileCard({
   riskProfile,
-  onOpenSheet,
+  onSetProfile,
 }: RiskProfileCardProps) {
   const theme = useTheme()
 
@@ -31,7 +31,7 @@ export default function RiskProfileCard({
             Balanced is a good starting point for most
           </Text>
         </View>
-        <TouchableOpacity style={styles.ctaButton} onPress={onOpenSheet}>
+        <TouchableOpacity style={styles.ctaButton} onPress={onSetProfile}>
           <Text style={styles.ctaText}>Set your risk profile →</Text>
         </TouchableOpacity>
       </View>
@@ -44,7 +44,7 @@ export default function RiskProfileCard({
     <View style={[styles.card, { backgroundColor: theme.surface }]}>
       <View style={styles.topRow}>
         <Text style={[styles.label, { color: theme.textDim }]}>RISK PROFILE</Text>
-        <TouchableOpacity onPress={onOpenSheet}>
+        <TouchableOpacity onPress={onSetProfile}>
           <Text style={[styles.editLink, { color: colours.accent }]}>Edit</Text>
         </TouchableOpacity>
       </View>
