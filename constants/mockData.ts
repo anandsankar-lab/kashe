@@ -1073,13 +1073,13 @@ export const MOCK_SUBCATEGORIES_BY_CATEGORY: Record<string, SpendSubcategory[]> 
 // ── PORTFOLIO MOCK DATA ───────────────────────────────────────────────────────
 
 export const MOCK_PORTFOLIO_HOLDINGS: PortfolioHolding[] = [
-  { id: 'h1', name: 'VWRL — Vanguard All-World ETF', assetClass: 'equity', assetSubtype: 'eu_etf', bucket: 'GROWTH', geography: 'europe', domicile: 'Ireland', currentValue: 48200, currency: 'EUR', dailyChangePercent: 0.6, freshnessStatus: 'fresh', isProtection: false },
-  { id: 'h2', name: 'Invesco Nasdaq 100 ETF', assetClass: 'equity', assetSubtype: 'eu_etf', bucket: 'GROWTH', geography: 'europe', domicile: 'Ireland', currentValue: 31400, currency: 'EUR', dailyChangePercent: 1.2, freshnessStatus: 'fresh', isProtection: false },
-  { id: 'h3', name: 'Apple Inc — RSU', assetClass: 'equity', assetSubtype: 'employer_rsu', bucket: 'GROWTH', geography: 'us', domicile: 'United States', currentValue: 22800, currency: 'EUR', dailyChangePercent: -0.4, freshnessStatus: 'amber', isProtection: false },
-  { id: 'h4', name: 'Current Account', assetClass: 'cash', assetSubtype: 'cash_general', bucket: 'STABILITY', geography: 'europe', domicile: 'Netherlands', currentValue: 8400, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'fresh', isProtection: true, avgMonthlySpend: 3000 },
-  { id: 'h5', name: 'High-Yield Savings', assetClass: 'cash', assetSubtype: 'cash_general', bucket: 'STABILITY', geography: 'us', domicile: 'United States', currentValue: 12700, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'fresh', isProtection: false },
-  { id: 'h6', name: 'Roth IRA — S&P 500 Index', assetClass: 'retirement', assetSubtype: 'us_roth_ira', bucket: 'LOCKED', geography: 'us', domicile: 'United States', currentValue: 34600, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'fresh', isProtection: false, unlockDate: '2041-01-01' },
-  { id: 'h7', name: 'Seedrs Portfolio', assetClass: 'alternative', assetSubtype: 'alternative_general', bucket: 'LOCKED', geography: 'europe', domicile: 'United Kingdom', currentValue: 13600, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'stale', isProtection: false },
+  { id: 'h1', name: 'VWRL — Vanguard All-World ETF', assetClass: 'equity', assetSubtype: 'eu_etf', bucket: 'GROWTH', geography: 'europe', domicile: 'Ireland', currentValue: 48200, currency: 'EUR', dailyChangePercent: 0.6, freshnessStatus: 'fresh', isProtection: false, valueInBaseCurrency: 48200, lastUpdated: '2026-03-18' },
+  { id: 'h2', name: 'Invesco Nasdaq 100 ETF', assetClass: 'equity', assetSubtype: 'eu_etf', bucket: 'GROWTH', geography: 'europe', domicile: 'Ireland', currentValue: 31400, currency: 'EUR', dailyChangePercent: 1.2, freshnessStatus: 'fresh', isProtection: false, valueInBaseCurrency: 31400, lastUpdated: '2026-03-18' },
+  { id: 'h3', name: 'Apple Inc — RSU', assetClass: 'equity', assetSubtype: 'employer_rsu', bucket: 'GROWTH', geography: 'us', domicile: 'United States', currentValue: 22800, currency: 'EUR', dailyChangePercent: -0.4, freshnessStatus: 'amber', isProtection: false, valueInBaseCurrency: 22800, lastUpdated: '2026-03-18' },
+  { id: 'h4', name: 'Current Account', assetClass: 'cash', assetSubtype: 'cash_general', bucket: 'STABILITY', geography: 'europe', domicile: 'Netherlands', currentValue: 8400, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'fresh', isProtection: true, avgMonthlySpend: 3000, valueInBaseCurrency: 8400, lastUpdated: '2026-03-18' },
+  { id: 'h5', name: 'High-Yield Savings', assetClass: 'cash', assetSubtype: 'cash_general', bucket: 'STABILITY', geography: 'us', domicile: 'United States', currentValue: 12700, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'fresh', isProtection: false, valueInBaseCurrency: 12700, lastUpdated: '2026-03-18' },
+  { id: 'h6', name: 'Roth IRA — S&P 500 Index', assetClass: 'retirement', assetSubtype: 'us_roth_ira', bucket: 'LOCKED', geography: 'us', domicile: 'United States', currentValue: 34600, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'fresh', isProtection: false, unlockDate: '2041-01-01', valueInBaseCurrency: 34600, lastUpdated: '2026-03-18' },
+  { id: 'h7', name: 'Seedrs Portfolio', assetClass: 'alternative', assetSubtype: 'alternative_general', bucket: 'LOCKED', geography: 'europe', domicile: 'United Kingdom', currentValue: 13600, currency: 'EUR', dailyChangePercent: 0, freshnessStatus: 'stale', isProtection: false, valueInBaseCurrency: 13600, lastUpdated: '2026-03-18' },
 ];
 
 export const MOCK_HOLDINGS = MOCK_PORTFOLIO_HOLDINGS
@@ -1090,7 +1090,7 @@ export const MOCK_PORTFOLIO_TOTALS: PortfolioTotals = {
   combinedTotal: 171700,
   monthlyDeltaLive: 2640,
   baseCurrency: 'EUR',
-  lastRefreshed: new Date(Date.now() - 1000 * 60 * 7),
+  lastRefreshed: '2026-03-18T09:00:00.000Z',
 };
 
 export const MOCK_INVESTMENT_PLAN: InvestmentPlan = {
