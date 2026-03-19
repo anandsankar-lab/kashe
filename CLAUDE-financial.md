@@ -1,10 +1,12 @@
 # Kāshe — CLAUDE-financial.md
 *Team Member 3: Financial Intelligence*
 *Read CLAUDE.md first, then this file.*
-*Last updated: 17 March 2026 — Instrument catalogue service added,
-KasheScore formula locked, spend categorisation Layer 1/2/3 architecture
-locked, catalogueService.ts spec added, merchantKeywords.ts spec added,
-PostHog event taxonomy added for four learning loops.*
+*Last updated: 19 March 2026 — Session 12 complete.
+CSV parser architecture overhauled: Papa Parse, smart field detector,
+Tier 1/2/3 field model, atomic imports, 24 institutions.
+Merchant enrichment locked: Option C (Clearbit) → Option A (Claude).
+Retry queue caps locked. Audit data added to CSV output.
+Output files updated to reflect what is built vs remaining.*
 
 ---
 
@@ -19,16 +21,17 @@ that Team Member 2 (Experience) consumes via hooks.
 
 ## Your Domain
 ```
-Universal CSV parser    Auto-detect any bank CSV format
+Universal CSV parser    Smart column detection, 24 institutions
 Salary slip parser      Dutch loonstrook + Indian salary slip
 Price refresh           All market price API integrations
 FX rates                Currency conversion service
 AMFI NAV feed           Indian mutual fund prices (free, daily)
 Spend categoriser       Transaction to category — 3-layer pipeline
+Merchant enrichment     Clearbit → Claude API fallback
 Portfolio calc          Position, allocation, bucket assignment
 Savings rate            Formula + monthly trend tracking
-FIRE engine             Calculator + projection logic
-AI insights             Claude API integration — full 5-insight engine
+FIRE engine             Calculator + projection logic [V2]
+AI insights             Claude API integration — insight engine
 Budget cap              Client-side token usage enforcement
 fireDefaults            Country-based inflation + return defaults
 Catalogue service       Supabase + static fallback for instrument data
@@ -42,7 +45,7 @@ PostHog events          Four learning loop instrumentation
 ```typescript
 interface DataSource {
   type: 'CSV' | 'API' | 'MANUAL'
-  fetchTransactions(params: FetchParams): Promise<Transaction[]>
+  fetchTransactions(params: FetchParams): Promise<SpendTransaction[]>
   fetchHoldings(params: FetchParams): Promise<Asset[]>
 }
 
@@ -55,39 +58,103 @@ class CSVDataSource implements DataSource {
 
 ---
 
-## Smart Universal CSV Parser
+## Smart Universal CSV Parser — LOCKED (19 March 2026)
 
 ```
-APPROACH: Auto-detect, not fixed format list.
-Known banks: zero-friction instant parse.
-Unknown banks: one confirmation screen.
+LIBRARY: Papa Parse (papaparse npm package)
+  Never write a custom CSV tokeniser.
+  Papa Parse handles: delimiter detection, encoding,
+  malformed rows, streaming large files.
+
+APPROACH: Smart field detection, not institution hardcoding.
+  Score every column against field types.
+  Institution hints are display labels only — not parse logic.
 
 PIPELINE:
-1. Read header row
-2. Score columns against known field types
-3. >85% confidence: auto-map, proceed silently
-4. 60-85%: show mapping confirmation
-5. <60%: ask user to map manually
+1. Papa Parse reads raw CSV → rows + headers
+2. detectColumnMapping(headers, sampleRows) scores each column:
+   DATE: header keywords + date pattern matching in data
+   AMOUNT: header keywords + numeric detection
+   DEBIT_CREDIT_FLAG: header keywords + small unique value set
+   DESCRIPTION: header keywords + longest text column
+   CURRENCY: header keywords + ISO 4217 codes in data
+   REFERENCE: header keywords + high-uniqueness alphanumeric
 
-KNOWN FORMATS (instant parse):
-  ABN Amro        Semicolon-delimited, Dutch headers
-  DeGiro          Portfolio export, ISIN column
-  HDFC Bank       Comma-delimited, DD/MM/YY dates
-  CAMS            Pipe-delimited, scheme code
-  Zerodha/Groww   Holdings export, symbol column
-  Morgan Stanley  StockPlan Connect, vest date column
-  Revolut         Started Date + Completed Date pattern
+3. Tier model:
+   Tier 1 — BLOCKING (parse fails if missing):
+     date, amount, debit/credit direction
+   Tier 2 — fallback available:
+     currency (infer from geography), description, merchant
+   Tier 3 — always has fallback:
+     referenceId, geography, isRecurring
+
+4. ParseConfidence computed AFTER parsing:
+   tier1Complete: boolean
+   tier2Score: 0–1 (fraction of Tier 2 fields found)
+   tier3Score: 0–1 (fraction of Tier 3 fields found)
+   overallScore: (tier2 × 0.7) + (tier3 × 0.3)
+   If tier1Complete = false: ParseError TIER1_FIELDS_MISSING
+   If tier1Complete = true: always ParseSuccess (warn if low score)
+
+5. Atomic import — all-or-nothing:
+   Any failure mid-import: ParseError ATOMIC_ROLLBACK
+   Never return partial results. Never partial state in store.
+
+6. Security pipeline runs INSIDE csvParser (sanitiseTransaction):
+   Account numbers → last 4 digits
+   IBANs → masked ****1234
+   BSN / PAN / Aadhaar → removed entirely
+   Raw files: NEVER written to disk
+
+SUPPORTED INSTITUTIONS (24):
+  NL:          ABN_AMRO, ING_NL, RABOBANK, BUNQ, SNS_BANK, N26
+  EU/Digital:  REVOLUT, WISE
+  Investment:  DEGIRO, IBKR
+  IN:          HDFC_BANK, HDFC_SECURITIES, ICICI_BANK, SBI,
+               AXIS_BANK, KOTAK, ADITYA_BIRLA, ZERODHA, GROWW
+  UK:          BARCLAYS, HSBC, MONZO
+  US:          CHASE, SCHWAB
+  Fallback:    UNKNOWN
+
+Institution hints (lightweight only — display label + amount format):
+  Used to name the detected institution for display.
+  NOT used to control parse logic — smart detector handles parsing.
 
 AMOUNT PARSING:
-  European: 1.234,56 (period=thousands, comma=decimal)
-  Standard: 1,234.56 (comma=thousands, period=decimal)
-  Auto-detect from first numeric cell.
+  European format: 1.234,56 (remove periods, replace comma → period)
+  Standard format: 1,234.56 (remove commas)
+  Auto-detected from institution hint or sample data analysis
 
-DEBIT/CREDIT DETECTION:
-  Separate debit + credit columns
-  Single amount, negative = debit
-  Af/Bij or Dr/Cr flag column
-  Handle all three patterns.
+DEBIT/CREDIT DETECTION (three patterns handled):
+  Separate debit + credit columns (HDFC, Revolut)
+  Single amount column + flag column (ABN Amro: Af/Bij, SBI: Dr/Cr)
+  Single signed amount column (negative = debit)
+
+DEDUPLICATION KEY HIERARCHY:
+  Priority 1: referenceId (transaction ID from CSV, where present)
+    Exact match against existing transaction referenceIds
+  Priority 2: compound key (where no referenceId present)
+    key = `${date}|${amount}|${description.slice(0,20).toLowerCase()}`
+  Priority 3: fuzzy Dice coefficient (Indian banks only)
+    For SBI, HDFC, ICICI, AXIS, KOTAK:
+    Same date + same amount + description similarity > 0.8
+    → probableDuplicates[] for USER CONFIRMATION
+    → never silently skipped
+
+UNRECOGNISED FORMAT:
+  Return ParseError with REQUEST_SUPPORT_URL (Google Form)
+  User submits bank name + country
+  PM prioritises new parsers from form data
+  Never leave user without guidance
+
+CSV PARSER OUTPUT (ParseSuccess):
+  transactions: SpendTransaction[]   — sanitised, deduplicated
+  duplicatesSkipped: number
+  probableDuplicates: ProbableDuplicate[]  — for user confirmation
+  accountLabel: string               — detected, user-editable
+  currency: string
+  confidence: ParseConfidence        — for UI feedback
+  auditData: ImportAuditData         — for auditStore.logImport()
 ```
 
 ---
@@ -124,32 +191,18 @@ INDIAN SALARY SLIP - FIELDS TO EXTRACT:
 
 POST-PARSE FLOW:
   For each detected contribution:
-    Emit: SalaryContributionDetected event
     UI prompts user:
     "We found a pension contribution of X/month.
      Want to add this as a holding?"
     [+ Add pension]  [Skip]
 
-    If accepted - pre-populate holding form:
-      name: "{Employer} Pension" or "EPF"
-      type: pension_scheme
-      bucket: LOCKED (cannot be overridden)
-      monthlyContribution: detected amount
-      employerContribution: detected if present
-
 INVESTABLE SURPLUS:
   investableSurplus = monthlyTarget - detectedLockedContributions
-  Feeds "Remaining to actively allocate" in Investment Plan card
-
-AMBIGUOUS FORMAT:
-  If not recognised: show manual field entry
-  Fields: gross, net, pension, EPF, pay frequency
-  User fills what they know, skips what they don't
 
 PRIVACY:
-  Parsed in memory — never persisted raw
-  BSN / PAN / Aadhaar / full name stripped before storage
   Same security pipeline as CSV uploads
+  BSN / PAN / Aadhaar / full name stripped before storage
+  Raw file discarded immediately after parsing
 ```
 
 ---
@@ -175,8 +228,7 @@ DEFAULT_BUCKET per asset type:
 BucketOverride:
   holdingId, overrideBucket, systemBucket,
   overriddenAt, profileId
-  Override triggers immediate insight regeneration.
-  Pass insightTrigger: BUCKET_REASSIGNED to insight engine.
+  Override triggers immediate PORTFOLIO_HEALTH insight invalidation.
 ```
 
 ---
@@ -235,230 +287,80 @@ Gap calculation per bucket:
 
 ## Spend Categorisation — Three-Layer Pipeline
 
-### Layer 1 — Keyword Rules
+### Layer 3 — User Corrections (CHECKED FIRST — DEC-01)
+```
+User corrections ALWAYS win over any other layer.
+merchantOverrides checked BEFORE keyword matching.
+
+On user correction:
+  MerchantOverride saved (merchantNorm, category, correctionCount)
+  Re-run categorise() on ALL past + future transactions
+  from same merchantNorm
+  correctionCount >= 5 → log Layer 1 promotion candidate
+  V2: 5+ corrections → Supabase merchant_keywords update
+  All users benefit
+
+MerchantConfidence: 1.0
+```
+
+### Layer 1 — Keyword Rules (CHECKED SECOND)
 ```
 File: /constants/merchantKeywords.ts
 Geography-aware. Fast, free, offline.
-Updated via Supabase merchant_keywords table → all users benefit.
 
 Structure:
   Record<GeographyCode, Record<SpendCategory, string[]>>
 
-Examples:
-  NL: {
-    groceries: ['albert heijn', 'jumbo', 'lidl', 'aldi', 'plus supermarkt'],
-    eating_out: ['thuisbezorgd', 'uber eats', 'deliveroo', 'mcdonalds'],
-    transport: ['ns ', 'gvb', 'ret ', 'htm ', 'arriva', 'connexxion', 'ov-chipkaart'],
-    utilities: ['eneco', 'vattenfall', 'nuon', 'ziggo', 'kpn', 't-mobile nl'],
-  }
-  IN: {
-    groceries: ['bigbasket', 'zepto', 'blinkit', 'swiggy instamart', 'jiomart'],
-    eating_out: ['swiggy', 'zomato', 'eatsure'],
-    investment_transfer: ['zerodha', 'groww', 'kuvera', 'mfcentral', 'cams'],
-    income: ['salary', 'neft cr', 'imps cr'],
-  }
+Coverage (minimum):
+  NL: albert heijn, jumbo, lidl, aldi, ns, gvb, ret, connexxion,
+      thuisbezorgd, tikkie, belastingdienst, ziggo, kpn, coolblue,
+      bol com, action, kruidvat, hema, apotheek, eneco, vattenfall
+  IN: swiggy, zomato, bigbasket, blinkit, zepto, irctc, ola, rapido,
+      zerodha, groww, kuvera, phonepe, gpay, paytm, flipkart, myntra,
+      amazon in, jio, airtel
+  GB: tesco, sainsburys, waitrose, deliveroo, just eat, tfl,
+      national rail, trainline, bt group, boots, superdrug
+  US: whole foods, trader joes, kroger, target, walmart, cvs,
+      lyft, doordash, grubhub, verizon, att
+  GLOBAL: uber, netflix, spotify, apple, google, microsoft, amazon,
+          airbnb, booking com, revolut, wise, paypal, h m, zara,
+          ikea, starbucks, mcdonalds
 
-MerchantConfidence: 1.0 for all Layer 1 matches
+Matching: merchantNorm.includes(keyword) — partial match correct
+MerchantConfidence: 1.0
 ```
 
-### Layer 2 — Claude API Enrichment
+### Layer 2 — Enrichment (LAST — only for Layer 1/3 misses)
 ```
-Triggered ONLY when Layer 1 produces no match.
-Cost: ~€0.001 per transaction.
+Triggered ONLY when Layer 1 AND Layer 3 both miss (confidence = 0.0).
+Never called for transactions already matched.
 
-Prompt structure:
-  "You are a transaction categoriser for a personal finance app
-   serving globally mobile professionals.
-   
-   Categorise this transaction into exactly one category from this list:
-   [housing, groceries, eating_out, transport, family, health,
-    personal_care, subscriptions, utilities, shopping, travel,
-    education, insurance, gifts_giving, investment_transfer,
-    transfer, income, other]
-   
-   Transaction: '{raw_description}'
-   Amount: {amount} {currency}
-   Country: {country_code}
-   
-   Return only the category name. Nothing else."
+Option C — Clearbit merchant lookup (PRIMARY):
+  Send merchant name ONLY — zero user context
+  No user ID, no amount, no date, no account info
+  Completely anonymous request
+  MUST be opt-in: check Settings enrichment toggle before calling
+  Privacy policy must disclose use before beta
 
-Result cached in merchantOverrides table (Supabase):
-  merchant_norm: string
-  category: SpendCategory
-  source: 'claude_api'
-  confidence: 0.8
-  createdAt: Date
+Option A — Claude API fallback (when Clearbit misses):
+  Model: claude-haiku-4-5-20251001
+  Send: merchant name + 50-char description snippet ONLY
+  Never: amounts, dates, account numbers, PII
+  Prompt: classify into SpendCategory, return JSON
+  On any failure: return { category: 'other', confidence: 0.3 }
+  Never throw from categoriseViaAI()
 
-That merchant never sent to API again.
-MerchantConfidence: 0.8
-```
+Retry queue (managed by spendStore):
+  Per upload batch cap:  20 enrichment calls maximum
+  Daily drain cap:       30 calls per day (first app open)
+  Per transaction limit: 3 attempts, then 'other' at 0.3
+  Budget gate:           always check isWithinBudget() first
+  Over budget:           pause queue entirely
 
-### Layer 3 — User Correction
-```
-User recategorises via TransactionEditSheet.
-MerchantOverride saved locally + to Supabase.
-MerchantConfidence: 1.0 (highest)
-
-PostHog event:
-  category_corrected {
-    merchant_norm: string,
-    from_category: SpendCategory,
-    to_category: SpendCategory,
-    geography: GeographyCode,
-  }
-
-Monthly review by PM:
-  Query PostHog for category_corrected events
-  Corrections appearing 5+ times for same merchant:
-    → Add to Layer 1 keyword list in Supabase
-    → All users benefit immediately
-```
-
----
-
-## Catalogue Service — Supabase + Static Fallback
-
-### catalogueService.ts
-```typescript
-// /services/catalogueService.ts
-
-import { INSTRUMENT_CATALOGUE } from '../constants/instrumentCatalogue'
-import type { InstrumentCatalogueEntry } from '../types/instrumentCatalogue'
-
-const CACHE_KEY = 'kashe_catalogue_cache'
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000  // 24 hours
-
-async function fetchCatalogue(): Promise<InstrumentCatalogueEntry[]> {
-  // 1. Check local cache
-  const cached = await getCachedCatalogue()
-  if (cached) return cached
-
-  // 2. Try Supabase
-  try {
-    const { data, error } = await supabase
-      .from('instrument_catalogue')
-      .select('*')
-      .eq('is_active', true)
-    
-    if (!error && data && data.length > 0) {
-      await setCatalogueCache(data)
-      return data
-    }
-  } catch {
-    // Network unavailable — fall through to static
-  }
-
-  // 3. Static fallback (offline or Supabase unavailable)
-  return INSTRUMENT_CATALOGUE
-}
-
-function subscribeToCatalogueUpdates(
-  onUpdate: (entries: InstrumentCatalogueEntry[]) => void
-): () => void {
-  const subscription = supabase
-    .channel('catalogue_updates')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'instrument_catalogue',
-    }, async () => {
-      // Invalidate cache and re-fetch
-      await invalidateCatalogueCache()
-      const fresh = await fetchCatalogue()
-      onUpdate(fresh)
-    })
-    .subscribe()
-
-  return () => supabase.removeChannel(subscription)
-}
-```
-
-### Supabase table schema
-```sql
--- instrument_catalogue table
--- Schema mirrors InstrumentCatalogueEntry exactly
--- Seed from /constants/instrumentCatalogue.ts on first deploy
-
-CREATE TABLE instrument_catalogue (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  ticker TEXT,
-  isin TEXT,
-  type TEXT NOT NULL,
-  bucket TEXT NOT NULL,
-  tier INTEGER NOT NULL,
-  role TEXT NOT NULL,
-  residence_geographies TEXT[] NOT NULL,
-  domicile TEXT NOT NULL,
-  regulatory_regime TEXT NOT NULL,
-  eligible_wrappers TEXT[] NOT NULL,
-  currency TEXT NOT NULL,
-  platforms JSONB NOT NULL,
-  description TEXT NOT NULL,
-  why TEXT NOT NULL,
-  expense_ratio TEXT,
-  ter_footnote BOOLEAN NOT NULL DEFAULT false,
-  kashe_score INTEGER NOT NULL DEFAULT 50,  -- 0-100
-  risk_tier TEXT NOT NULL,
-  liquidity_horizon TEXT NOT NULL,
-  risk_warning TEXT,
-  tags TEXT[] NOT NULL,
-  added_at DATE NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  last_verified DATE,           -- when PM last reviewed this entry
-  next_review_due DATE          -- drives review_queue
-);
-
--- review_queue view — what PM sees in Supabase dashboard
-CREATE VIEW review_queue AS
-SELECT id, name, expense_ratio, last_verified, next_review_due
-FROM instrument_catalogue
-WHERE next_review_due <= CURRENT_DATE
-  AND is_active = true
-ORDER BY next_review_due ASC;
-```
-
-### KasheScore calculation
-```typescript
-// Calculated and stored by PM in Supabase dashboard
-// Not calculated in app — editorial decision
-
-function calculateKasheScore(entry: InstrumentCatalogueEntry): number {
-  let score = 0
-
-  // Cost efficiency (25pts)
-  const ter = parseFloat(entry.expenseRatio ?? '99')
-  if (ter === 0)      score += 25
-  else if (ter < 0.10) score += 25
-  else if (ter < 0.25) score += 20
-  else if (ter < 0.50) score += 15
-  else if (ter < 1.00) score += 8
-  else                score += 2
-  // No TER (govt scheme, pension): 25pts
-  if (!entry.expenseRatio && entry.type !== 'etf') score += 25
-
-  // Diversification quality (25pts)
-  // Set manually based on holdings count + index breadth
-  // VWCE/VWRL: 25  |  CSPX: 18  |  Thematic: 8  |  Direct equity: 2
-
-  // Liquidity/accessibility (20pts)
-  const platformCount = entry.platforms.length
-  if (platformCount >= 4) score += 20
-  else if (platformCount >= 2) score += 15
-  else score += 8
-
-  // Regulatory strength (15pts)
-  const strongRegimes = ['UCITS', 'SEBI', 'SEC', 'FCA', 'BaFin', 'MoF_IN', 'EPFO']
-  if (strongRegimes.includes(entry.regulatoryRegime)) score += 15
-  else if (entry.regulatoryRegime === 'exchange_listed') score += 8
-  else if (entry.regulatoryRegime === 'unregulated') score += 0
-  else score += 10
-
-  // Track record (15pts) — based on addedAt as proxy
-  // Set manually by PM based on fund inception date
-
-  return Math.min(100, score)
-}
+Progressive UI:
+  Show results immediately after upload (Layer 1 matched)
+  Background queue drains over subsequent days
+  UI updates reactively as enrichment completes (Zustand)
 ```
 
 ---
@@ -474,7 +376,7 @@ investment_transfer is wealth-building, not consumption
 
 ---
 
-## FIRE Engine — Full Spec
+## FIRE Engine — Full Spec [V2]
 
 ### Core formula
 ```
@@ -485,12 +387,6 @@ Projection formula:
   FV = PV × (1 + r)^n + PMT × ((1 + r)^n - 1) / r
   Solve for n where FV >= FIRE number
 
-  PV  = current portfolio value (excludes unvested stock,
-        equity_crowdfunding/angel, primary residence)
-  PMT = monthly savings / investments
-  r   = monthly equivalent of annual return
-        (1 + annualReturn)^(1/12) - 1
-
 yearsToFIRE = n / 12
 projectedFIREYear = currentYear + yearsToFIRE
 ```
@@ -498,14 +394,9 @@ projectedFIREYear = currentYear + yearsToFIRE
 ### Inflation adjustment
 ```
 All monetary values inflation-adjusted to today's terms.
-targetMonthlySpend is in today's money.
-Projection shows real purchasing power, not nominal.
-
-Inflation rates — from /constants/fireDefaults.ts:
+Inflation rates from /constants/fireDefaults.ts:
   NL: 3.0%  IN: 5.0%  GB: 3.0%  US: 3.0%
   DE: 2.5%  FR: 2.5%  BE: 3.0%  OTHER: 3.5%
-  Source: conservative long-term planning assumptions.
-  Not current CPI. User can always override.
 ```
 
 ### Mortgage step-down
@@ -513,296 +404,74 @@ Inflation rates — from /constants/fireDefaults.ts:
 If mortgage liability exists with fixed end date:
   Before mortgageEndDate:  targetMonthlySpend (unchanged)
   From mortgageEndDate:    targetMonthlySpend - monthlyMortgagePayment
-
-  FIRE number recalculated for each phase:
-    Phase 1 FIRE number = currentSpend × 300
-    Phase 2 FIRE number = reducedSpend × 300
-  Projection solves across both phases.
-
-  Surfaced in UI:
-    "Your mortgage ends in [year] — this reduces your
-     required monthly spend by ~€[X] from that point"
-```
-
-### FIRE inputs model
-```typescript
-interface FIREInputs {
-  currentPortfolioValue: number
-  monthlyInvestmentAmount: number
-  targetMonthlySpendRetirement: number
-  currentAge: number
-  expectedAnnualReturnPct: number     // default 7.0
-  inflationRatePct: number            // from fireDefaults by country
-  mortgageEndDate?: Date
-  monthlyMortgagePayment?: number
-}
-```
-
-### FIRE outputs model
-```typescript
-interface FIREOutputs {
-  fireNumber: number
-  yearsToFIRE: number
-  projectedFIREYear: number
-  requiredMonthlySavings: number
-  safeWithdrawalAmount: number
-  currentTrajectoryYear?: number
-  portfolioAtFIRE: number
-  assumptions: FIREAssumptions
-}
-
-interface FIREAssumptions {
-  safeWithdrawalRatePct: 4            // locked, not editable
-  expectedReturnPct: number
-  inflationRatePct: number
-  inflationCountry: string
-  primaryResidenceExcluded: true
-  unvestedStockExcluded: true
-  illiquidAlternativesExcluded: true
-}
-```
-
-### FIRE scope
-```
-Household mode (default):
-  Aggregate all OWNER + MANAGED profile assets
-  PARTNER: V2 only
-
-Individual mode:
-  Filter assets to selected profileId only
-```
-
-### Exclusions from FIRE number
-```
-Always excluded:
-  Unvested employer stock
-  equity_crowdfunding, angel_investment, venture_fund
-  Primary residence (out of scope V1)
-
-Included despite being Locked:
-  PPF / EPF — real, realisable value at retirement
-  FDs — included at maturity projection
 ```
 
 ---
 
-## fireDefaults.ts
+## AI Insight Engine
 
-```typescript
-// /constants/fireDefaults.ts
-export const FIRE_INFLATION_DEFAULTS: Record<string, number> = {
-  NL: 3.0,   // Netherlands — EC forecast
-  IN: 5.0,   // India — RBI 4% target, structural ~5%
-  GB: 3.0,   // United Kingdom
-  US: 3.0,   // United States
-  DE: 2.5,   // Germany
-  FR: 2.5,   // France
-  BE: 3.0,   // Belgium
-  OTHER: 3.5 // Conservative fallback
-}
+### Budget cap
+```
+FREE_MONTHLY_LIMIT:  10,000 input tokens
+PAID_MONTHLY_LIMIT: 100,000 input tokens
 
-export const FIRE_RETURN_DEFAULT = 7.0
-// 7% blended conservative:
-//   Indian equity (EUR real): ~8.5%
-//   European equity: ~7–8%
-//   Blended 60/40: ~8% → 7% for conservatism
-
-export const FIRE_SWR = 4.0
-// Bengen rule. Fixed. Not user-editable.
-
-export const FIRE_MULTIPLIER = 300
-// = 1/SWR * 12 = 300
+isWithinBudget check: inputTokensThisMonth < limit × 0.90
+When exceeded: return { budgetExceeded: true }
+No hard paywall. Soft banner only.
+Existing cached insights remain visible.
 ```
 
----
+### Insight generation rules
+```
+One call per app open maximum.
+Minimum 1 hour between calls for same insight type.
+Generate ONLY highest-priority stale insight.
+Priority: MARKET_EVENT → PORTFOLIO_HEALTH → INVESTMENT_OPPORTUNITY
+FIRE_TRAJECTORY: V2, skip entirely in V1.
 
-## PostHog Event Taxonomy — Four Learning Loops
-
-All events anonymised. No PII. Never user-identifiable.
-
-### Loop 1 — Catalogue freshness
-```typescript
-// Instrument discovery interactions
-posthog.capture('instrument_tapped', {
-  instrument_id: string,
-  tier: DiscoveryTier,
-  bucket: InstrumentBucket,
-  geography: GeographyCode,
-  risk_profile: RiskProfileType,
-  kashe_score: number,
-})
-
-posthog.capture('instrument_added', {
-  instrument_id: string,
-  source: 'discovery' | 'manual',
-  tier: DiscoveryTier,
-  bucket: InstrumentBucket,
-})
-
-posthog.capture('instrument_skipped', {
-  instrument_id: string,
-  position: number,  // position in list when skipped
-  tier: DiscoveryTier,
-})
+Check lastInsightCheck before any call.
 ```
 
-### Loop 2 — Spend category accuracy
-```typescript
-posthog.capture('category_corrected', {
-  merchant_norm: string,        // normalised, never raw
-  from_category: SpendCategory,
-  to_category: SpendCategory,
-  geography: GeographyCode,
-  categorisation_source: 'layer1' | 'layer2' | 'layer3',
-})
+### AI privacy rules (non-negotiable)
 ```
+NEVER send raw transactions
+NEVER send absolute monetary values
+NEVER send merchant names to insight API
+Send ONLY: category totals, bucket percentages, savings rate
+Send ONLY: portfolio allocation percentages, instrument types
 
-### Loop 3 — AI insight quality
-```typescript
-posthog.capture('insight_viewed', {
-  insight_type: InsightType,
-  trigger: string,
-  risk_profile: RiskProfileType,
-})
+SpendSummaryForAI:
+  totalSpendRange: 'under_2k' | '2k_5k' | 'over_5k'  // range not exact
+  byCategory: Record<SpendCategory, number>             // totals OK
+  comparisonVsLastMonth: number                         // percentage only
+  anomalies: string[]                                   // "eating_out 34% above avg"
+  monthYear: string
 
-posthog.capture('insight_actioned', {
-  insight_type: InsightType,
-  action_type: string,  // 'view_suggestions' | 'open_fire' etc.
-})
-
-posthog.capture('insight_dismissed', {
-  insight_type: InsightType,
-  time_visible_ms: number,  // how long before dismissed
-})
-```
-
-### Loop 4 — Monthly review quality
-```typescript
-posthog.capture('monthly_review_opened', {
-  month: string,  // '2026-03'
-  sections_scrolled: number,  // how far they read
-})
-
-posthog.capture('monthly_review_section_read', {
-  section: 'whereYouStand' | 'howMoneyWorking' | 
-           'priority' | 'fireUpdate' | 'watchlist',
-  month: string,
-})
-```
-
----
-
-## AI Insight Engine — Full Spec
-
-### Five insight types, priority ordered
-
-```
-1. MARKET_EVENT_ALERT      time-sensitive, web search
-2. PORTFOLIO_HEALTH        action-needed, local calc + Claude
-3. FIRE_TRAJECTORY         important, not urgent
-4. INVESTMENT_OPPORTUNITY  helpful, fully templated, zero API cost
-5. MONTHLY_REVIEW          scheduled, own card in Invest tab
-
-One insight shows in strip at a time.
-Priority order determines which shows when multiple exist.
-Monthly Review has its own card — never competes with strip.
-```
-
-### Client-side budget enforcement
-
-```
-MONTHLY_BUDGET_EUR = 5.00
-
-AIUsageRecord:
-  monthYear: string        // 2026-03
-  totalTokensInput: number
-  totalTokensOutput: number
-  estimatedCostEUR: number
-  callCount: number
-  lastUpdated: Date
-
-Before every Claude call:
-  Check usage.estimatedCostEUR + estimatedCallCost vs budget
-  If over: return { error: BUDGET_EXCEEDED, resetsOn: ... }
-  If under: call Claude, log usage, return response
-
-When budget exceeded: insight strip does not render.
-No error shown to user. Logged internally for PM visibility.
-```
-
-### API key security
-
-```
-API key stored in encrypted storage — NEVER in app bundle.
-Never in source code. Never in GitHub.
-
-Setup flow: Settings → AI Features → Enter API key
-Stored via react-native-encrypted-storage (AES-256)
+PortfolioSummaryForAI:
+  allocationByBucket: Record<string, number>            // percentages only
+  totalPositionRange: 'under_100k' | '100k_500k' | 'over_500k'
+  riskProfile: RiskProfileType
+  underfundedBuckets: string[]
+  savingsRate: number
 ```
 
 ### Insight 1 — Market Event Alert
-
 ```
 Trigger: once per 24 hours on app open
-Source:  Claude API + web search tool enabled
-Cost:    ~0.01–0.02 EUR per call
+Model:   claude-haiku-4-5-20251001 (with web search enabled)
+Cost:    ~0.025 EUR per call (includes discovery pass)
 Cache:   24 hours
 
-holdingsContext — percentages only, never absolute values:
-  Growth bucket: X% of live portfolio
-    EU/US equity: X%
-    India equity: X%
-    Employer stock: X% (sector: Y)
-  Stability bucket: X%
-  Locked bucket: X%
-  Currency exposure: X% INR, X% EUR etc.
-
-RESEARCH TIERS:
-TIER 1 — AUTHORITATIVE:
-  RBI, SEBI, AMFI, NSE, BSE official announcements
-  ECB, Federal Reserve statements
-  Reuters, Bloomberg, Associated Press
-  Financial Times, Wall Street Journal
-  Economic Times, Mint, Business Standard
-  NRC Financieel Dagblad (Netherlands context)
-  Morningstar, S&P Global, Moody's
-  Capitalmind / Deepak Shenoy (Indian markets)
-  Freefincal (Indian FIRE / MF focused)
-
-TIER 2 — ANALYSIS:
-  Seeking Alpha, ValueResearch, Moneycontrol
-  Bogleheads forums, Zerodha Varsity community
-
-TIER 3 — SOCIAL:
-  Reddit: r/IndiaInvestments, r/DutchFIRE, r/EuropeFIRE,
-          r/financialindependence, r/wallstreetbets
-  Stocktwits: bullish/bearish ratio for held stocks
-
-Prompt rules:
-  Run 5–7 searches across tiers.
-  Find ONE most actionable event.
-  Return null if nothing material in 48 hours.
-  Never fabricate. Never recommend buy/sell.
-
-JSON response:
-{
-  headline: string,          // max 10 words
-  body: string,              // max 40 words
-  holdingType: string,
-  source: string,
-  sourceUrl: string,
-  sentiment: 'bullish' | 'bearish' | 'mixed' | 'neutral',
-  confidence: 'high' | 'medium' | 'low',
-  forumSignal: { summary: string, platforms: string[] } | null
-} | null
+Research tier system, confidence scoring, instrument-class
+source routing — see ai-insights.md for full spec.
 ```
 
 ### Insight 2 — Portfolio Health Alert
-
 ```
 Trigger: data change OR weekly check
-Source:  local calculation + Claude for narrative
+Model:   claude-sonnet-4-20250514 (no web search)
 Cost:    ~0.002 EUR per call
+Cache:   invalidated on holdings change
 
 Trigger conditions (any one sufficient):
   Growth bucket <50% (>10% below target per risk profile)
@@ -812,32 +481,12 @@ Trigger conditions (any one sufficient):
   Monthly invested < target * 0.8
   INR weakened >3% vs EUR in 90 days + India >20%
   Vesting event within 30 days
-
-Output: { headline, body, action | null }
 ```
 
-### Insight 3 — FIRE Trajectory Change
-
+### Insight 3 — Investment Opportunity
 ```
-Trigger: projected FIRE year shifts >6 months vs last month
-Both directions trigger — good news too.
-
-Context includes:
-  previousProjectedYear, currentProjectedYear
-  shiftMonths, direction ('earlier' | 'later')
-  spendChangePct, investmentChangePct, portfolioChangePct
-  mortgageStepDownOccurring: boolean
-
-Output: { headline, body, action | null }
-Max 10 word headline, 40 word body.
-```
-
-### Insight 4 — Investment Opportunity
-
-```
-Trigger: savingsRate >20% AND investment_transfer < target * 0.8
-Source:  local calculation only
 Cost:    ZERO — fully templated, no Claude call
+Trigger: savingsRate >20% AND investment_transfer < target * 0.8
 
 Template:
   headline: "{amount} uninvested this month"
@@ -846,65 +495,39 @@ Template:
   action: VIEW_SUGGESTIONS → opens InstrumentDiscoverySection
 ```
 
-### Insight 5 — Monthly Review
-
+### Insight 4 — Monthly Review
 ```
 Trigger: first app open of new calendar month
-Minimum: 3 months spend + portfolio data
-Source:  rich Claude API call, structured JSON output
-Cost:    ~0.008 EUR per call (largest prompt)
+Minimum: 3 months spend + 1 month portfolio data
+Model:   claude-sonnet-4-20250514 (no web search)
+Cost:    ~0.008 EUR per call
 Cache:   entire calendar month — never regenerates mid-month
 
-Context sent to Claude (percentages only, no absolute values):
-  Portfolio allocation by bucket
-  Spend last month vs 3-month average
-  FIRE progress and projection (if set up)
-  Protection coverage months
-  Investment plan gap
-  Whether mortgage step-down occurred
-  Risk profile
-  KasheScore of held instruments (as quality signal)
+Context: percentages only, no absolute values
+  allocationByBucket, spendLastMonthVs3MonthAvg,
+  protectionCoverageMonths, investmentPlanGapPct,
+  mortgageStepDownOccurredThisPeriod,
+  dataMonthsAvailable: { spend, portfolio }
 
-JSON response:
-{
-  whereYouStand: string,
-  howMoneyIsWorking: {
-    growth: string,
-    stability: string,
-    locked: string,
-    protection: string,
-  },
-  thisMonthsPriority: {
-    headline: string,
-    reasoning: string,
-    bucketTarget: 'GROWTH' | 'STABILITY' | 'LOCKED' | null,
-  },
-  fireUpdate: { headline: string, detail: string } | null,
-  nextMonthWatchlist: string[],  // 2–3 items max
-}
-
-Prompt rules:
-  Specific — use the data, not generalities.
-  Never recommend specific funds by name.
-  Category-level guidance only.
-  Warm but direct — no jargon.
-  If data insufficient for a section: say so honestly.
+If data insufficient for any section: return null for that field.
+Never fabricate. Never pad with generalities.
 ```
 
-### Cache management
+---
+
+## Cache Management
 
 ```
-MARKET_EVENT_ALERT:     expires 24 hours
-PORTFOLIO_HEALTH:       expires when holdings data changes
-FIRE_TRAJECTORY:        expires when FIRE inputs change
-INVESTMENT_OPPORTUNITY: expires when investment_transfer changes
-MONTHLY_REVIEW:         expires at start of next calendar month
+MARKET_EVENT_ALERT:     expiresAt = generatedAt + 24h
+PORTFOLIO_HEALTH:       invalidated on holdings data change
+INVESTMENT_OPPORTUNITY: invalidated on investment_transfer change
+MONTHLY_REVIEW:         invalidated at midnight on 1st of next month
 
-triggerHash: hash the data that triggers each insight.
-On bucket reassign: invalidate PORTFOLIO_HEALTH immediately.
-On new CSV upload: invalidate relevant insights.
-On FIRE inputs change: invalidate FIRE_TRAJECTORY.
-On new month: invalidate MONTHLY_REVIEW (generate fresh).
+Implementation:
+  Insight has expiresAt field (ISO string)
+  On app open: compare expiresAt vs now
+  If expired: regenerate (subject to budget + throttle)
+  On bucket reassign: immediately invalidate PORTFOLIO_HEALTH
 ```
 
 ---
@@ -928,15 +551,20 @@ Finnhub:       news + prices, key required, 60/min
 [NOT YOURS] Coverage score (removed V1)
 [NOT YOURS] Property equity (out of scope V1)
 [V2] ML categorisation, open banking, Supabase Edge Functions
-     (V2 adds Edge Function for catalogue freshness — not V1)
 [V2] Historical performance charts
 [V2] Year-end wrapped generation
+[V2] FIRE engine integration (types built, not used in V1)
 [NEVER] Buy/sell recommendations
 [NEVER] Regulated advice
 [NEVER] Affiliate links
 [NEVER] KasheScore shown to user as a number
 [NEVER] Crypto suggestions (track_only — never suggest)
 [NEVER] Equity crowdfunding suggestions (track_only)
+[NEVER] Raw transactions sent to Claude API
+[NEVER] Clearbit sent user ID, amounts, dates, or any context
+[NEVER] Merchant enrichment on Layer 1 matches
+[NEVER] Partial CSV imports
+[NEVER] Raw CSV files written to disk
 ```
 
 ---
@@ -944,44 +572,37 @@ Finnhub:       news + prices, key required, 60/min
 ## Your Output Files
 
 ```
-/types/instrumentCatalogue.ts    ✅ Session 09 — full type system
-/types/asset.ts
-/types/liability.ts
-/types/transaction.ts
-/types/dataSource.ts
-/types/insight.ts
-/types/portfolio.ts
-/types/investmentPlan.ts
-/types/fire.ts
+/constants/merchantKeywords.ts     ✅ Session 12
+/constants/fireDefaults.ts         ✅ Session 11 (V2 foundation)
 
-/constants/instrumentCatalogue.ts  ✅ Session 09 — ~40 entries
-/constants/fireDefaults.ts
-/constants/merchantKeywords.ts     Session 12 — geography-aware keywords
+/services/storageService.ts        ✅ Session 12
+/services/secureStorageAdapter.ts  ✅ Session 12
+/services/spendCategoriser.ts      ✅ Session 12
+/services/csvParser.ts             ✅ Session 12
+/services/aiInsightService.ts      ⬜ Session 12 remaining
+/services/analyticsService.ts      ⬜ Session 12 remaining
 
-/services/catalogueService.ts      Session 12 — Supabase + static fallback
-/services/dataSource.ts
-/services/csvDataSource.ts
-/services/universalParser.ts
-/services/salarySlipParser.ts
-/services/priceRefresh.ts
-/services/amfiNavFeed.ts
-/services/fxRefresh.ts
-/services/portfolioCalc.ts
-/services/savingsRate.ts
-/services/spendCategoriser.ts      Session 12 — Layer 1/2/3 pipeline
-/services/fireEngine.ts
-/services/aiInsights.ts
-/services/budgetCap.ts
+/store/spendStore.ts               ✅ Session 12
+/store/portfolioStore.ts           ✅ Session 12
+/store/insightsStore.ts            ✅ Session 12
+/store/householdStore.ts           ✅ Session 12
+/store/auditStore.ts               ✅ Session 12
 
-/store/portfolioStore.ts
-/store/spendStore.ts
-/store/investStore.ts
-/store/insightsStore.ts
+/hooks/useSpend.ts                 ⬜ Session 12 remaining
+/hooks/usePortfolio.ts             ⬜ Session 12 remaining
+/hooks/useInsights.ts              ⬜ Session 12 remaining
+/hooks/useHousehold.ts             ⬜ Session 12 remaining
+/hooks/useInstrumentCatalogue.ts   ⬜ Session 12 remaining
 
-/hooks/usePortfolio.ts
-/hooks/useSpend.ts
-/hooks/useInvestmentPlan.ts
-/hooks/useInsights.ts
-/hooks/useFirePlanner.ts
-/hooks/useInstrumentCatalogue.ts   Session 12 — catalogueService wrapper
+Not building in V1 (spec only):
+/types/asset.ts                    ⬜ types spec in data-architecture.md
+/types/liability.ts                ⬜ types spec in data-architecture.md
+/services/salarySlipParser.ts      ⬜ Session 14+
+/services/priceRefresh.ts          ⬜ Session 13+
+/services/amfiNavFeed.ts           ⬜ Session 13+
+/services/fxRefresh.ts             ⬜ Session 13+
+/services/portfolioCalc.ts         ⬜ Session 13+
+/services/savingsRate.ts           ⬜ Session 13+
+/services/fireEngine.ts            ⬜ V2
+/services/catalogueService.ts      ⬜ V2 (Supabase)
 ```
