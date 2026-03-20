@@ -1,7 +1,7 @@
 # Kāshe — CLAUDE-experience.md
 *Team Member 2: Experience & Delight*
 *Read CLAUDE.md first, then this file.*
-*Last updated: 11 March 2026 — font refs corrected (Syne/DM Sans → SpaceGrotesk/Inter), PortfolioHoldingRow icon system locked (SVG, no emoji), Zone 4 spec updated*
+*Last updated: 20 March 2026 — font refs corrected, FIRE screen marked V2.*
 
 ---
 
@@ -1300,7 +1300,11 @@ PARTIAL STATE (1–2 months of data):
 
 ---
 
-## FIRE Planner Screen — Full Spec
+## FIRE Planner Screen — Full Spec [V2 — DO NOT BUILD IN V1]
+
+*This screen is deferred to V2. The spec is preserved here for when V2 is built.*
+*In V1: /app/invest/fire.tsx does not exist. FIRETeaserCard is built but not rendered.*
+*fireIsSetUp in UserFinancialProfile affects monthly review content only.*
 
 **Route:** `/app/insights/fire.tsx`
 **Job:** "Let me model my path to financial independence —

@@ -1,6 +1,12 @@
 # Kāshe — Product Requirements Document
 *Version 1.0 — February 2026*
 *Status: Section 1–3 (Home) complete. Spend, Portfolio, Insights TBD.*
+*CORRECTION NOTE (20 March 2026): Typography in section 1.3 is stale.*
+*Correct fonts: Space Grotesk (display/numbers) + Inter (body/UI).*
+*Syne and DM Sans are retired — do not use them. See design-system.md.*
+*CORRECTION NOTE (20 March 2026): Section 1.1 audience broadened.*
+*Kāshe is for ALL globally mobile professionals, not India-specific.*
+*See CLAUDE.md for the current product definition.*
 
 ---
 
@@ -52,11 +58,12 @@ Danger:             #FF5C5C
 Warning:            #FFB547
 Success:            #C8F04A   (same as accent)
 
-TYPOGRAPHY
-Display/Numbers:    Syne 800, tight letter-spacing
-Headings:           Syne 700
-Body:               DM Sans 400/500
-Labels:             DM Sans 500, uppercase, tracked
+TYPOGRAPHY — CORRECTED (20 March 2026, see design-system.md)
+Display/Numbers:    Space Grotesk 700, tight letter-spacing
+Headings:           Space Grotesk 600
+Body:               Inter 400/500
+Labels:             Inter 500, uppercase, tracked
+NOTE: Syne and DM Sans are retired. Never use them.
 
 LOGO MARK
 6-point asterisk. 5 strokes: #8A8A85. 1 stroke (the k): #C8F04A.
@@ -87,7 +94,8 @@ State:              Zustand (lightweight, simple)
 Storage:            react-native-encrypted-storage
                     (iOS Keychain / Android Keystore)
 Auth:               Google OAuth via expo-auth-session
-Fonts:              Expo Google Fonts (Syne + DM Sans)
+Fonts:              Expo Google Fonts (Space Grotesk + Inter)
+                    NOTE: Syne + DM Sans retired Session 01.
 Blur effect:        @react-native-community/blur (iOS)
                     Semi-transparent overlay (Android)
 Analytics:          PostHog (anonymised, no PII)

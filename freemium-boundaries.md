@@ -1,8 +1,9 @@
 # Kāshe — Freemium Boundaries
 *Read CLAUDE.md before this file.*
 *This file defines what is FREE, FREEMIUM, and PREMIUM in V1.*
-*Last updated: 19 March 2026 — Institution count updated to 24.
-Merchant enrichment opt-in added. Beta API key model added.*
+*Last updated: 20 March 2026 — Session 12 complete.*
+*UserFinancialProfile + sophistication score added to V1 scope.*
+*PM dashboard + snapshot export added to V1 scope (Session 16.5).*
 
 ---
 
@@ -234,9 +235,13 @@ V1 (current build):
   Zustand stores with secureStorageAdapter
   Hooks — clean UI boundary layer
   AI insights (4 types — FIRE_TRAJECTORY is V2)
+  UserFinancialProfile — intelligence spine (DL-09)
+  Portfolio sophistication score — drives insight depth
   PostHog analytics (built disabled, PM reviews before enabling)
   Onboarding (10 screens) — Session 14
   Settings (stub in Session 11, full in Session 16)
+  PM dashboard — 5-second long press on KasheAsterisk (Session 16.5)
+  Snapshot export — JSON + summary via native share sheet (Session 16.5)
   Single OWNER profile
   Data encrypted locally via expo-secure-store
   Education catalogue in settings.tsx
