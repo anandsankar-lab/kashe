@@ -1,11 +1,11 @@
 # Kāshe — CLAUDE.md
 *Read this before starting any task in this project.*
-*Last updated: 19 March 2026 — Session 12 partial complete.
-Data layer engine built (DL-01 through DL-05).
-Tech stack updated: Papa Parse, Zustand added.
-File structure updated. CSV parsing philosophy locked.
-Caching model locked. Atomic imports locked.
-Joint account model locked. Audit log locked.*
+*Last updated: 20 March 2026 — Session 12 complete.*
+*Data layer engine fully built: DL-01 through DL-09.*
+*UserFinancialProfile architecture introduced — central intelligence spine.*
+*Analytics finalised: events + user properties + PostHog key live.*
+*Sophistication score added. T11 + T12 triggers added.*
+*FIRE confirmed V2 only — no FIRE UI anywhere in V1.*
 
 ---
 
@@ -72,6 +72,7 @@ picture, find it genuinely insightful, and willingly pay for it?
 - Service → Store → Hook → Component. Never skip the chain.
 - Atomic imports: all-or-nothing. Never partial state.
 - Raw CSV files never written to disk. Parse in memory only.
+- UserFinancialProfile is the spine of all intelligence. Read from it. Never re-derive inline.
 
 ---
 
@@ -94,14 +95,18 @@ Animation:      React Native Animated API only
                 react-native-reanimated — banned from web builds
 Price APIs:     Alpha Vantage / Finnhub / AMFI NAV / CoinGecko
 FX:             ExchangeRate-API
-AI Insights:    Claude API (claude-haiku-4-5-20251001 for insights)
+AI Insights:    Claude API (claude-haiku-4-5-20251001 for all insight types)
                 Hard budget cap: client-side token enforcement
                 API key in encrypted storage — never in bundle
                 NEVER send raw transactions — aggregated percentages only
                 One call per app open maximum
+                12-hour generation windows: A (00:00–11:59) B (12:00–23:59)
+                Max 2 insight generations per day per user
 Merchant enrich: Clearbit (merchant name only, opt-in) →
                  Claude API fallback (same privacy rules)
-Analytics:      PostHog (anonymised, zero PII) — four learning loops
+Analytics:      PostHog EU cloud (eu.posthog.com), project 144615
+                PostHog key: in analyticsService.ts (write-only, safe in client)
+                anonymised, zero PII — four learning loops
                 ANALYTICS_ENABLED = false until PM review
 Backend:        Supabase
                 V1b: couple sync (E2E encrypted)
@@ -178,7 +183,7 @@ Invest tab:       InvestmentPlanFull + MonthlyReviewCard
 **Four types in V1, priority ordered:**
 ```
 1. MARKET_EVENT_ALERT      Time-sensitive, web search, tiered sources
-2. PORTFOLIO_HEALTH        Action-needed, local calc + Claude
+2. PORTFOLIO_HEALTH        Action-needed, local calc + Claude narrative
 3. INVESTMENT_OPPORTUNITY  Helpful, zero API cost, fully templated
 4. MONTHLY_REVIEW          Scheduled, executive brief format
 (FIRE_TRAJECTORY is V2 — skip entirely in V1)
@@ -192,8 +197,64 @@ Send only aggregated category totals and percentages
 Send portfolio percentages, not absolute values
 One insight per API call — never generate all types at once
 One call per app open maximum
-Minimum 1 hour between calls for same insight type
+12-hour generation windows — max 2 per day
 Cache insights: 24 hours (insights), full calendar month (reviews)
+```
+
+---
+
+## UserFinancialProfile — The Intelligence Spine (LOCKED 20 March 2026)
+
+```
+Every insight, trigger, source selector, and analytics call reads from
+UserFinancialProfile stored in householdStore.financialProfile.
+
+Built by: /services/userProfileService.ts
+Stored in: householdStore.financialProfile
+Updated on: addTransactions, addHolding, updateHolding, setBucketOverride,
+            setProtection, setRiskProfile (if actively changed),
+            onboardingComplete, setMonthlyTarget, setFireInputs
+
+UserFinancialProfile feeds:
+  → getActiveSeedSources()    which sources to search
+  → evaluateAllTriggers()     which health checks fire
+  → buildHoldingsContext()    what context Claude receives
+  → analyticsService          all PostHog user properties
+  → aiInsightService          search depth + insight depth
+
+NEVER re-derive inline what is already in the profile.
+NEVER send the profile directly to Claude — use context builders.
+```
+
+---
+
+## Portfolio Sophistication Score (LOCKED 20 March 2026)
+
+```
+0–100 score computed from five components:
+  1. Vehicle diversity (0–25)     — distinct asset class categories
+  2. Liquidity balance (0–25)     — growth/stability/locked all funded
+  3. Protection coverage (0–20)   — emergency fund months
+  4. Investing consistency (0–15) — regular investing cadence
+  5. Geographic spread (0–15)     — multi-geography exposure
+
+Bands:
+  0–25:   'foundation'    — basics missing, health insight priority
+  26–50:  'building'      — progress, gaps remain
+  51–75:  'established'   — solid foundations
+  76–100: 'sophisticated' — diversified, consistent
+
+NEVER shown to user as a number.
+Drives: insight depth, PORTFOLIO_HEALTH framing, prompt conservatism.
+
+Key scenarios:
+  €500k all in savings accounts → sophisticationScore ~20
+    → T11_CASH_PILE_CONCENTRATION fires
+    → Insight: "Substantial savings eroding to inflation"
+
+  €100k overleveraged on illiquid/speculative → score ~15
+    → T12_LIQUIDITY_CONCENTRATION fires
+    → Insight: "Portfolio locked up — no liquid buffer"
 ```
 
 ---
@@ -205,273 +266,137 @@ Conservative   40% Growth / 40% Stability / 20% Locked
 Balanced       60% Growth / 20% Stability / 20% Locked
 Growth         80% Growth / 10% Stability / 10% Locked
 
-Default: RECOMMEND Balanced — never silently pre-select
-STATE 1: KasheAsterisk + "Balanced is a good starting point for most"
-Drives: targets, suggestions, health alerts
-Persisted in householdStore via secureStorageAdapter
+Default: RECOMMEND Balanced — never silently assume.
+Stored in: householdStore.riskProfile
+riskProfileActivelySet: true ONLY if user changed from Balanced default
 ```
 
 ---
 
-## Instrument Catalogue — LOCKED
+## Portfolio Tier — LOCKED (with hysteresis)
 
-### Three concepts
 ```
-RegulatoryRegime  Legal framework (UCITS/SEBI/SEC/FCA/BaFin/
-                  AFM/FSMA/RBI/EPFO/PFRDA/MoF_IN/
-                  exchange_listed/unregulated/other/unknown)
+Tier 1 (Starter):      < €25k      3 sources, seed only
+Tier 2 (Growing):      €25k–€100k  6 sources, discovery pass
+Tier 3 (Established):  €100k–€500k 10 sources, full tiered
+Tier 4 (Significant):  > €500k     14 sources, full + routing
 
-AccountWrapper    Tax structure (ISA/LISA/SIPP/Roth_IRA/401k/PPF/
-                  EPF/NPS/ELSS/NRE/NRO/FCNR/Pension_NL/bAV_DE/
-                  Pensioensparen_BE/taxable/other/unknown)
-
-InstrumentType    What it is (etf/index_fund/active_mutual_fund/
-                  bond_etf/direct_equity/fractional_equity/
-                  equity_crowdfunding/govt_savings_scheme/
-                  pension_scheme/crypto_spot/p2p_lending/
-                  other/unknown)
-```
-
-### CatalogueRole
-```
-suggest      → InstrumentDiscoverySection (shown to user)
-track_only   → portfolio only, NEVER suggested
-educational  → FinancialEducationSection only
-
-TRACK_ONLY forever: equity_crowdfunding, angel_investment,
-  venture_fund, private_equity, nft, stock_options, futures,
-  structured_product, employer_rsu, employer_espp, crypto_spot
+Tier up:   immediately when value crosses floor
+Tier down: only when value is 20% BELOW the floor
+           (prevents oscillation on market movements)
 ```
 
 ---
 
-## CSV Parsing Philosophy — LOCKED (19 March 2026)
+## Analytics — LOCKED (20 March 2026)
 
 ```
-Papa Parse handles all mechanical CSV reading.
-Never write a custom CSV tokeniser.
+PostHog EU cloud. Project 144615.
+ANALYTICS_ENABLED = false — PM reviews before enabling.
 
-Smart field detector scores every column against field types.
-Never hardcode institution-specific parsing logic.
-Institution hints (lightweight header patterns) exist only
-to label the detected institution for display — not to control parsing.
+User properties: driven entirely by UserFinancialProfile
+  updateUserProperties(profile) — single call, all properties
+  Called by userProfileService after every profile update
 
-Post-parse confidence scoring:
-  Tier 1 (blocking): date, amount, debit/credit direction
-  Tier 2 (fallback OK): currency, description, merchant
-  Tier 3 (always fallback): reference, geography, isRecurring
-  If Tier 1 missing: hard fail (ParseError)
-  If Tier 1 present: always ParseSuccess, warn on low Tier 2/3
+Events (17 total):
+  Loop 1: instrument_tapped, instrument_added, instrument_skipped
+  Loop 2: category_correction, layer1_promotion_candidate
+  Loop 3: insight_viewed, insight_actioned, insight_dismissed,
+          insight_generation_result, monthly_review_opened,
+          monthly_review_section_read
+  Loop 4: csv_uploaded
+  PM visibility: portfolio_tier_changed, milestone_reached,
+                 pm_snapshot_exported
+  General: screen_viewed, risk_profile_set, app_opened
 
-Atomic imports — all-or-nothing:
-  Any failure mid-import: entire batch rolled back
-  User shown error + re-upload request
-  Never partial state in spendStore
-
-24 supported institutions:
-  NL: ABN_AMRO, ING_NL, RABOBANK, BUNQ, SNS_BANK, N26
-  EU/Digital: REVOLUT, WISE
-  Investment: DEGIRO, IBKR
-  IN: HDFC_BANK, HDFC_SECURITIES, ICICI_BANK, SBI,
-      AXIS_BANK, KOTAK, ADITYA_BIRLA, ZERODHA, GROWW
-  UK: BARCLAYS, HSBC, MONZO
-  US: CHASE, SCHWAB
-  Fallback: UNKNOWN
-
-Unrecognised bank:
-  ParseError with REQUEST_SUPPORT_URL (Google Form)
-  User submits bank + country
-  PM prioritises new parsers from form data
+ZERO PII in any event. ZERO merchant names. ZERO amounts.
+injection_detected: NEVER sent to analytics — log locally only.
 ```
 
 ---
 
-## Spend Categorisation Pipeline — LOCKED
+## V1 / V2 / Never Scope
 
 ```
-Layer 3 (FIRST — user corrections always win — DEC-01):
-  merchantOverrides checked before anything else
-  User correction always beats keyword rulebook
+[V1 Built]
+  Four tabs fully built
+  CSV parsing — 24 supported institutions + smart detector
+  Security pipeline — sanitisation inside csvParser
+  Atomic imports
+  Spend categoriser — Layer 3 → Layer 1 → Layer 2
+  Merchant enrichment — Clearbit opt-in → Claude fallback
+  Zustand stores with secureStorageAdapter
+  Hooks — clean UI boundary layer
+  AI insight engine (5 files, 2383 lines)
+  UserFinancialProfile + userProfileService
+  Analytics (PostHog, disabled)
+  Sophistication score + T11/T12 triggers
+  Tiered source architecture
+  Onboarding (10 screens) — Session 14
+  Settings — Session 16
+  PM dashboard + snapshot export — Session 16.5
+  Single OWNER profile
+  BYOK API keys — one per beta tester
 
-Layer 1 (SECOND — fast, free, offline):
-  /constants/merchantKeywords.ts
-  Geography-aware: NL / IN / EU / GLOBAL
-  confidence: 1.0
+[V1b]
+  Couple sync (Supabase E2E encrypted)
+  PARTNER profile type activated
+  API key moves to Supabase Edge Functions
+  Push notifications (opt-in)
+  Server-side budget enforcement (replaces local-only)
+  PostHog → Supabase signal loop (previousDismissRate automated)
 
-Layer 2 (LAST — only for Layer 1 misses):
-  Option C: Clearbit merchant lookup (opt-in, name only)
-  Option A: Claude haiku fallback (if Clearbit misses)
-  Retry queue: 20/upload cap, 30/day drain, 3 attempt limit
-  Budget gated: always check isWithinBudget() first
-  After 3 failures: category = 'other', confidence = 0.3
+[V2]
+  FIRE planner screen (foundation types already built)
+  Open banking (Nordigen EU, Account Aggregator India, Plaid US)
+  ML spend categorisation
+  Tax field surface (data already captured in V1)
+  Historical portfolio performance charts
+  Property market estimate
+  Year-end wrapped
+  Conversational advisor
+  Historical insight log
+  Partner spend on Home
+  Supabase instrument catalogue live feed
+  Supabase merchant keywords live feed
 
-Layer 3 back-application:
-  User corrects any transaction → correction applied to ALL
-  past + future transactions from same merchantNorm
-  correctionCount >= 5 → Layer 1 promotion candidate logged
-```
-
----
-
-## Caching Model — LOCKED (19 March 2026)
-
-```
-Derived values cached in stores with lastCalculatedAt timestamp.
-Hooks check staleness on mount. 24-hour rule for time-based.
-Event-based invalidation is immediate (ignores time).
-
-Home:       portfolioStore.derived, 24h + event invalidation
-Spend:      spendStore.derivedSpend, 24h + immediate on import/edit
-            One month at a time — month switch = cache miss
-Portfolio:  portfolioStore.derived, 24h + event invalidation
-Insights:   per-insight type expiry (see ai-insights.md)
-            One Claude call per app open maximum
-```
-
----
-
-## Joint Account Model — LOCKED (19 March 2026)
-
-```
-DataSource.accountType: 'personal' | 'joint' | 'managed'
-Transaction.ownership: 'personal' | 'joint' | 'split'
-
-Joint imports:
-  DataSourceConfirmSheet always asks "Is this a joint account?"
-  Joint transactions: ownership: 'joint'
-  splitWithProfileId + splitRatio: 0.5 default
-
-Household view: joint transactions shown ONCE
-Individual view: personal + joint for that profile
-
-Deduplication:
-  Same joint account in two exports → compound key catches it
-  Indian bank format variations → fuzzy Dice coefficient
-  Probable duplicates → user confirmation (never silent)
-```
-
----
-
-## Audit Log — LOCKED (19 March 2026)
-
-```
-Every import logged in auditStore at profile level.
-Last 100 events retained. FIFO eviction.
-Never wiped except "delete all data" (Session 16).
-
-ImportAuditEvent: id, profileId, householdId, timestamp,
-  institution, transactionCount, duplicatesSkipped,
-  probableDuplicatesFound, layer2Queued, parseConfidence,
-  status ('success' | 'failed'), errorCode?
-```
-
----
-
-## Living Database — Three Pillars
-
-```
-Invest catalogue:  KasheScore quarterly + TER auto-flag weekly
-                   review_queue Supabase table (PM: 15 min/week)
-Spend categories:  PostHog corrections → Layer 1 promotion monthly
-Portfolio intel:   Monthly Review includes KasheScore of held instruments
-```
-
----
-
-## Four Learning Loops — LOCKED
-
-Quality baked in via KasheScore (objective). Behaviour supplements only.
-
-```
-Loop 1: Catalogue freshness — KasheScore + Edge Function + review_queue
-Loop 2: Spend accuracy — category_corrected → Layer 1
-Loop 3: AI insight quality — viewed/actioned/dismissed + time_visible
-Loop 4: Discovery signal — tapped/added/skipped (editorial, not algo)
-```
-
----
-
-## Onboarding Stack — 10 Screens
-```
-1. Welcome      Kāshe asterisk + tagline + Google OAuth
-2. Name         "What's your name?"
-3. Location     Country + base currency (drives geography filtering)
-4. Age          Skippable. Stored for V2 FIRE only.
-5. Risk Profile Conservative / Balanced / Growth
-                KasheAsterisk + "Balanced is a good starting point"
-6. Teach [+]    Static illustration
-7. First Add    Guided universal add sheet
-8. First Payoff Real data OR ghost
-9. Budget       Conditional on screen 7 upload success
-10. Complete    "Tap [+] anytime" → main app
-
-Screen 3+5 together drive:
-  → Geography-filtered instrument suggestions
-  → Education catalogue geography filter
-  → Spend merchant keyword set
-  → Balanced recommendation (or user changes it)
-
-Note on screen 4 (Age):
-  Stored in Profile.age — null if skipped
-  Used for FIRE engine (V2 only)
-  Never used for any V1 logic
-```
-
----
-
-## What NOT to Build
-```
-[V2]    FIRE planner screen (/app/invest/fire.tsx)
-[V2]    FIRETeaserCard on Invest tab
-[V2]    FIREProgress on Home
-[V2]    Open banking API sync
-[V2]    Push notifications
-[V2]    Partner spend on Home
-[V2]    Real price chart data (shell V1, data V2)
-[V2]    Tax field surface
-[V2]    Property market estimate
-[V2]    Couple sync (Supabase E2E)
-[V2]    ML spend categorisation (Layer 2 is Claude API in V1)
-[V2]    Conversational advisor
-[V2]    Historical insight log
-[V2]    Year-end wrapped
-[V2]    Algorithmic catalogue personalisation (editorial V1)
-[V2]    API connections in Sources screen
-[V2]    Contextual education tooltips (V1: settings.tsx only)
-[NEVER] Physical assets
-[NEVER] Tax filing or calculations
-[NEVER] Money transfers or payments
-[NEVER] Social features or comparisons
-[NEVER] Ads, affiliate links, data monetisation
-[NEVER] Generic market news feed
-[NEVER] Gamification
-[NEVER] Business finances
-[NEVER] Specific buy/sell recommendations
-[NEVER] Regulated financial advice
-[NEVER] Intl.NumberFormat
-[NEVER] react-native-reanimated in web builds
-[NEVER] @/ import alias
-[NEVER] Inline style objects
-[NEVER] Hardcoded hex colours in components
-[NEVER] Raw subtype keys in UI (use displayLabels.ts)
-[NEVER] KasheScore shown to user as a number
-[NEVER] Crypto suggested (track_only only)
-[NEVER] Equity crowdfunding suggested (track_only only)
-[NEVER] AsyncStorage used directly
-[NEVER] Raw SecureStore calls outside storageService.ts
-[NEVER] Raw transactions sent to Claude API
-[NEVER] FIRE UI in V1
-[NEVER] "Choose not to work" — use financial independence framing
-[NEVER] Partial CSV imports — atomic or nothing
-[NEVER] Raw CSV files written to disk — parse in memory only
-[NEVER] Services imported directly into components
-[NEVER] Derived values recalculated inline in components
-[NEVER] Clearbit sent any user data — merchant name only
-[NEVER] Merchant enrichment on Layer 1 matches — misses only
-[NEVER] Probable duplicates silently skipped
-[NEVER] Joint transactions shown twice in household view
-[NEVER] auditStore.clearAuditLog() except in "delete all data"
-[NEVER] ANALYTICS_ENABLED = true without PM review
+[NEVER]
+  Physical assets
+  Tax filing or calculations
+  Money transfers or payments
+  Social features or comparisons
+  Ads, affiliate links, data monetisation
+  Generic market news feed
+  Gamification
+  Business finances
+  Specific buy/sell recommendations
+  Regulated financial advice
+  Intl.NumberFormat
+  react-native-reanimated in web builds
+  @/ import alias
+  Inline style objects
+  Hardcoded hex colours in components
+  Raw subtype keys in UI (use displayLabels.ts)
+  KasheScore shown to user as a number
+  Sophistication score shown to user as a number
+  Crypto suggested (track_only only)
+  Equity crowdfunding suggested (track_only only)
+  AsyncStorage used directly
+  Raw SecureStore calls outside storageService.ts
+  Raw transactions sent to Claude API
+  FIRE UI in V1
+  "Choose not to work" — use financial independence framing
+  Partial CSV imports — atomic or nothing
+  Raw CSV files written to disk
+  Services imported directly into components
+  Derived values recalculated inline in components
+  Clearbit sent any user data — merchant name only
+  Merchant enrichment on Layer 1 matches
+  Probable duplicates silently skipped
+  Joint transactions shown twice in household view
+  auditStore.clearAuditLog() except in "delete all data"
+  ANALYTICS_ENABLED = true without PM review
+  UserFinancialProfile sent directly to Claude API
 ```
 
 ---
@@ -482,9 +407,8 @@ Note on screen 4 (Age):
 CSV only — no Excel, PDF, OFX
 Local-first storage — privacy by architecture
 expo-secure-store for all persistence — via storageService.ts
-secureStorageAdapter separate from storageService (single responsibility)
+secureStorageAdapter separate from storageService
 Google OAuth only — no passwords
-Encryption key = hash(OAuth token + device ID) [V2 adds E2E]
 4 tabs: Home / Spend / Portfolio / Invest
 No standalone Insights tab
 Tab 4 = Invest — planning, risk profile, discovery, monthly review
@@ -526,13 +450,21 @@ Option C (Clearbit) → Option A (Claude) fallback for enrichment
 Retry queue: 20/upload cap, 30/day drain, 3 attempt limit
 Derived cache in stores with lastCalculatedAt — not recalculated every render
 One month at a time for Spend cache — month switch = cache miss
-One Claude call per app open maximum for insights
+12-hour generation windows for insights — max 2 per day
 24h minimum between same insight type regeneration
 Joint accounts: ownership: 'joint', shown once in household view
 Audit log: every import at profile level, 100 events max, never wiped
 BYOK (bring your own key) for V1 beta — one key per tester
 ANALYTICS_ENABLED = false — PM reviews before enabling
 Data deletion: storageService.clear() + sign out (Session 16)
+UserFinancialProfile: single source of truth for all intelligence
+Sophistication score: 0–100 computed, never shown to user
+Portfolio tier: size-based with 20% hysteresis for tier-down
+financialVehicles drives source selection — not re-derived per call
+T11 (cash pile) + T12 (liquidity) triggers added to PORTFOLIO_HEALTH
+PM dashboard: 5-second long press on KasheAsterisk (Session 16.5)
+Snapshot export: JSON + readable summary via native share sheet
+PostHog dashboards: 4 (Spend Accuracy, Insight Quality, Catalogue, CSV)
 ```
 
 ---
@@ -544,7 +476,7 @@ Rules:
 - One commit per logical ticket
 - Always preview before committing
 - Never commit broken code
-- Never commit API keys or tokens
+- Never commit API keys or tokens (PostHog write-only key is OK in client)
 - Every commit includes code + updated MD files together
 - Git always run manually — never through Claude Code
 - MD files downloaded and replaced in full — never edited inline
@@ -566,17 +498,10 @@ Rules:
   /home          ✅ complete
   /spend         ✅ complete
   /portfolio     ✅ complete
-  /invest
-    RiskProfileCard.tsx            ✅
-    RiskProfileSheet.tsx           ✅
-    InvestmentPlanFull.tsx         ✅
-    MonthlyReviewCard.tsx          ✅
-    MonthlyReviewSheet.tsx         ✅ executive brief
-    FIRETeaserCard.tsx             ✅ built, NOT rendered [V2]
-    InstrumentDiscoverySection.tsx ✅
-    FinancialEducationSection.tsx  ✅ rendered in settings.tsx
+  /invest        ✅ complete
   /shared
     AppHeader.tsx         ✅ universal — all tabs
+    PMDashboard.tsx       ⬜ Session 16.5
     UniversalAddSheet.tsx ⬜ Session 14
     CSVUploadSheet.tsx    ⬜ Session 13
     DataSourceConfirmSheet.tsx ⬜ Session 13
@@ -591,36 +516,44 @@ Rules:
   colours.ts typography.ts spacing.ts formatters.ts
   featureFlags.ts mockData.ts displayLabels.ts
   instrumentCatalogue.ts  ✅
-  educationCatalogue.ts   ✅ 20 articles, 5 geographies
+  educationCatalogue.ts   ✅
   fireDefaults.ts         ✅ V2 foundation
-  merchantKeywords.ts     ✅ Session 12 — NL/IN/EU/GLOBAL
+  merchantKeywords.ts     ✅ Session 12
+  insightSources.ts       ✅ Session 12 — tiered source registry
+  insightTriggers.ts      ✅ Session 12 — 12 trigger conditions
+  insightPrompts.ts       ✅ Session 12 — prompt templates
 
 /types
   spend.ts ✅  portfolio.ts ✅  riskProfile.ts ✅
   instrumentCatalogue.ts ✅  fire.ts ✅ V2 foundation
+  userProfile.ts          ✅ Session 12 — UserFinancialProfile
 
 /services
-  storageService.ts       ✅ Session 12 — vault door
-  secureStorageAdapter.ts ✅ Session 12 — Zustand bridge
-  spendCategoriser.ts     ✅ Session 12 — Layer 1/2/3
-  csvParser.ts            ✅ Session 12 — smart detector
-  aiInsightService.ts     ⬜ Session 12 remaining
-  analyticsService.ts     ⬜ Session 12 remaining
+  storageService.ts         ✅ Session 12
+  secureStorageAdapter.ts   ✅ Session 12
+  spendCategoriser.ts       ✅ Session 12
+  csvParser.ts              ✅ Session 12
+  holdingsContextBuilder.ts ✅ Session 12
+  aiInsightService.ts       ✅ Session 12
+  analyticsService.ts       ✅ Session 12
+  userProfileService.ts     ✅ Session 12 (DL-09)
+  snapshotService.ts        ⬜ Session 16.5
+  shareService.ts           ⬜ Session 16.5
 
 /store
   spendStore.ts           ✅ Session 12
   portfolioStore.ts       ✅ Session 12
   insightsStore.ts        ✅ Session 12
-  householdStore.ts       ✅ Session 12
+  householdStore.ts       ✅ Session 12 (updated DL-09)
   auditStore.ts           ✅ Session 12
 
 /hooks
   useDataSources.ts       ✅
-  useSpend.ts             ⬜ Session 12 remaining
-  usePortfolio.ts         ⬜ Session 12 remaining
-  useInsights.ts          ⬜ Session 12 remaining
-  useHousehold.ts         ⬜ Session 12 remaining
-  useInstrumentCatalogue.ts ⬜ Session 12 remaining
+  useSpend.ts             ✅ Session 12
+  usePortfolio.ts         ✅ Session 12
+  useInsights.ts          ✅ Session 12
+  useHousehold.ts         ✅ Session 12
+  useInstrumentCatalogue.ts ✅ Session 12
 
 /context
   ThemeContext.tsx ✅ (useColorScheme() ONLY here)

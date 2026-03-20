@@ -1,10 +1,10 @@
 # Kāshe — Engineering Rules
 *Read this before starting any ticket. No exceptions.*
 *These rules apply to every agent, every session, every component.*
-*Last updated: 19 March 2026 — Session 12 complete.
-Data layer rules added: storage chain, caching model, CSV parser
-architecture, retry queue caps, atomic imports, merchant enrichment,
-joint account rules, audit log rules.*
+*Last updated: 20 March 2026 — Session 12 complete.*
+*UserFinancialProfile rules added: single intelligence spine.*
+*Analytics rules added: updateUserProperties pattern.*
+*AI insight engine rules added: budget, windows, wiring.*
 
 ---
 
@@ -28,6 +28,14 @@ Every piece of data or configuration has exactly one home.
 - Storage keys → `services/storageService.ts` STORAGE_KEYS
 - Supported institutions → `services/csvParser.ts` SupportedInstitution
 - Import audit log → `store/auditStore.ts`
+- Insight seed sources → `constants/insightSources.ts`
+- Insight trigger conditions → `constants/insightTriggers.ts`
+- Insight prompt templates → `constants/insightPrompts.ts`
+- User financial profile → `store/householdStore.ts` financialProfile
+  Built by: `services/userProfileService.ts`
+- PostHog user properties → `services/analyticsService.ts` updateUserProperties()
+  Source: UserFinancialProfile always. Never set properties manually.
+- Vehicle category taxonomy → `types/userProfile.ts` VEHICLE_CATEGORY_MAP
 
 If you find yourself defining the same thing in two places, stop.
 One of them is wrong. Fix the source, not the symptom.
@@ -45,6 +53,7 @@ They do NOT:
 - Write to storage directly (use storageService.ts)
 - Import from services/ directly (use hooks)
 - Import from store/ directly (use hooks)
+- Re-derive values already in UserFinancialProfile
 
 All of those decisions belong in hooks, services, or context.
 Components receive values via props and hooks. They render those values.
@@ -54,7 +63,7 @@ The hooks are the contract between data and UI.
 - `useTheme()` → colours, always, no exceptions
 - `useSpend()` → spend data and calculations
 - `usePortfolio()` → portfolio data and calculations
-- `useHousehold()` → profile and household state
+- `useHousehold()` → profile, household state, financialProfile
 - `useInsights()` → insight state and cache
 - `useFirePlanner()` → FIRE inputs and outputs [V2]
 - `useInstrumentCatalogue()` → catalogue data
@@ -119,16 +128,6 @@ Wrong:
     <Text>Invest</Text>
     ...
   </View>
-
-AppHeader props:
-  title: string
-  showAvatar?: boolean       // default false
-  avatarInitial?: string     // default 'A'
-  showOverflow?: boolean     // default false
-  showAdd?: boolean          // default true
-  onAdd?: () => void
-  onOverflow?: () => void    // defaults to router.push('/settings')
-  onAvatar?: () => void
 ```
 
 ---
@@ -145,9 +144,127 @@ L3: Priority action card with accent left border
 L4: FIRE year + watchlist bullets
 
 Mode: System-responsive (follows device dark/light) — intentional.
-      Do NOT force light or dark background.
+```
 
-Reference: /components/invest/MonthlyReviewSheet.tsx
+---
+
+## USERFINANCIALPROFILE RULES — LOCKED (20 March 2026)
+
+```
+UserFinancialProfile is the spine of all financial intelligence.
+It is built by userProfileService.ts and stored in householdStore.
+
+RULE 1: Read from the profile, never re-derive.
+  If you need portfolioTier, read profile.portfolioTier.
+  If you need geographyExposure, read profile.geographyExposure.
+  NEVER recalculate these from raw holdings inline.
+
+RULE 2: Update the profile on every data change.
+  After addTransactions():     call userProfileService, update householdStore
+  After addHolding():          same
+  After updateHolding():       same
+  After setBucketOverride():   same
+  After setProtection():       same
+  After setRiskProfile()
+    (if actively changed):     same
+  After onboardingComplete():  same
+  After setMonthlyTarget():    same
+  After setFireInputs():       same
+
+RULE 3: Never send UserFinancialProfile directly to Claude.
+  Use holdingsContextBuilder which sanitises it first.
+  Only percentages and identifiers go into prompts.
+  Never absolute values. Never account numbers.
+
+RULE 4: Analytics properties come from the profile only.
+  analyticsService.updateUserProperties(profile) is the ONLY
+  place PostHog user properties are set.
+  Never call ph.register() with individual properties elsewhere.
+
+RULE 5: sophisticationScore is never shown to the user.
+  It drives insight depth and prompt framing internally.
+  Never surface it in any UI component.
+```
+
+---
+
+## AI INSIGHT ENGINE RULES — LOCKED (20 March 2026)
+
+```
+RULE 1: Budget check before every API call.
+  isWithinBudget() must return true before callClaudeAPI().
+  Pessimistic accounting: deduct BEFORE call, reconcile AFTER.
+  On failure: restore the deducted estimate.
+
+RULE 2: Generation windows.
+  Window A: 00:00–11:59. Window B: 12:00–23:59.
+  Maximum ONE generation per window per insight type.
+  Maximum TWO total generations per day per user.
+  Check lastGenerationWindow before generating.
+
+RULE 3: isGenerating lock.
+  In-memory lock. Never persisted.
+  Checked BEFORE budget check.
+  Prevents parallel calls from both passing the budget check.
+
+RULE 4: API key handling.
+  Read from storageService inside the function.
+  Never assign to module-level variable.
+  Discarded after the call — not referenced again.
+  Never logged. Never in error messages.
+
+RULE 5: Clock manipulation defence.
+  If stored monthYear > current monthYear: do NOT reset budget.
+  Log the anomaly locally. Return budget_exceeded.
+
+RULE 6: FIRE_TRAJECTORY.
+  Returns { success: false, reason: 'not_implemented' } in V1.
+  No FIRE insight generation. No FIRE web search.
+
+RULE 7: Web search.
+  MARKET_EVENT_ALERT: web search ENABLED.
+  All other insight types: web search DISABLED.
+
+RULE 8: Injection defence.
+  isSafeForPrompt() on all user-influenced string fields.
+  If injection detected: return injection_detected reason.
+  Never log injection_detected to analytics.
+
+RULE 9: Context builders.
+  holdingsContextBuilder sanitises before sending to Claude.
+  Only percentages and public identifiers (ISIN, ticker).
+  Never absolute values. Never account numbers. Never PII.
+```
+
+---
+
+## ANALYTICS RULES — LOCKED (20 March 2026)
+
+```
+RULE 1: ANALYTICS_ENABLED = false always, until PM review.
+  Never flip to true without completing the enable checklist.
+
+RULE 2: User properties come from UserFinancialProfile only.
+  Call analyticsService.updateUserProperties(profile).
+  Never set PostHog properties manually anywhere else.
+
+RULE 3: Zero PII in any event.
+  No amounts. No merchant names. No account numbers.
+  No email. No name. No device identifiers beyond anonymous UUID.
+  Category strings and enum values only.
+
+RULE 4: injection_detected never goes to analytics.
+  Log locally (console.warn in dev). Never capture to PostHog.
+  Sending this would reveal that a user's data contains suspicious strings.
+
+RULE 5: Anonymous distinct ID only.
+  Generated via crypto.randomUUID() on first launch.
+  Stored in storageService. Never tied to email or Google account.
+  Never regenerated — consistent across the user's sessions.
+
+RULE 6: source_discovered event does not exist.
+  Dropped — not actionable without domain/URL.
+  Source quality review happens via snapshot export.
 ```
 
 ---
@@ -163,17 +280,8 @@ Rules:
 - KasheAsterisk punctuates AI-generated insights and recommendations
 - "Worth exploring" always — never "Buy" or "Invest in"
 - FIRE headline: "How close are you to financial independence?"
-  NEVER "choose not to work"
-  NEVER "stop working"
-  NEVER "retire early"
+  NEVER "choose not to work" / "stop working" / "retire early"
 - Risk profile recommendation: "Balanced is a good starting point"
-  Not: "Tell us how you think about risk. We'll tailor your..."
-
-KasheAsterisk usage:
-  ✓ Before AI-generated recommendations ("* Balanced is a good...")
-  ✓ Before "why" text in instrument cards
-  ✓ In MonthlyReviewSheet hero stat row
-  ✗ As random decoration — only where Kāshe is "speaking"
 ```
 
 ---
@@ -184,19 +292,22 @@ KasheAsterisk usage:
 FIRE is deferred to V2. No FIRE UI is built in V1.
 
 What EXISTS (do not delete):
-  /constants/fireDefaults.ts  — country-specific engine, V2 foundation
-  /types/fire.ts              — full type system, V2 foundation
+  /constants/fireDefaults.ts  — country-specific defaults
+  /types/fire.ts              — full type system
   /components/invest/FIRETeaserCard.tsx — built, not rendered
 
-What does NOT exist and must NOT be built in V1:
-  /app/invest/fire.tsx        — FIRE planner screen
+What does NOT exist:
+  /app/invest/fire.tsx
 
-What has been REMOVED from V1 screens:
-  FIREProgress component      — removed from index.tsx
-  FIRETeaserCard              — removed from invest.tsx
+Removed from V1 screens:
+  FIREProgress — removed from index.tsx
+  FIRETeaserCard — removed from invest.tsx
 
-Do not add any FIRE UI to any screen in V1.
-Do not re-debate this decision.
+fireIsSetUp in UserFinancialProfile:
+  true if FIRE inputs have been entered
+  Affects monthly review (fireUpdate section null if false)
+  No FIRE insight generation in V1.
+  FIRE_TRAJECTORY returns not_implemented.
 ```
 
 ---
@@ -220,258 +331,21 @@ KasheScore:
 "Worth exploring" framing:
   Every instrument card must use the entry.why field.
   Never write custom copy that recommends buying or selling.
-  The catalogue content is the spec — render it, don't override it.
-
-Geography filtering:
-  Always filter suggestions by user's residence geography.
-  Never show instruments from unrelated geographies unless GLOBAL.
-  Unknown geography → show GLOBAL entries + UNKNOWN_GEOGRAPHY_MESSAGE.
 ```
 
 ---
 
-## EDUCATION CATALOGUE RULES — LOCKED (18 March 2026)
+## STORAGE + SECURITY RULES — LOCKED (19 March 2026)
 
 ```
-/constants/educationCatalogue.ts is the single source of truth.
-Components never hardcode education content inline.
-
-Selection logic (always use getEducationArticles()):
-  1. Geography: GLOBAL always shown + geography-specific match
-  2. Tier: never show articles below user's derived tier
-     (use deriveUserTier() — never calculate inline)
-  3. excludeIfHoldingTypes: if user holds it, they know it
-
-V1 placement: /app/settings.tsx only
-V2 placement: contextual inline tooltips on bucket names,
-              instrument fields (TER, regulatory regime, etc.)
-
-Never add education content to the Invest tab scroll.
-```
-
----
-
-## STORAGE RULES — LOCKED (18 March 2026, updated 19 March 2026)
-
-```
-ALL persistent data uses expo-secure-store.
-ALL storage access goes through /services/storageService.ts.
-AsyncStorage is NEVER used directly — anywhere in the codebase.
-Raw SecureStore calls are NEVER made outside storageService.ts.
-
-Two files own the storage layer:
-  /services/storageService.ts      — vault door, get/set/delete/clear
-  /services/secureStorageAdapter.ts — Zustand bridge (createJSONStorage)
-  These are SEPARATE files with separate responsibilities.
-
-Zustand persistence pattern (v5):
-  import { createJSONStorage, persist } from 'zustand/middleware'
-  import secureStorageAdapter from '../services/secureStorageAdapter'
-  persist(store, {
-    name: STORAGE_KEYS.XXX_STORE,
-    storage: createJSONStorage(() => secureStorageAdapter),
-  })
-
-What NEVER goes into storage:
-  Raw account numbers (only last 4 digits)
-  Full IBANs (only masked ****1234)
-  BSN / PAN / Aadhaar numbers (stripped entirely)
-  API keys in plain text (stored via SecureStore encryption)
-  Raw CSV file content (parsed in memory, discarded immediately)
-
-Error handling:
-  Read failures: graceful degradation — store starts with empty state
-  Write failures: ALWAYS propagate (DEC-06) — never swallow silently
-  On storage error: show clear error screen, never continue with
-  in-memory state as if save succeeded
-```
-
----
-
-## DATA LAYER RULES — LOCKED (19 March 2026)
-
-### The chain
-```
-Service → Store → Hook → Component
-
-Services:  Business logic, parsing, API calls. No UI.
-Stores:    In-memory state + encrypted persistence. No UI.
-Hooks:     Bridge between stores and UI. Translations only.
-Components: Render only. Never import services or stores directly.
-```
-
-### Derived cache pattern
-```
-All expensive derived values are cached in their store with a
-lastCalculatedAt: string | null timestamp.
-
-null = never calculated (app first launch)
-ISO string = when last calculated
-
-Hooks check lastCalculatedAt on every mount:
-  If null OR older than 24 hours: recalculate + update store
-  If fresh (< 24h): return cached values directly
-
-Event-based invalidation (immediate, ignores time):
-  spendStore: new CSV upload, recategorise(), setSelectedMonth()
-  portfolioStore: addHolding(), updateHolding(), setBucketOverride()
-  insightsStore: per-insight type (see ai-insights.md)
-
-Month caching (Spend screen):
-  One month at a time — not all months simultaneously
-  Month switch = cache miss = immediate recalculation
-  This is intentional for V1 simplicity
-
-Never recalculate derived values inside a component.
-Never calculate inline in a hook on every render.
-Always use the cached + lastCalculatedAt pattern.
-```
-
-### Retail queue rules
-```
-Layer 2 AI categorisation retry queue:
-
-Per upload batch cap:  20 Layer 2 calls maximum per upload
-  Prioritise: shortest/simplest merchant names first
-  (complex ref strings like "SEPA REF 9281" won't enrich well)
-
-Daily drain cap:       30 Layer 2 calls per day
-  Runs on first app open of each new day
-  Processes oldest queued items first (FIFO)
-
-Per transaction retry: 3 attempts maximum (DEC-08)
-  After 3 failures: category = 'other', confidence = 0.3
-  User can always correct via Layer 3
-
-Budget gate:           ALWAYS check isWithinBudget() before any call
-  Over budget: pause entire queue, not just slow it down
-  Budget resets at start of each calendar month
-```
-
----
-
-## CSV PARSING RULES — LOCKED (19 March 2026)
-
-### The approach
-```
-Papa Parse handles mechanical CSV reading — never custom tokeniser.
-Smart field detector scores columns — never institution-specific hardcode.
-Post-parse confidence scoring — not pre-parse prediction.
-Atomic imports — all-or-nothing, never partial state.
-```
-
-### Field tier model
-```
-Tier 1 — BLOCKING (parse fails if any of these missing):
-  date, amount, debit/credit direction
-  If Tier 1 fields cannot be found: ParseError TIER1_FIELDS_MISSING
-
-Tier 2 — Important, fallbacks available:
-  currency (fallback: infer from geography)
-  description (fallback: empty string)
-  merchant (fallback: description slice)
-
-Tier 3 — Nice to have, always have fallbacks:
-  referenceId (fallback: compound dedup key)
-  geography (fallback: infer from institution hints)
-  isRecurring (fallback: false)
-```
-
-### Confidence scoring
-```
-ParseConfidence is computed AFTER parsing, not before.
-It reflects what was actually found, not what we predict.
-
-tier1Complete: boolean   — Tier 1 all found (blocking)
-tier2Score: 0–1          — fraction of Tier 2 fields found
-tier3Score: 0–1          — fraction of Tier 3 fields found
-overallScore: 0–1        — (tier2 × 0.7) + (tier3 × 0.3)
-
-If tier1Complete = false: ParseError (hard fail, always)
-If tier1Complete = true:  ParseSuccess regardless of overallScore
-  overallScore ≥ 0.8: auto-accept, no warning
-  overallScore 0.5–0.8: ParseSuccess + user-facing warnings
-  overallScore < 0.5: ParseSuccess + "many fields uncertain"
-```
-
-### Atomic import rule
-```
-Imports are all-or-nothing. No partial state. Ever.
-
-If anything fails mid-import (any row, any field, any error):
-  Entire batch is rolled back
-  spendStore receives nothing
-  auditStore logs status: 'failed'
-  User sees clear error + re-upload request
-
-parseCSV() wraps entire body in try/catch.
-On any uncaught error: return ParseError ATOMIC_ROLLBACK.
-Never return partial results.
-```
-
-### Deduplication key hierarchy
-```
-Priority 1: referenceId (transaction ID from CSV, where present)
-  Exact match against existing referenceIds
-
-Priority 2: compound key (where no referenceId)
-  key = `${date}|${amount}|${description.slice(0,20).toLowerCase().trim()}`
-
-Priority 3: fuzzy Dice coefficient (Indian banks only)
-  For SBI, HDFC, ICICI, AXIS, KOTAK imports:
-  Same date + same amount + description similarity > 0.8
-  → probableDuplicates[] for USER CONFIRMATION
-  → NEVER silently skipped
-  User sees ProbableDuplicateSheet and decides per pair
-
-Silent dedup (Priority 1 + 2): automatic, reported in toast count
-Fuzzy dedup (Priority 3): always shown to user for confirmation
-```
-
-### Supported institutions (24 total)
-```
-NL:          ABN_AMRO, ING_NL, RABOBANK, BUNQ, SNS_BANK, N26
-EU/Digital:  REVOLUT, WISE
-Investment:  DEGIRO, IBKR
-IN:          HDFC_BANK, HDFC_SECURITIES, ICICI_BANK, SBI,
-             AXIS_BANK, KOTAK, ADITYA_BIRLA, ZERODHA, GROWW
-UK:          BARCLAYS, HSBC, MONZO
-US:          CHASE, SCHWAB
-Fallback:    UNKNOWN
-
-Unrecognised format:
-  Return ParseError UNRECOGNISED_FORMAT
-  Include REQUEST_SUPPORT_URL (Google Form)
-  User submits bank name — PM prioritises new parsers from form
-```
-
----
-
-## MERCHANT ENRICHMENT RULES — LOCKED (19 March 2026)
-
-```
-Enrichment runs ONLY for Layer 1 misses (confidence = 0.0).
-Never called for transactions already matched in Layer 1.
-Never blocks the upload UI — always background queue.
-
-Option C (Clearbit) → Option A (Claude API) fallback:
-
-Clearbit rules:
-  Send merchant name ONLY
-  Zero user context (no user ID, no amount, no date, no account)
-  Completely anonymous — "what category is this business?"
-  Opt-in only: check Settings enrichment flag before calling
-  Privacy policy must disclose before beta
-
-Claude API fallback (when Clearbit misses):
-  Same privacy rules as spend categoriser
-  Merchant name + 50-char description snippet only
-  Never amounts, dates, account info, or any PII
-
-Batch caps (enforced in spendStore, not in service):
-  20 enrichment calls per upload
-  30 enrichment calls per day
-  Budget gate: check isWithinBudget() before every call
+expo-secure-store for ALL persistence. Never AsyncStorage directly.
+ALL storage access: /services/storageService.ts only.
+secureStorageAdapter: Zustand bridge. Separate from storageService.
+Raw CSV files: never written to disk. Parse in memory only.
+Security pipeline: runs INSIDE csvParser.ts (sanitiseTransaction).
+Write failures: always propagate. Never swallowed silently.
+API key: never in source code, bundle, or GitHub.
+  Read from storageService in each function call. Discarded after use.
 ```
 
 ---
@@ -479,31 +353,14 @@ Batch caps (enforced in spendStore, not in service):
 ## JOINT ACCOUNT RULES — LOCKED (19 March 2026)
 
 ```
-Anand and partner have joint accounts at ABN Amro and HDFC.
-Joint accounts are a first-class concept, not an edge case.
-
 DataSource.accountType: 'personal' | 'joint' | 'managed'
-  Set during DataSourceConfirmSheet (always shown after import)
-  "Is this a joint account?" asked for every new DataSource
-
 Transaction.ownership: 'personal' | 'joint' | 'split'
   Joint account imports → ownership: 'joint'
-  splitWithProfileId: partner profileId (if exists)
-  splitRatio: 0.5 default (user can change)
+  splitWithProfileId: partner profileId
+  splitRatio: 0.5 default
 
-Household view (activeProfileId = 'household'):
-  Joint transactions appear ONCE — never twice
-  Deduplication catches same transaction from both exports
-
-Individual view (activeProfileId = specific profile):
-  Show personal transactions for that profile
-  Show joint transactions for that profile
-  Never show partner's personal transactions
-
-Cross-export deduplication for joint accounts:
-  Same joint transaction in Anand's export AND partner's export
-  Compound key catches exact matches
-  Fuzzy match catches format variations between exports
+Household view: joint transactions appear ONCE
+Individual view: personal + joint for that profile, never partner's personal
 ```
 
 ---
@@ -511,47 +368,10 @@ Cross-export deduplication for joint accounts:
 ## AUDIT LOG RULES — LOCKED (19 March 2026)
 
 ```
-Every CSV import is logged in auditStore at profile level.
-The audit log is NEVER wiped except on "delete all data".
-
-ImportAuditEvent logged on every import attempt:
-  id, profileId, householdId, timestamp
-  institution, transactionCount, duplicatesSkipped
-  probableDuplicatesFound, layer2Queued
-  parseConfidence (overallScore), status, errorCode?
-
-100-event cap per store. FIFO eviction when over limit.
-Failed imports logged with status: 'failed' + errorCode.
-Successful imports logged with status: 'success'.
-
-auditStore.clearAuditLog() is ONLY called from:
-  "Delete all my data" flow in Settings (Session 16)
-  Never called anywhere else.
-```
-
----
-
-## SECURITY PIPELINE RULES — LOCKED (19 March 2026)
-
-```
-The security pipeline runs INSIDE csvParser.ts (sanitiseTransaction).
-It is NOT a separate post-parse step.
-Parse → sanitise → return. Storage happens after.
-
-Raw files NEVER touch disk:
-  Read CSV content into memory only
-  Pass to parseCSV()
-  Security pipeline runs inside parser
-  Return sanitised Transaction[] to caller
-  Caller (store) persists via storageService
-  Raw content discarded — never written anywhere
-
-Sanitisation applied to description AND rawDescription:
-  Account numbers → keep last 4 digits (regex: /\b\d{8,}\b/g)
-  IBANs → mask (regex: /[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7,}/g)
-  BSN → remove entirely (regex: /\bBSN:?\s*\d{8,9}\b/gi)
-  PAN → remove entirely (regex: /\b[A-Z]{5}\d{4}[A-Z]\b/g)
-  Aadhaar → remove entirely (regex: /\b\d{4}\s\d{4}\s\d{4}\b/g)
+Every CSV import logged in auditStore at profile level.
+100-event cap, FIFO eviction.
+auditStore.clearAuditLog() ONLY called from "delete all data" flow.
+Never called anywhere else.
 ```
 
 ---
@@ -560,21 +380,11 @@ Sanitisation applied to description AND rawDescription:
 
 ```
 Before beta, add to these screens:
-  /app/(tabs)/invest.tsx   — footer: "For information only.
-                              Not financial advice."
+  /app/(tabs)/invest.tsx   — "For information only. Not financial advice."
   /app/settings.tsx        — below Education section: same text
 
-FIRE projections (when V2 is built):
-  Always label as estimate: "Based on your current inputs"
-  Never use guarantee language
-
-Instrument suggestions:
-  "Worth exploring" framing is mandatory (already locked)
-  No affiliate links — ever (already locked)
-
-Geography-gated instruments:
-  All NL-tagged entries in instrumentCatalogue.ts must be
-  UCITS-compliant before beta. Verify before first user.
+Instrument suggestions: "Worth exploring" framing mandatory.
+No affiliate links — ever.
 ```
 
 ---
@@ -584,11 +394,7 @@ Geography-gated instruments:
 ```
 ALWAYS use formatCurrency() from /constants/formatters.ts
 NEVER use Intl.NumberFormat — unreliable in Expo web bundler
-NEVER use template literals with raw numbers: `€${amount}`
-
-formatCurrency(1500, 'EUR')     // → "€1,500"
-formatCurrency(420000, 'INR')   // → "₹4,20,000"
-formatCurrency(48200, 'EUR')    // → "€48,200"
+NEVER use template literals: `€${amount}`
 
 TextInput fields: format on blur, parse on save.
 Never format a live TextInput value — breaks cursor position.
@@ -600,17 +406,9 @@ Never format a live TextInput value — breaks cursor position.
 
 ```
 npm install     ALWAYS use --legacy-peer-deps
-                Example: npm install some-package --legacy-peer-deps
-
 Animations      NEVER install react-native-reanimated for web preview
-                Use React Native built-in Animated API only
-                Reanimated returns in QA session (native builds only)
-
 TypeScript      Strict mode throughout. Zero any types.
-
 Preview         npx expo start → w → localhost:8081
-                Every ticket must be visually confirmed before committing
-
 Git             ALWAYS run git commands manually in a normal terminal
                 NEVER run git through Claude Code
 ```
@@ -621,13 +419,14 @@ Git             ALWAYS run git commands manually in a normal terminal
 
 ```
 Format:   [TICKET-ID] Brief description
-Example:  [DL-02] spendCategoriser — three-layer pipeline
+Example:  [DL-09] UserFinancialProfile — intelligence spine
 
 Rules:
 - One commit per logical ticket
 - Always preview before committing
 - Never commit broken code
 - Never commit API keys or tokens
+  (PostHog write-only key is safe in client code)
 - Every commit includes code + updated MD files together
 - Push at end of every session
 ```
@@ -638,63 +437,65 @@ Rules:
 
 1. Read `CLAUDE-state.md` — know what exists and what the next ticket is
 2. Read the latest `kashe-handoff-session-XX.md`
-3. Read only the relevant section of the spec file your ticket needs
+3. Check that UserFinancialProfile has the fields your ticket needs
 4. Check that the TypeScript type exists in `/types/` before building
 5. Check that mock data exists in `/constants/mockData.ts` before building
-
-**Read CLAUDE-state.md and the handoff doc. That is enough to start.**
 
 ---
 
 ## WHAT NEVER GETS BUILT
 
-These are permanent. Do not ask. Do not suggest workarounds.
-
 ```
-[NEVER] Physical assets (car, art, jewellery, watches, property)
-[NEVER] Tax filing or tax calculations of any kind
+[NEVER] Physical assets
+[NEVER] Tax filing or calculations
 [NEVER] Money transfers or payments
 [NEVER] Social features or comparisons between users
 [NEVER] Ads, affiliate links, or data monetisation
-[NEVER] Generic market news feed (only holdings-specific news)
-[NEVER] Gamification (badges, streaks, scores)
-[NEVER] Business or company finances
+[NEVER] Generic market news feed
+[NEVER] Gamification
+[NEVER] Business finances
 [NEVER] Specific buy/sell recommendations
 [NEVER] Regulated financial advice
-[NEVER] Net Worth — always "Your Position" everywhere
-[NEVER] Intl.NumberFormat — use formatCurrency() from formatters.ts
+[NEVER] Net Worth — always "Your Position"
+[NEVER] Intl.NumberFormat — use formatCurrency()
 [NEVER] react-native-reanimated in web builds
-[NEVER] @/ import alias — relative imports only
+[NEVER] @/ import alias
 [NEVER] Named exports from component files — default exports only
-[NEVER] Inline style objects — StyleSheet.create() only
+[NEVER] Inline style objects
 [NEVER] Hardcoded hex colour values in components
-[NEVER] Raw subtype keys in UI — always use displayLabels.ts
+[NEVER] Raw subtype keys in UI — use displayLabels.ts
 [NEVER] KasheScore shown to user as a number
+[NEVER] Sophistication score shown to user as a number
 [NEVER] track_only instruments in InstrumentDiscoverySection
-[NEVER] Crypto suggested to user (track_only only)
-[NEVER] Equity crowdfunding suggested to user (track_only only)
-[NEVER] Inline header code in any tab screen (use AppHeader)
-[NEVER] MonthlyReviewSheet as text document (executive brief only)
+[NEVER] Crypto suggested to user
+[NEVER] Equity crowdfunding suggested to user
+[NEVER] Inline header code in any tab screen
+[NEVER] MonthlyReviewSheet as text document
 [NEVER] Buy/sell language in instrument cards
-[NEVER] AsyncStorage used directly (use storageService.ts)
+[NEVER] AsyncStorage used directly
 [NEVER] Raw SecureStore calls outside storageService.ts
-[NEVER] FIRE UI in V1 (FIRETeaserCard, FIREProgress, fire.tsx)
-[NEVER] "Choose not to work" — use financial independence framing
-[NEVER] Education content hardcoded in components (use educationCatalogue.ts)
-[NEVER] Raw transactions sent to Claude API (aggregated only)
+[NEVER] FIRE UI in V1
+[NEVER] "Choose not to work" — financial independence framing only
+[NEVER] Education content hardcoded in components
+[NEVER] Raw transactions sent to Claude API
 [NEVER] Partial CSV imports — atomic or nothing
-[NEVER] Raw CSV files written to disk — parse in memory only
-[NEVER] Silent write failures — storage errors always propagate
+[NEVER] Raw CSV files written to disk
+[NEVER] Silent write failures
 [NEVER] Services imported directly into components
-[NEVER] Derived values recalculated in components or on every hook render
-[NEVER] Clearbit sent user ID, amounts, dates, or any user context
-[NEVER] Merchant enrichment run on Layer 1 matches (misses only)
-[NEVER] Probable duplicates silently skipped (always show to user)
+[NEVER] Derived values recalculated inline in components
+[NEVER] Clearbit sent user ID, amounts, dates, or any context
+[NEVER] Merchant enrichment on Layer 1 matches
+[NEVER] Probable duplicates silently skipped
 [NEVER] Joint transactions shown twice in household view
-[NEVER] auditStore.clearAuditLog() called except in "delete all data"
+[NEVER] auditStore.clearAuditLog() except in "delete all data"
+[NEVER] ANALYTICS_ENABLED = true without PM checklist complete
+[NEVER] UserFinancialProfile sent directly to Claude API
+[NEVER] PostHog properties set manually — use updateUserProperties(profile)
+[NEVER] Re-derive values already computed in UserFinancialProfile
+[NEVER] injection_detected sent to analytics
 ```
 
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 19 March 2026*
+*Last updated: 20 March 2026*
