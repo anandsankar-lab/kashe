@@ -78,6 +78,7 @@ export interface PortfolioHolding {
   id: string
   name: string
   ticker?: string
+  isin?: string              // ISIN code e.g. 'IE00B3RBWM25'
   assetClass: AssetClass        // display/grouping hint
   assetSubtype: AssetSubtype    // drives all logic
   taxWrapper?: TaxWrapper       // V1: display only

@@ -23,7 +23,7 @@ export interface Insight {
   source?: string
   sourceUrl?: string
   sentiment?: 'bullish' | 'bearish' | 'mixed' | 'neutral'
-  confidence?: 'high' | 'medium' | 'low'
+  confidence?: 'high' | 'medium' | 'low' | 'sentiment_only'
   action?: {
     label: string
     type: 'VIEW_HOLDING' | 'VIEW_SUGGESTIONS' | 'VIEW_FIRE'
