@@ -20,9 +20,12 @@
     "expo-font": "~55.0.4",
     "expo-linear-gradient": "~55.0.8",
     "expo-router": "~55.0.3",
+    "expo-secure-store": "^55.0.9",
     "expo-splash-screen": "~55.0.10",
     "expo-status-bar": "~55.0.4",
     "expo-web-browser": "~55.0.9",
+    "papaparse": "^5.5.3",
+    "posthog-react-native": "^4.37.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.2",
@@ -32,9 +35,10 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "15.15.3",
     "react-native-web": "^0.21.2",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@types/papaparse": "^5.5.2",
     "@types/react": "~19.2.2",
     "typescript": "~5.9.2"
   },
