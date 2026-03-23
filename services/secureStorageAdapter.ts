@@ -1,8 +1,13 @@
+import { Platform } from 'react-native'
 import type { StateStorage } from 'zustand/middleware'
 import storageService, { StorageError } from './storageService'
 
 const secureStorageAdapter: StateStorage = {
   async getItem(name: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      const value = localStorage.getItem(name)
+      return value
+    }
     try {
       return await storageService.get(name)
     } catch (err) {
@@ -12,6 +17,10 @@ const secureStorageAdapter: StateStorage = {
   },
 
   async setItem(name: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(name, value)
+      return
+    }
     try {
       await storageService.set(name, value)
     } catch (err) {
@@ -26,6 +35,10 @@ const secureStorageAdapter: StateStorage = {
   },
 
   async removeItem(name: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(name)
+      return
+    }
     try {
       await storageService.delete(name)
     } catch (err) {

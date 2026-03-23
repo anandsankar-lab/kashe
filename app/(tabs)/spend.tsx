@@ -8,9 +8,10 @@ import SpendCategoryList from '../../components/spend/SpendCategoryList';
 import SpendBudgetSheet from '../../components/spend/SpendBudgetSheet';
 import EmptyState from '../../components/shared/EmptyState';
 import DataSourceSheet from '../../components/shared/DataSourceSheet';
-import { SpendCategoryData, AppDataState } from '../../types/spend';
+import { SpendCategoryData, AppDataState, SpendCategory, CATEGORY_META } from '../../types/spend';
 import { MOCK_APP_STATE } from '../../constants/mockData';
 import { useDataSources } from '../../hooks/useDataSources';
+import useSpend from '../../hooks/useSpend';
 
 const mockCategories: SpendCategoryData[] = [
   {
@@ -183,17 +184,48 @@ const MOCK_TRANSFERS: SpendCategoryData[] = [
 export default function SpendScreen() {
   const theme = useTheme();
   const [appState] = useState<AppDataState>(MOCK_APP_STATE);
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
   const [profileFilter] = useState<'household' | string>('household');
   const [showBudgetSheet, setShowBudgetSheet] = useState(false);
   const [showSourceSheet, setShowSourceSheet] = useState(false);
   const [insightDismissed, setInsightDismissed] = useState(false);
 
   const { sources } = useDataSources();
-  const hasData = appState === 'HAS_DATA';
+  const {
+    transactions,
+    spendByCategory,
+    totalSpend,
+    comparisonVsLastMonth,
+    selectedMonth,
+    setSelectedMonth,
+    hasMinimumHistory,
+  } = useSpend();
+
+  const hasData = transactions.length > 0;
+  const selectedMonthDate = new Date(selectedMonth + '-01');
+  const spendCategoryData: SpendCategoryData[] = Object.entries(spendByCategory ?? {}).map(
+    ([category, amount]) => {
+      const cat = category as SpendCategory;
+      const meta = CATEGORY_META.find((m) => m.id === cat);
+      return {
+        id: cat,
+        name: meta?.label ?? cat,
+        icon: '',
+        amount,
+        currency: '€',
+        budgetAmount: null,
+        totalMonthSpend: amount,
+        anomalyScore: 0,
+        hasHistory: false,
+        vsAverage: 0,
+        topMerchants: [],
+        isMortgage: false,
+        isExcluded: false,
+        isRecurring: false,
+        insightLine: null,
+        ownership: 'personal' as const,
+      };
+    }
+  );
 
   const hasStaleData = sources.some(
     (s) => s.type === 'SPEND' && s.status !== 'FRESH'
@@ -201,15 +233,23 @@ export default function SpendScreen() {
 
   const currentMonth = new Date();
   const currentMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-  const canGoNext = selectedMonth < currentMonthStart;
+  const canGoNext = selectedMonthDate < currentMonthStart;
 
   function handlePreviousMonth() {
-    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const prev = m === 1
+      ? `${y - 1}-12`
+      : `${y}-${String(m - 1).padStart(2, '0')}`;
+    setSelectedMonth(prev);
   }
 
   function handleNextMonth() {
     if (!canGoNext) return;
-    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const next = m === 12
+      ? `${y + 1}-01`
+      : `${y}-${String(m + 1).padStart(2, '0')}`;
+    setSelectedMonth(next);
   }
 
   function handleDotsPress() {
@@ -256,13 +296,13 @@ export default function SpendScreen() {
           showsVerticalScrollIndicator={false}
         >
           <SpendHeroCard
-            totalSpend={2847}
+            totalSpend={totalSpend}
             currency="€"
             budgetAmount={4500}
             vsLastMonth={12}
             vs3MonthAvg={8}
             hasMultiCurrency={true}
-            selectedMonth={selectedMonth}
+            selectedMonth={selectedMonthDate}
             onPreviousMonth={handlePreviousMonth}
             onNextMonth={handleNextMonth}
             canGoNext={canGoNext}
@@ -279,7 +319,7 @@ export default function SpendScreen() {
             isRedacted={false}
           />
           <SpendCategoryList
-            categories={mockCategories}
+            categories={spendCategoryData}
             transferCategories={MOCK_TRANSFERS}
             onCategoryPress={(id) => console.log('Category pressed:', id)}
             isRedacted={!hasData}
