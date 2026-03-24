@@ -11,22 +11,9 @@ import PortfolioInsightStrip from '@/components/portfolio/PortfolioInsightStrip'
 import InvestmentPlanCard from '../../components/portfolio/InvestmentPlanCard'
 import InstrumentSuggestionSheet from '../../components/portfolio/InstrumentSuggestionSheet'
 import KasheAsterisk from '../../components/shared/KasheAsterisk'
-import { MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN, MOCK_PORTFOLIO_HOLDINGS } from '@/constants/mockData'
-import { BucketType } from '../../types/portfolio'
-
-const growthTotal = MOCK_PORTFOLIO_HOLDINGS
-  .filter(h => h.bucket === 'GROWTH')
-  .reduce((sum, h) => sum + h.currentValue, 0);
-
-const stabilityTotal = MOCK_PORTFOLIO_HOLDINGS
-  .filter(h => h.bucket === 'STABILITY')
-  .reduce((sum, h) => sum + h.currentValue, 0);
-
-const lockedTotal = MOCK_PORTFOLIO_HOLDINGS
-  .filter(h => h.bucket === 'LOCKED')
-  .reduce((sum, h) => sum + h.currentValue, 0);
-
-const totalPortfolioValue = MOCK_PORTFOLIO_HOLDINGS.reduce((sum, h) => sum + h.currentValue, 0);
+import { MOCK_PORTFOLIO_TOTALS, MOCK_INVESTMENT_PLAN } from '@/constants/mockData'
+import { BucketType, PortfolioHolding } from '../../types/portfolio'
+import usePortfolio from '../../hooks/usePortfolio'
 
 const ASSET_TYPE_LABEL: Partial<Record<string, string>> = {
   eu_etf: 'ETF',
@@ -50,7 +37,7 @@ const ASSET_TYPE_LABEL: Partial<Record<string, string>> = {
   crypto_general: 'Crypto',
 };
 
-function holdingVariant(h: typeof MOCK_PORTFOLIO_HOLDINGS[0]): 'live' | 'locked' | 'protection' {
+function holdingVariant(h: PortfolioHolding): 'live' | 'locked' | 'protection' {
   if (h.bucket === 'LOCKED') return 'locked';
   if (h.isProtection) return 'protection';
   return 'live';
@@ -77,12 +64,32 @@ const MOCK_PORTFOLIO_INSIGHT = {
 export default function PortfolioScreen() {
   const theme = useTheme()
   const router = useRouter()
-  const hasData = true  // toggle to false to preview empty state
   const [activeInsight, setActiveInsight] = useState<typeof MOCK_PORTFOLIO_INSIGHT | null>(MOCK_PORTFOLIO_INSIGHT)
   const [suggestionSheet, setSuggestionSheet] = useState<{ visible: boolean; bucket: BucketType }>({
     visible: false,
     bucket: 'GROWTH',
   })
+
+  const {
+    holdings,
+    liveTotal,
+    lockedTotal,
+    financialPosition,
+    allocationByBucket,
+    protectionAsset,
+    protectionMonthsCovered,
+    savingsRate,
+  } = usePortfolio()
+
+  const hasData = holdings.length > 0
+
+  const growthTotal = holdings
+    .filter(h => h.bucket === 'GROWTH')
+    .reduce((sum, h) => sum + h.currentValue, 0)
+  const stabilityTotal = holdings
+    .filter(h => h.bucket === 'STABILITY')
+    .reduce((sum, h) => sum + h.currentValue, 0)
+  const totalPortfolioValue = financialPosition
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -103,7 +110,7 @@ export default function PortfolioScreen() {
         <View style={{ opacity: hasData ? 1 : 0.5 }}>
           <View style={styles.totalsCardWrapper}>
             <PortfolioTotalsCard
-              totals={MOCK_PORTFOLIO_TOTALS}
+              totals={{ ...MOCK_PORTFOLIO_TOTALS, liveTotal, lockedTotal, combinedTotal: financialPosition }}
               isRedacted={!hasData}
             />
           </View>
@@ -128,7 +135,7 @@ export default function PortfolioScreen() {
               currency="€"
               isRedacted={!hasData}
             />
-            {MOCK_PORTFOLIO_HOLDINGS.filter(h => h.bucket === 'GROWTH').map(h => (
+            {holdings.filter(h => h.bucket === 'GROWTH').map(h => (
               <PortfolioHoldingRow
                 key={h.id}
                 id={h.id}
@@ -140,7 +147,7 @@ export default function PortfolioScreen() {
                 bucket={h.bucket}
                 geography={h.geography}
                 domicile={h.domicile}
-                allocationPct={h.currentValue / totalPortfolioValue}
+                allocationPct={totalPortfolioValue > 0 ? h.currentValue / totalPortfolioValue : 0}
                 dailyMovementPct={h.dailyChangePercent}
                 freshnessStatus={holdingFreshness(h.freshnessStatus)}
                 isRedacted={!hasData}
@@ -153,7 +160,7 @@ export default function PortfolioScreen() {
               currency="€"
               isRedacted={!hasData}
             />
-            {MOCK_PORTFOLIO_HOLDINGS.filter(h => h.bucket === 'STABILITY').map(h => (
+            {holdings.filter(h => h.bucket === 'STABILITY').map(h => (
               <PortfolioHoldingRow
                 key={h.id}
                 id={h.id}
@@ -165,7 +172,7 @@ export default function PortfolioScreen() {
                 bucket={h.bucket}
                 geography={h.geography}
                 domicile={h.domicile}
-                allocationPct={h.currentValue / totalPortfolioValue}
+                allocationPct={totalPortfolioValue > 0 ? h.currentValue / totalPortfolioValue : 0}
                 dailyMovementPct={h.dailyChangePercent}
                 freshnessStatus={holdingFreshness(h.freshnessStatus)}
                 monthsCovered={h.avgMonthlySpend ? h.currentValue / h.avgMonthlySpend : undefined}
@@ -181,7 +188,7 @@ export default function PortfolioScreen() {
               isRedacted={!hasData}
               onAddPress={() => console.log('Add locked holding pressed')}
             />
-            {MOCK_PORTFOLIO_HOLDINGS.filter(h => h.bucket === 'LOCKED').map(h => (
+            {holdings.filter(h => h.bucket === 'LOCKED').map(h => (
               <PortfolioHoldingRow
                 key={h.id}
                 id={h.id}
@@ -193,7 +200,7 @@ export default function PortfolioScreen() {
                 bucket={h.bucket}
                 geography={h.geography}
                 domicile={h.domicile}
-                allocationPct={h.currentValue / totalPortfolioValue}
+                allocationPct={totalPortfolioValue > 0 ? h.currentValue / totalPortfolioValue : 0}
                 freshnessStatus={holdingFreshness(h.freshnessStatus)}
                 unlockDate={holdingUnlockDate(h.unlockDate)}
                 isRedacted={!hasData}
