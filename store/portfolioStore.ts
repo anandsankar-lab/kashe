@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import secureStorageAdapter from '../services/secureStorageAdapter'
 import { STORAGE_KEYS } from '../services/storageService'
 import type { PortfolioHolding } from '../types/portfolio'
+import type { AssetSubtype } from '../types/portfolio'
+import { DEFAULT_BUCKET } from '../types/portfolio'
 
 // ── LOCAL TYPES ───────────────────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ interface PortfolioState {
   bucketOverrides: BucketOverride[]
   protectionHoldingId: string | null
   derived: PortfolioDerived
+  pendingCategorizationQueue: PortfolioHolding[]
 }
 
 interface PortfolioActions {
@@ -40,6 +43,9 @@ interface PortfolioActions {
   setBucketOverride(override: BucketOverride): void
   setProtection(holdingId: string): void
   updateDerived(derived: PortfolioDerived): void
+  addHoldings(holdings: PortfolioHolding[]): void
+  addPendingHoldings(holdings: PortfolioHolding[]): void
+  resolveHolding(holdingId: string, assetSubtype: AssetSubtype): void
 }
 
 type PortfolioStore = PortfolioState & PortfolioActions
@@ -52,6 +58,7 @@ const usePortfolioStore = create<PortfolioStore>()(
       holdings: [],
       bucketOverrides: [],
       protectionHoldingId: null,
+      pendingCategorizationQueue: [],
       derived: {
         liveTotal: 0,
         lockedTotal: 0,
@@ -123,6 +130,54 @@ const usePortfolioStore = create<PortfolioStore>()(
 
       updateDerived(derived) {
         set({ derived })
+      },
+
+      addHoldings(holdings) {
+        set((state) => {
+          const existingIds = new Set(state.holdings.map(h => h.id))
+          const newHoldings = holdings.filter(h => !existingIds.has(h.id))
+          if (newHoldings.length === 0) return state
+          return {
+            ...state,
+            holdings: [...state.holdings, ...newHoldings],
+            derived: { ...state.derived, lastCalculatedAt: null },
+          }
+        })
+      },
+
+      addPendingHoldings(holdings) {
+        set((state) => {
+          const appended = [...state.pendingCategorizationQueue, ...holdings]
+          return {
+            ...state,
+            pendingCategorizationQueue: appended.length > 50
+              ? appended.slice(appended.length - 50)
+              : appended,
+          }
+        })
+      },
+
+      resolveHolding(holdingId, assetSubtype) {
+        set((state) => {
+          const idx = state.pendingCategorizationQueue.findIndex(h => h.id === holdingId)
+          if (idx === -1) return state
+          const holding = state.pendingCategorizationQueue[idx]
+          if (!holding) return state
+          const resolved: PortfolioHolding = {
+            ...holding,
+            assetSubtype,
+            bucket: DEFAULT_BUCKET[assetSubtype],
+          }
+          return {
+            ...state,
+            holdings: [...state.holdings, resolved],
+            pendingCategorizationQueue: [
+              ...state.pendingCategorizationQueue.slice(0, idx),
+              ...state.pendingCategorizationQueue.slice(idx + 1),
+            ],
+            derived: { ...state.derived, lastCalculatedAt: null },
+          }
+        })
       },
     }),
     {
