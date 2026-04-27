@@ -7,10 +7,8 @@ import {
 } from 'react-native'
 import { useTheme } from '../../context/ThemeContext'
 import colours from '../../constants/colours'
-import {
-  getInstrumentsByTierAndBucket,
-  TER_FOOTNOTE,
-} from '../../constants/instrumentCatalogue'
+import { TER_FOOTNOTE } from '../../constants/instrumentCatalogue'
+import { useInstrumentCatalogue } from '../../hooks/useInstrumentCatalogue'
 import type { InstrumentCatalogueEntry, RiskTier } from '../../types/instrumentCatalogue'
 import type { PortfolioHolding } from '../../types/portfolio'
 import type { RiskProfileType } from '../../types/riskProfile'
@@ -67,6 +65,7 @@ export default function InstrumentDiscoverySection({
   isRedacted,
 }: Props) {
   const theme = useTheme()
+  const { getSuggestions } = useInstrumentCatalogue()
 
   const profile = RISK_PROFILES[riskProfile]
   const targets = profile.targetAllocation
@@ -93,7 +92,7 @@ export default function InstrumentDiscoverySection({
   const tier = !hasGrowthHoldings ? 0 : hasGlobalETF ? 1 : 0
 
   const resolvedGeography = geography ?? 'NL'
-  const suggestions = getInstrumentsByTierAndBucket(bucketLabel, tier, resolvedGeography).slice(0, 3)
+  const suggestions = getSuggestions(bucketLabel, resolvedGeography).slice(0, 3)
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface }]}>
