@@ -134,7 +134,6 @@ export interface ImportAuditData {
   duplicatesSkipped: number
   layer2Queued: number
   parseConfidence: number
-  probableDuplicatesFound: number
   holdingCount: number
   pendingCategorizationCount: number
   tier1Route: Tier1Route
@@ -143,12 +142,6 @@ export interface ImportAuditData {
 
 // ── PARSE RESULT ──────────────────────────────────────────────────────────────
 
-export interface ProbableDuplicate {
-  incoming: SpendTransaction
-  existing: SpendTransaction
-  similarityScore: number
-}
-
 export interface ParseSuccess {
   success: true
   institution: SupportedInstitution
@@ -156,7 +149,6 @@ export interface ParseSuccess {
   holdings: PortfolioHolding[]
   pendingHoldings: PortfolioHolding[]
   duplicatesSkipped: number
-  probableDuplicates: ProbableDuplicate[]
   accountLabel: string
   currency: string
   confidence: ParseConfidence

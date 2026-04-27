@@ -14,9 +14,12 @@
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo-google-fonts/syne": "^0.4.2",
     "@react-native-community/blur": "^4.4.1",
+    "babel-preset-expo": "^55.0.12",
     "expo": "~55.0.4",
     "expo-auth-session": "~55.0.6",
     "expo-crypto": "~55.0.8",
+    "expo-document-picker": "^55.0.9",
+    "expo-file-system": "^55.0.11",
     "expo-font": "~55.0.4",
     "expo-linear-gradient": "~55.0.8",
     "expo-router": "~55.0.3",
@@ -35,6 +38,7 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "15.15.3",
     "react-native-web": "^0.21.2",
+    "xlsx": "^0.18.5",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

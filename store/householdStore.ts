@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import secureStorageAdapter from '../services/secureStorageAdapter'
 import { STORAGE_KEYS } from '../services/storageService'
+import type { UserFinancialProfile } from '../types/userProfile'
 
 // ── LOCAL TYPES ───────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ interface HouseholdState {
   isAuthenticated: boolean
   riskProfile: RiskProfileType
   onboardingComplete: boolean
+  financialProfile: UserFinancialProfile | null
 }
 
 interface HouseholdActions {
@@ -46,6 +48,7 @@ interface HouseholdActions {
   setAuthenticated(value: boolean): void
   setRiskProfile(profile: RiskProfileType): void
   setOnboardingComplete(value: boolean): void
+  updateFinancialProfile(profile: UserFinancialProfile): void
 }
 
 type HouseholdStore = HouseholdState & HouseholdActions
@@ -61,6 +64,7 @@ const useHouseholdStore = create<HouseholdStore>()(
       isAuthenticated: false,
       riskProfile: 'balanced',
       onboardingComplete: false,
+      financialProfile: null,
 
       setHousehold(household) {
         set({ household })
@@ -89,6 +93,10 @@ const useHouseholdStore = create<HouseholdStore>()(
 
       setOnboardingComplete(value) {
         set({ onboardingComplete: value })
+      },
+
+      updateFinancialProfile(profile) {
+        set({ financialProfile: profile })
       },
     }),
     {

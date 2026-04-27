@@ -8,6 +8,8 @@ import SpendCategoryList from '../../components/spend/SpendCategoryList';
 import SpendBudgetSheet from '../../components/spend/SpendBudgetSheet';
 import EmptyState from '../../components/shared/EmptyState';
 import DataSourceSheet from '../../components/shared/DataSourceSheet';
+import CSVUploadSheet from '../../components/shared/CSVUploadSheet';
+import UploadToast from '../../components/shared/UploadToast';
 import { SpendCategoryData, AppDataState, SpendCategory, CATEGORY_META } from '../../types/spend';
 import { MOCK_APP_STATE } from '../../constants/mockData';
 import { useDataSources } from '../../hooks/useDataSources';
@@ -188,6 +190,9 @@ export default function SpendScreen() {
   const [showBudgetSheet, setShowBudgetSheet] = useState(false);
   const [showSourceSheet, setShowSourceSheet] = useState(false);
   const [insightDismissed, setInsightDismissed] = useState(false);
+  const [csvSheetVisible, setCsvSheetVisible] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastCount, setToastCount] = useState(0);
 
   const { sources } = useDataSources();
   const {
@@ -273,7 +278,7 @@ export default function SpendScreen() {
         avatarInitial="A"
         showOverflow={true}
         showAdd={true}
-        onAdd={() => console.log('add')}
+        onAdd={() => setCsvSheetVisible(true)}
         onOverflow={() => console.log('overflow')}
         onAvatar={() => console.log('avatar')}
       />
@@ -340,6 +345,21 @@ export default function SpendScreen() {
         onClose={() => setShowSourceSheet(false)}
         sources={sources.filter((s) => s.type === 'SPEND')}
         onRequestUpload={(id) => console.log('Request upload', id)}
+      />
+
+      <CSVUploadSheet
+        visible={csvSheetVisible}
+        onClose={() => setCsvSheetVisible(false)}
+        onUploadComplete={(count) => {
+          setToastCount(count);
+          setToastVisible(true);
+        }}
+      />
+
+      <UploadToast
+        visible={toastVisible}
+        transactionCount={toastCount}
+        onDismiss={() => setToastVisible(false)}
       />
     </View>
   );

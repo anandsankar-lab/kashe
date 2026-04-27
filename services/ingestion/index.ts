@@ -133,14 +133,13 @@ export async function ingestFile(input: IngestionInput): Promise<ParseResult> {
         return makeError('NO_TRANSACTIONS_FOUND', 'No valid transactions could be parsed from this file.', institution)
       }
 
-      const { unique, duplicatesSkipped, probableDuplicates } =
+      const { unique, duplicatesSkipped } =
         deduplicator.deduplicateTransactions(transactions, input.existingTransactions)
 
       const auditData: ImportAuditData = {
         institution,
         transactionCount: unique.length,
         duplicatesSkipped,
-        probableDuplicatesFound: probableDuplicates.length,
         layer2Queued: 0,
         parseConfidence: confidence.overallScore,
         holdingCount: 0,
@@ -156,7 +155,6 @@ export async function ingestFile(input: IngestionInput): Promise<ParseResult> {
         holdings: [],
         pendingHoldings: [],
         duplicatesSkipped,
-        probableDuplicates,
         accountLabel,
         currency: unique[0]?.currency ?? 'EUR',
         confidence,
@@ -180,7 +178,6 @@ export async function ingestFile(input: IngestionInput): Promise<ParseResult> {
       institution,
       transactionCount: 0,
       duplicatesSkipped: 0,
-      probableDuplicatesFound: 0,
       layer2Queued: 0,
       parseConfidence: confidence.overallScore,
       holdingCount: holdings.length,
@@ -196,7 +193,6 @@ export async function ingestFile(input: IngestionInput): Promise<ParseResult> {
       holdings,
       pendingHoldings,
       duplicatesSkipped: 0,
-      probableDuplicates: [],
       accountLabel,
       currency: 'EUR',
       confidence,
@@ -217,7 +213,7 @@ export type {
   IngestionInput, RouteDetectionResult,
   Tier1Route, Tier2AccountType, RouteConfidence,
   FileType, SupportedInstitution,
-  ColumnMapping, ParseConfidence, ImportAuditData, ProbableDuplicate,
+  ColumnMapping, ParseConfidence, ImportAuditData,
 } from './types'
 
 export { detectFileType } from './fileReader'

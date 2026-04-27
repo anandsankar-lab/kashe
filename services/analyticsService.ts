@@ -4,6 +4,7 @@ import type { SpendCategory } from '../types/spend'
 import type { RiskProfileType } from '../store/householdStore'
 import type { InsightType } from '../store/insightsStore'
 import type { SupportedInstitution } from './csvParser'
+import type { UserFinancialProfile } from '../types/userProfile'
 import Posthog from 'posthog-react-native'
 
 // ─────────────────────────────────────────────────────
@@ -249,6 +250,34 @@ export async function trackAppOpened(params: {
   } catch { /* silent */ }
 }
 
+// ── USER PROPERTIES ────────────────────────────────────────────────────────────
+
+export async function updateUserProperties(profile: UserFinancialProfile): Promise<void> {
+  if (!ANALYTICS_ENABLED) return
+  try {
+    const ph = await getPosthog()
+    const distinctId = await getOrCreateDistinctId()
+    ph?.identify(distinctId, {
+      portfolio_tier: profile.portfolioTier,
+      portfolio_tier_label: profile.portfolioTierLabel,
+      sophistication_band: profile.sophisticationBand,
+      risk_profile_actively_set: profile.riskProfileActivelySet,
+      has_spend_source: profile.hasSpendSource,
+      has_portfolio_source: profile.hasPortfolioSource,
+      data_months_spend: profile.dataMonthsSpend,
+      institutions_connected: profile.institutionsConnected,
+      onboarding_complete: profile.onboardingComplete,
+      investment_style: profile.investmentStyle,
+      is_nri_profile: profile.isNriProfile,
+      household_type: profile.householdType,
+      savings_rate_band: profile.savingsRateBand,
+      investing_frequency: profile.investingFrequency,
+      import_freshness: profile.importFreshness,
+      ai_insights_enabled: profile.aiInsightsEnabled,
+    })
+  } catch { /* silent */ }
+}
+
 // ── DEFAULT EXPORT ────────────────────────────────────────────────────────────
 
 export default {
@@ -265,5 +294,6 @@ export default {
   trackScreenViewed,
   trackRiskProfileSet,
   trackAppOpened,
+  updateUserProperties,
   getOrCreateDistinctId,
 }

@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router'
 import { useTheme } from '@/context/ThemeContext'
 import colours from '../../constants/colours'
 import AppHeader from '@/components/shared/AppHeader'
+import CSVUploadSheet from '../../components/shared/CSVUploadSheet'
+import UploadToast from '../../components/shared/UploadToast'
 import PortfolioTotalsCard from '@/components/portfolio/PortfolioTotalsCard'
 import PortfolioSectionHeader from '@/components/portfolio/PortfolioSectionHeader'
 import PortfolioHoldingRow from '@/components/portfolio/PortfolioHoldingRow'
@@ -69,6 +71,9 @@ export default function PortfolioScreen() {
     visible: false,
     bucket: 'GROWTH',
   })
+  const [csvSheetVisible, setCsvSheetVisible] = useState(false)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastCount, setToastCount] = useState(0)
 
   const {
     holdings,
@@ -99,7 +104,7 @@ export default function PortfolioScreen() {
         avatarInitial="A"
         showOverflow={true}
         showAdd={true}
-        onAdd={() => console.log('add')}
+        onAdd={() => setCsvSheetVisible(true)}
         onOverflow={() => console.log('overflow')}
         onAvatar={() => console.log('avatar')}
       />
@@ -228,6 +233,21 @@ export default function PortfolioScreen() {
         isVisible={suggestionSheet.visible}
         bucket={suggestionSheet.bucket}
         onClose={() => setSuggestionSheet(prev => ({ ...prev, visible: false }))}
+      />
+
+      <CSVUploadSheet
+        visible={csvSheetVisible}
+        onClose={() => setCsvSheetVisible(false)}
+        onUploadComplete={(count) => {
+          setToastCount(count)
+          setToastVisible(true)
+        }}
+      />
+
+      <UploadToast
+        visible={toastVisible}
+        transactionCount={toastCount}
+        onDismiss={() => setToastVisible(false)}
       />
     </View>
   )

@@ -195,7 +195,7 @@ export default function CSVUploadSheet({ visible, onClose, onUploadComplete }: P
       institution: parseResult.auditData.institution,
       transactionCount: parseResult.auditData.transactionCount,
       duplicatesSkipped: parseResult.auditData.duplicatesSkipped,
-      probableDuplicatesFound: parseResult.auditData.probableDuplicatesFound,
+      probableDuplicatesFound: 0,
       layer2Queued: parseResult.auditData.layer2Queued,
       parseConfidence: parseResult.auditData.parseConfidence,
       status: 'success',
