@@ -1,10 +1,9 @@
 # Kāshe — Engineering Rules
 *Read this before starting any ticket. No exceptions.*
 *These rules apply to every agent, every session, every component.*
-*Last updated: 20 March 2026 — Session 12 complete.*
-*UserFinancialProfile rules added: single intelligence spine.*
-*Analytics rules added: updateUserProperties pattern.*
-*AI insight engine rules added: budget, windows, wiring.*
+*Last updated: 25 March 2026 — Session 13 complete.*
+*Ingestion pipeline rules added: single entry point, institution registry.*
+*Storage rules updated: web localStorage fallback via secureStorageAdapter.*
 
 ---
 
@@ -26,7 +25,8 @@ Every piece of data or configuration has exactly one home.
 - FIRE types → `types/fire.ts` (V2 foundation)
 - Merchant keywords → `constants/merchantKeywords.ts`
 - Storage keys → `services/storageService.ts` STORAGE_KEYS
-- Supported institutions → `services/csvParser.ts` SupportedInstitution
+- Supported institutions → `services/ingestion/institutionRegistry.ts` INSTITUTION_REGISTRY
+- Ingestion entry point → `services/ingestion/index.ts` ingestFile()
 - Import audit log → `store/auditStore.ts`
 - Insight seed sources → `constants/insightSources.ts`
 - Insight trigger conditions → `constants/insightTriggers.ts`
@@ -55,7 +55,11 @@ They do NOT:
 - Import from store/ directly (use hooks)
 - Re-derive values already in UserFinancialProfile
 
-All of those decisions belong in hooks, services, or context.
+EXCEPTION — one permitted direct service import:
+  CSVUploadSheet may import ingestFile() from /services/ingestion.
+  This is the boundary layer for file I/O. No other component may do this.
+
+All other decisions belong in hooks, services, or context.
 Components receive values via props and hooks. They render those values.
 
 ### 3. Hooks are the boundary layer
@@ -71,6 +75,7 @@ The hooks are the contract between data and UI.
 Screens never calculate inline. They call a hook, get a value, render it.
 The chain is always: **Service → Store → Hook → Component**
 If you are importing a service into a component, you are doing it wrong.
+(Exception: CSVUploadSheet → ingestFile() — see Principle 2 above.)
 
 ### 4. Types are the spec
 If the TypeScript interface doesn't exist in `/types/`, the component
@@ -148,6 +153,48 @@ Mode: System-responsive (follows device dark/light) — intentional.
 
 ---
 
+## INGESTION PIPELINE RULES — LOCKED (25 March 2026)
+
+```
+RULE 1: Single entry point only.
+  ingestFile(input: IngestionInput) from /services/ingestion
+  NEVER call individual pipeline stages directly.
+  NEVER import from csvParser.ts — it is a shim, will be removed Session 16.
+
+RULE 2: Institution detection by fingerprints only.
+  Column header fingerprints + sample value fingerprints.
+  NEVER use filename as a detection signal.
+  NEVER hardcode institution logic outside INSTITUTION_REGISTRY.
+  To add a new institution: add entry to INSTITUTION_REGISTRY only.
+
+RULE 3: Four-tier taxonomy — always in this order.
+  Tier 1: Route (spend | portfolio) — auto-detected, user confirms
+  Tier 2: Account type — user always selects in DataSourceConfirmSheet
+  Tier 3: Line item type — parser assigns per row, user can correct later
+  Tier 4: Direction — always auto-detected, never user-facing
+
+RULE 4: Confirm button disabled when confidence = unknown.
+  DataSourceConfirmSheet must not allow import without Tier 2 selection
+  when routeDetection.confidence === 'unknown'.
+
+RULE 5: Portfolio pending queue is not a failure state.
+  Holdings with undetected assetSubtype → pendingCategorizationQueue.
+  This is correct behaviour, not an error.
+  Never block import because of unknown assetSubtype.
+  Never roll back because of unknown assetSubtype.
+
+RULE 6: File formats.
+  CSV and TXT/TAB: Papa Parse, auto-detect delimiter.
+  XLSX/XLS: SheetJS, first sheet only.
+  All headers normalised (trim + lowercase) before any detection.
+
+RULE 7: Atomic at file level.
+  Any pipeline failure → ParseError ATOMIC_ROLLBACK.
+  Individual row failures (unknown subtype) are NOT rollback triggers.
+```
+
+---
+
 ## USERFINANCIALPROFILE RULES — LOCKED (20 March 2026)
 
 ```
@@ -162,6 +209,7 @@ RULE 1: Read from the profile, never re-derive.
 RULE 2: Update the profile on every data change.
   After addTransactions():     call userProfileService, update householdStore
   After addHolding():          same
+  After addHoldings():         same
   After updateHolding():       same
   After setBucketOverride():   same
   After setProtection():       same
@@ -234,6 +282,11 @@ RULE 9: Context builders.
   holdingsContextBuilder sanitises before sending to Claude.
   Only percentages and public identifiers (ISIN, ticker).
   Never absolute values. Never account numbers. Never PII.
+
+RULE 10: Source quality.
+  PM reviews seed sources quarterly (insightSources.ts).
+  PM reviews auto-discovered sources weekly (15 min).
+  Source quality review happens via snapshot export.
 ```
 
 ---
@@ -299,10 +352,6 @@ What EXISTS (do not delete):
 What does NOT exist:
   /app/invest/fire.tsx
 
-Removed from V1 screens:
-  FIREProgress — removed from index.tsx
-  FIRETeaserCard — removed from invest.tsx
-
 fireIsSetUp in UserFinancialProfile:
   true if FIRE inputs have been entered
   Affects monthly review (fireUpdate section null if false)
@@ -335,14 +384,19 @@ KasheScore:
 
 ---
 
-## STORAGE + SECURITY RULES — LOCKED (19 March 2026)
+## STORAGE + SECURITY RULES — LOCKED (updated 25 March 2026)
 
 ```
-expo-secure-store for ALL persistence. Never AsyncStorage directly.
+expo-secure-store for ALL persistence on native. Never AsyncStorage directly.
 ALL storage access: /services/storageService.ts only.
 secureStorageAdapter: Zustand bridge. Separate from storageService.
-Raw CSV files: never written to disk. Parse in memory only.
-Security pipeline: runs INSIDE csvParser.ts (sanitiseTransaction).
+  Web preview: localStorage fallback (NOT encrypted — dev only).
+  Native build: expo-secure-store (encrypted).
+  All code uses storageService.ts — the adapter handles the platform difference.
+Raw files: never written to disk. Parse in memory only. Discard after ingestFile().
+Security pipeline: runs inside /services/ingestion/securityPipeline.ts
+  Called by transactionParser.ts and holdingsParser.ts per row.
+  NOT in csvParser.ts (that is now a shim).
 Write failures: always propagate. Never swallowed silently.
 API key: never in source code, bundle, or GitHub.
   Read from storageService in each function call. Discarded after use.
@@ -368,7 +422,7 @@ Individual view: personal + joint for that profile, never partner's personal
 ## AUDIT LOG RULES — LOCKED (19 March 2026)
 
 ```
-Every CSV import logged in auditStore at profile level.
+Every import logged in auditStore at profile level.
 100-event cap, FIFO eviction.
 auditStore.clearAuditLog() ONLY called from "delete all data" flow.
 Never called anywhere else.
@@ -411,6 +465,8 @@ TypeScript      Strict mode throughout. Zero any types.
 Preview         npx expo start → w → localhost:8081
 Git             ALWAYS run git commands manually in a normal terminal
                 NEVER run git through Claude Code
+metro.config.js MUST exist at project root (unstable_enablePackageExports: false)
+babel.config.js MUST exist at project root (babel-preset-expo preset)
 ```
 
 ---
@@ -419,7 +475,7 @@ Git             ALWAYS run git commands manually in a normal terminal
 
 ```
 Format:   [TICKET-ID] Brief description
-Example:  [DL-09] UserFinancialProfile — intelligence spine
+Example:  [W-03b] Ingestion pipeline — tiered taxonomy, institution registry
 
 Rules:
 - One commit per logical ticket
@@ -437,9 +493,10 @@ Rules:
 
 1. Read `CLAUDE-state.md` — know what exists and what the next ticket is
 2. Read the latest `kashe-handoff-session-XX.md`
-3. Check that UserFinancialProfile has the fields your ticket needs
-4. Check that the TypeScript type exists in `/types/` before building
-5. Check that mock data exists in `/constants/mockData.ts` before building
+3. Check `CLAUDE-decisions.md` section 4b for ingestion pipeline rules
+4. Check that UserFinancialProfile has the fields your ticket needs
+5. Check that the TypeScript type exists in `/types/` before building
+6. Check that mock data exists in `/constants/mockData.ts` before building
 
 ---
 
@@ -478,10 +535,11 @@ Rules:
 [NEVER] "Choose not to work" — financial independence framing only
 [NEVER] Education content hardcoded in components
 [NEVER] Raw transactions sent to Claude API
-[NEVER] Partial CSV imports — atomic or nothing
-[NEVER] Raw CSV files written to disk
+[NEVER] Partial file imports — atomic or nothing (file level)
+[NEVER] Raw files written to disk
 [NEVER] Silent write failures
 [NEVER] Services imported directly into components
+  (Exception: CSVUploadSheet → ingestFile() from /services/ingestion)
 [NEVER] Derived values recalculated inline in components
 [NEVER] Clearbit sent user ID, amounts, dates, or any context
 [NEVER] Merchant enrichment on Layer 1 matches
@@ -493,9 +551,12 @@ Rules:
 [NEVER] PostHog properties set manually — use updateUserProperties(profile)
 [NEVER] Re-derive values already computed in UserFinancialProfile
 [NEVER] injection_detected sent to analytics
+[NEVER] Import from csvParser.ts in new code — use /services/ingestion
+[NEVER] Filename used as institution detection signal
+[NEVER] Institution logic added outside INSTITUTION_REGISTRY
 ```
 
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 20 March 2026*
+*Last updated: 25 March 2026*

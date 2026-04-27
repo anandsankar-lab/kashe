@@ -1,11 +1,9 @@
 # Kāshe — CLAUDE-identity.md
 *Team Member 1: Identity & Trust*
 *Read CLAUDE.md first, then this file.*
-*Last updated: 19 March 2026 — Session 12 complete.
-Security pipeline clarified: sanitisation runs INSIDE csvParser,
-not as a separate post-parse step.
-secureStorageAdapter location corrected: /services/ not /store/.
-Output files updated to reflect what is built.*
+*Last updated: 25 March 2026 — Session 13 complete.*
+*Security pipeline location updated: now in /services/ingestion/securityPipeline.ts*
+*secureStorageAdapter: web localStorage fallback added Session 13.*
 
 ---
 
@@ -44,20 +42,18 @@ interface Profile {
   baseCurrency: string         // ISO 4217
   age: number | null           // captured in onboarding screen 4
                                // null if user skipped
-                               // reserved for V2 FIRE engine
-                               // not used for any V1 calculations
+                               // reserved for V2 FIRE engine only
   createdAt: Date
 }
 
 interface Household {
   id: string
   name: string
-  baseCurrency: string         // display currency for household view
+  baseCurrency: string
   createdBy: string            // Profile id of OWNER
   profiles: Profile[]
 }
 
-// Every asset and transaction has an owner field
 type AssetOwner = 'household' | string  // string = profile id
 ```
 
@@ -77,15 +73,11 @@ PARTNER
 MANAGED
   No Google login. No app access.
   Administered entirely by OWNER.
-  Primary use case: An Indian professional in Amsterdam
-  tracks their parents' investments in India.
-  Parents don't use the app — their son/daughter manages
-  their Zerodha + LIC + PPF on their behalf.
+  Primary use case: A globally mobile professional
+  tracks their parents' investments in their home country.
+  Parents don't use the app — their child manages
+  their portfolio on their behalf.
   This is a common, real use case. Build it well.
-
-  V2 note: MANAGED profiles will have their own FIRE
-  projection in Individual mode. Their age field is set
-  by the OWNER when creating the profile. This is V2 only.
 ```
 
 ### Age Field — Rules
@@ -95,38 +87,33 @@ Optional: User can skip — age field = null
 Storage:  Stored in encrypted Profile record
 Usage:    Reserved for V2 FIRE engine only
           NOT used for any V1 logic or calculations
-          NOT used for categorisation, limits, or UI logic
 Edit:     User can update age in Settings → Profile (Session 16)
-
-Note: The field is captured now so the data exists
-when FIRE is built in V2. Do not use it for anything in V1.
 ```
 
 ---
 
-## Security Pipeline — LOCKED (19 March 2026)
+## Security Pipeline — LOCKED (updated 25 March 2026)
 
 ```
-IMPORTANT ARCHITECTURE CLARIFICATION:
-The security pipeline (sanitiseTransaction) runs INSIDE
-/services/csvParser.ts — not as a separate post-parse step.
+ARCHITECTURE UPDATE (Session 13):
+The security pipeline now lives in:
+  /services/ingestion/securityPipeline.ts
 
-The flow is:
-  Read CSV into memory
-  → Papa Parse
-  → detectColumnMapping()
-  → parseRow() calls sanitiseTransaction() for EACH ROW
-  → deduplicateTransactions()
-  → Return sanitised Transaction[] to caller
+It runs as part of ingestFile() — called by:
+  transactionParser.ts → sanitiseTransaction() per row
+  holdingsParser.ts → sanitiseHolding() per row
 
-The caller (spendStore.addTransactions) stores via storageService.
-sanitiseTransaction is a named export from csvParser.ts.
-There is NO separate securityPipeline.ts service in V1.
+The caller (spendStore.addTransactions or portfolioStore.addHoldings)
+receives only sanitised data. Raw file content is discarded
+from memory after ingestFile() returns.
+
+THERE IS NO SEPARATE securityPipeline.ts AT /services/ LEVEL.
+The security pipeline is internal to /services/ingestion/.
 
 RAW FILE RULES:
-  CSV content read into memory only — never written to disk
-  After parseCSV() returns: raw content discarded
-  Store receives only sanitised Transaction[]
+  File content read into memory only — never written to disk
+  After ingestFile() returns: raw content discarded
+  Store receives only sanitised SpendTransaction[] or PortfolioHolding[]
   Raw file is GONE before any persistence happens
 
 SANITISATION RULES (applied to description AND rawDescription):
@@ -140,13 +127,13 @@ SANITISATION RULES (applied to description AND rawDescription):
     Regex: /\b[A-Z]{5}\d{4}[A-Z]\b/g → ''
   Aadhaar → remove entirely
     Regex: /\b\d{4}\s\d{4}\s\d{4}\b/g → ''
-  Full name in transaction refs → partial mask (keep first name)
+  Full name in transaction refs → partial mask (keep first name only)
   Only retain: date, amount, sanitised description,
                merchantNorm, category, debit/credit flag
 
-SALARY SLIP PIPELINE (same rules, slightly different fields):
-  Parsed by salary slip parser
-  Same sanitisation pipeline applied to text fields
+SALARY SLIP PIPELINE (same rules, different fields):
+  Parsed by salary slip parser (Session 14+)
+  Same sanitisation applied to text fields
   BSN / PAN / Aadhaar → remove entirely
   Full name → remove entirely (only employer name retained)
   Only retain: gross, net, pension contribution,
@@ -158,25 +145,29 @@ SALARY SLIP PIPELINE (same rules, slightly different fields):
 
 ## Encryption Model
 ```
-Storage layer: expo-secure-store
-  All data stored via /services/storageService.ts
-  Uses iOS Keychain / Android Keystore (hardware-backed)
-  Never AsyncStorage. Never raw file system writes.
+Storage layer: expo-secure-store (native) / localStorage (web preview)
+
+Web preview (development only):
+  secureStorageAdapter uses localStorage as fallback
+  localStorage is NOT encrypted — acceptable for dev/preview only
+  Never ship to production web without proper encryption
+  Warning log added when Platform.OS === 'web' and not __DEV__
+
+Native (iOS + Android):
+  expo-secure-store — hardware-backed encryption
+  iOS Keychain / Android Keystore
+  Protection level: same as banking apps
 
 V1 encryption:
-  Hardware-backed OS encryption
-  expo-secure-store handles key management transparently
-  Protection level: same as banking apps on iOS/Android
+  Hardware-backed OS encryption via expo-secure-store
+  All code uses storageService.ts — adapter handles platform difference
 
 V2 encryption (when Supabase backend added):
   Key = hash(Google OAuth token + device-specific ID)
   End-to-end encryption before data leaves device
   On logout: Invalidate key → stored data becomes unreadable
-  On re-login: Key re-derived from new OAuth token
   Row Level Security on all Supabase tables
-  auth.uid() = user_id enforcement on every table
   Field-level encryption for sensitive columns via KMS
-  Separate data keys per user, encrypted with master KMS key
 
 Rules (non-negotiable in both V1 and V2):
   Never store the key in plaintext — ever
@@ -190,20 +181,26 @@ Rules (non-negotiable in both V1 and V2):
 ## Post-Upload Confirmation Toast
 After every successful import, show this toast (always):
 ```
-"✓ X transactions imported"
-"✓ Account numbers masked"
-"✓ Raw file discarded"
-"✓ Data stored securely on your device"
-```
-Show it every time — never suppress it. Builds user trust.
+For spend imports:
+  "✓ X transactions imported"
+  "✓ Account numbers masked"
+  "✓ Raw file discarded"
+  "✓ Data stored securely on your device"
+
+For portfolio imports:
+  "✓ X holdings imported"
+  "⚠ Y holdings need categorisation"  (only if pendingHoldings > 0)
+  "✓ Account numbers masked"
+  "✓ Raw file discarded"
+  "✓ Data stored securely on your device"
 
 For salary slip uploads:
+  "✓ Salary data imported"
+  "✓ Personal identifiers removed"
+  "✓ Raw file discarded"
+  "✓ Data stored securely on your device"
 ```
-"✓ Salary data imported"
-"✓ Personal identifiers removed"
-"✓ Raw file discarded"
-"✓ Data stored securely on your device"
-```
+Show it every time — never suppress it. Builds user trust.
 
 ---
 
@@ -228,14 +225,11 @@ Implementation:  expo-local-authentication
 
 ## Onboarding Completion Flag
 ```typescript
-// Stored via storageService.ts
 interface OnboardingState {
   complete: boolean
   completedAt: Date | null
   skipped: boolean           // user skipped upload — show ghost state
   ageSkipped: boolean        // user skipped age screen (screen 4)
-                             // V2 FIRE planner will prompt for age
-                             // on first open if ageSkipped = true
 }
 
 // On app launch:
@@ -276,7 +270,6 @@ V2 (when Supabase backend added):
 V1 beta: BYOK (Bring Your Own Key)
   PM (Anand) provides one API key per beta tester
   One key per person — not one shared key
-  Helps track usage patterns per user
   PM funds beta API costs (target: €50 total)
   Keys entered by user in Settings → AI Features → API Key
   Stored via storageService (STORAGE_KEYS.AI_API_KEY)
@@ -293,15 +286,15 @@ V1b (after beta, when backend added):
 ## What You Must NOT Build
 ```
 [NOT YOURS] Any UI component or screen layout
-[NOT YOURS] CSV parsing logic (sanitiseTransaction is in csvParser)
-[NOT YOURS] Salary slip parsing logic (parser runs sanitisation)
+[NOT YOURS] CSV/file parsing logic (lives in /services/ingestion/)
+[NOT YOURS] Salary slip parsing logic
 [NOT YOURS] Financial calculations of any kind
 [NOT YOURS] FIRE calculations (V2)
 [NOT YOURS] Price refresh or API calls
 [V2]        Couple sync (Supabase E2E encryption)
 [V2]        Partner invitation flow
 [V2]        QR code device pairing
-[V2]        FIRE engine integration (age field stored, not used in V1)
+[V2]        FIRE engine integration
 ```
 
 ---
@@ -309,10 +302,10 @@ V1b (after beta, when backend added):
 ## Your Output Files
 ```
 /types/profile.ts              ⬜ Profile + Household interfaces
-                               (age: number | null included)
 
-/store/householdStore.ts       ✅ Session 12
+/store/householdStore.ts       ✅ Session 12 + Session 13
                                Profiles + auth state (Zustand)
+                               financialProfile field (DL-09)
                                Uses secureStorageAdapter for persistence
 
 /services/auth.ts              ⬜ Google OAuth flow (Session 14)
@@ -320,13 +313,14 @@ V1b (after beta, when backend added):
 /services/storageService.ts    ✅ Session 12
                                expo-secure-store abstraction
                                Single storage interface — vault door
-                               All other services call this only
 
-/services/secureStorageAdapter.ts  ✅ Session 12
-                               NOTE: Lives in /services/ not /store/
+/services/secureStorageAdapter.ts  ✅ Session 12 + Session 13
+                               Lives in /services/ (not /store/)
                                Zustand bridge using createJSONStorage()
-                               Separate file from storageService (single responsibility)
+                               Web: localStorage fallback (Session 13)
+                               Native: expo-secure-store (unchanged)
+                               Separate file from storageService
 
-/hooks/useHousehold.ts         ⬜ Session 12 remaining
+/hooks/useHousehold.ts         ✅ Session 12
                                Profile data for UI consumption
 ```

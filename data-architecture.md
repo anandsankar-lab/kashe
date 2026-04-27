@@ -1,10 +1,12 @@
 # Kāshe — Data Architecture
 *Read CLAUDE.md and engineering-rules.md before this file.*
 *This file covers the data layer: types, stores, hooks, services.*
-*Last updated: 19 March 2026 — Session 12 complete.
-Store interfaces updated with derived cache fields and auditStore.
-CSV upload flow updated to reflect smart detector architecture.
-Caching strategy section added. Joint account handling added.*
+*Last updated: 25 March 2026 — Session 13 complete.*
+*Ingestion pipeline restructured: /services/ingestion/ (10 files).*
+*csvParser.ts is now a re-export shim.*
+*portfolioStore: addHoldings, addPendingHoldings, resolveHolding added.*
+*ImportAuditEvent: holdingCount, pendingCategorizationCount, tier1Route added.*
+*Upload flow updated: ingestFile(), four-tier taxonomy, XLSX/TXT support.*
 
 ---
 
@@ -12,17 +14,20 @@ Caching strategy section added. Joint account handling added.*
 UI components never touch data services directly.
 The chain is always: **Service → Store → Hook → Component**.
 If you're importing a service into a component, you're doing it wrong.
+EXCEPTION: CSVUploadSheet imports ingestFile() from /services/ingestion.
+This is the one permitted direct service import — it IS the boundary layer.
 
 ---
 
 ## Layer Map
 
 ```
-/types/          TypeScript interfaces — the contract
-/services/       Business logic, API calls, parsing
-/store/          Zustand stores — in-memory state
-/hooks/          Bridge between stores and UI
-/components/     UI only — consumes hooks, never services
+/types/                TypeScript interfaces — the contract
+/services/             Business logic, API calls, parsing
+/services/ingestion/   Ingestion pipeline — 10 files, single entry point
+/store/                Zustand stores — in-memory state
+/hooks/                Bridge between stores and UI
+/components/           UI only — consumes hooks, never services
 ```
 
 ---
@@ -31,6 +36,11 @@ If you're importing a service into a component, you're doing it wrong.
 
 Before any component or service is built, the TypeScript
 interface exists in `/types/`. This is non-negotiable.
+
+Build order:
+1. Define the interface in `/types/`
+2. Add mock data to `/constants/mockData.ts` that satisfies the interface
+3. Build the component that renders it
 
 ### Spend types (built — /types/spend.ts)
 
@@ -47,10 +57,6 @@ const EXCLUDED_FROM_TOTALS: SpendCategory[] = [
   'income', 'investment_transfer', 'transfer'
 ]
 
-// Mortgage: shown in UI but MUTED, excluded from totals
-// Rendered with MacronRule instead of proportion bar
-// SpendCategoryRow variant="mortgage"
-
 interface SpendTransaction {
   id: string
   dataSourceId: string
@@ -61,7 +67,7 @@ interface SpendTransaction {
   currency: string            // base currency (converted)
   currencyOriginal: string    // original currency before conversion
   amountOriginal: number      // original amount before conversion
-  fxRateApplied: number | null // null if same currency
+  fxRateApplied: number | null
   merchant: string
   description: string
   rawDescription: string      // sanitised original
@@ -77,17 +83,13 @@ interface SpendTransaction {
   dataSource: 'CSV' | 'MANUAL'
   merchantNorm: string        // normalised for merchant memory
   importedAt: Date
-  tags: string[]              // default: []
+  tags: string[]
 }
-
-// NOTE: types/spend.ts exports this as SpendTransaction.
-// csvParser.ts imports it as: import type { SpendTransaction as Transaction }
-// This alias will be aligned in Session 16 cleanup.
 
 interface Budget {
   id: string
   householdId: string
-  profileId: string | 'household'   // 'household' = applies to all
+  profileId: string | 'household'
   category: SpendCategory
   monthlyAmount: number
   currency: string
@@ -97,213 +99,170 @@ interface DataSource {
   id: string
   householdId: string
   profileId: string
-  institution: string               // "ABN Amro", "HDFC Bank", etc.
+  institution: string
   accountType: 'personal' | 'joint' | 'managed'
-  accountLabel: string              // user-editable, e.g. "ABN Amro ····4821"
+  accountLabel: string        // user-editable
   lastFourDigits?: string
   currency: string
   lastImported?: Date
   transactionCount: number
+  type: 'SPEND' | 'PORTFOLIO' | 'SALARY'  // routes to correct store
 }
 ```
 
-### Asset types (to be built — /types/asset.ts)
+### Portfolio types (built — /types/portfolio.ts)
 
 ```typescript
-type AssetType =
-  | 'indian_mf' | 'indian_equity' | 'nre_nro' | 'ppf_epf'
-  | 'eu_brokerage' | 'employer_stock' | 'crypto'
-  | 'alternative' | 'cash'
-
-type PortfolioBucket = 'GROWTH' | 'STABILITY' | 'LOCKED'
-
-// DEFAULT bucket per asset type (can be overridden by user):
-// GROWTH:    indian_mf, indian_equity, eu_brokerage,
-//            employer_stock, crypto
-// STABILITY: nre_nro, cash, debt MFs, money market funds,
-//            bond ETFs
-// LOCKED:    ppf_epf, alternative (Crowdcube/Seedrs/angel)
-
-interface Asset {
+interface PortfolioHolding {
   id: string
   profileId: string
   householdId: string
-  owner: 'household' | string   // string = profileId
-  type: AssetType
   name: string
   ticker?: string
-  isin?: string
-  fundCode?: string
+  isin?: string               // e.g. 'IE00B3RBWM25'
+  assetClass: AssetClass      // display/grouping hint
+  assetSubtype: AssetSubtype  // drives all logic — never use assetClass for logic
+  geography: string
+  currency: string
+  currentValue: number
   quantity?: number
-  units?: number
   purchasePrice?: number
   purchaseDate?: Date
-  purchaseCurrency?: string
-  currentPrice?: number
-  currentCurrency: string
-  geography: 'india' | 'europe' | 'us' | 'uk' | 'other'
-  bucket: PortfolioBucket        // system default or user override
+  vestingDate?: Date          // RSU/ESPP only
+  unlockDate?: Date           // PPF, FD etc.
+  bucket: 'GROWTH' | 'STABILITY' | 'LOCKED'
   bucketOverridden: boolean
-  isIlliquid: boolean            // Crowdcube, angel = true
-  isEmployerStock: boolean
-  vestingDate?: Date             // RSU/ESPP only
-  unlockDate?: Date              // PPF, FD, etc.
-  isProtectionDesignated: boolean // emergency fund flag
-  lastPriceUpdate?: Date
+  isProtectionDesignated: boolean
   freshnessStatus: 'fresh' | 'stale' | 'very_stale'
-    // fresh: updated today
-    // stale: 7–30 days
-    // very_stale: >30 days
   dataSource: 'CSV' | 'MANUAL' | 'API'
+  lastPriceUpdate?: Date
 }
 ```
 
-### Liability types (to be built — /types/liability.ts)
+### Ingestion types (built — /services/ingestion/types.ts)
 
 ```typescript
-type LiabilityType =
-  | 'mortgage' | 'personal_loan' | 'car_loan'
-  | 'student_loan' | 'credit_card'
+// The four-tier import taxonomy
+type Tier1Route = 'spend' | 'portfolio'
 
-interface Liability {
-  id: string
-  profileId: string
-  type: LiabilityType
-  name: string
-  outstandingBalance: number
-  currency: string
-  monthlyPayment: number
-  interestRate: number
-  fixedRateExpiryDate?: Date      // mortgage only
-  creditLimit?: number            // credit card only
-  apr?: number                    // credit card only
-  endDate?: Date                  // loans only
-  linkedPropertyId?: string       // mortgage only, optional
-  lastUpdatedDate: Date
-}
-// Credit card: amber staleness warning after 7 days
-// Show credit utilisation = balance ÷ limit
-```
+type Tier2AccountType =
+  // Spend
+  | 'savings_account' | 'current_account'
+  | 'credit_card' | 'joint_account'
+  // Portfolio
+  | 'brokerage' | 'mutual_fund_folio'
+  | 'retirement' | 'fixed_deposit_account' | 'other_investment'
 
-### FIRE types (built — /types/fire.ts) [V2]
+type RouteConfidence = 'high' | 'medium' | 'low' | 'unknown'
 
-```typescript
-interface FIREInputs {
-  currentPortfolioValue: number
-  monthlyInvestmentAmount: number
-  targetMonthlySpendRetirement: number
-  currentAge: number
-  expectedAnnualReturnPct: number   // default 7.0
-  inflationRatePct: number          // from fireDefaults by country
-  mortgageEndDate?: Date
-  monthlyMortgagePayment?: number
+type FileType = 'csv' | 'txt' | 'xlsx'
+
+type RawRow = Record<string, string>
+
+interface RouteDetectionResult {
+  tier1Route: Tier1Route
+  tier2Suggestion: Tier2AccountType | null  // null when confidence = unknown
+  confidence: RouteConfidence
+  detectedInstitution: SupportedInstitution
+  signals: string[]  // human-readable detection signals
 }
 
-interface FIREOutputs {
-  fireNumber: number                // targetSpend × 300
-  yearsToFIRE: number
-  projectedFIREYear: number
-  requiredMonthlySavings: number
-  safeWithdrawalAmount: number      // 4% of projectedPortfolio
-  currentTrajectoryYear?: number    // at current PMT if data exists
-  portfolioAtFIRE: number
-  assumptions: FIREAssumptions
-}
-
-interface FIREAssumptions {
-  safeWithdrawalRatePct: 4          // locked, not editable
-  expectedReturnPct: number
-  inflationRatePct: number
-  inflationCountry: string
-  primaryResidenceExcluded: true
-  unvestedStockExcluded: true
-  illiquidAlternativesExcluded: true
-}
-```
-
-### Insight types (built — /store/insightsStore.ts)
-
-```typescript
-type InsightType =
-  | 'MARKET_EVENT_ALERT'
-  | 'PORTFOLIO_HEALTH'
-  | 'FIRE_TRAJECTORY'       // V2 — skip in V1
-  | 'INVESTMENT_OPPORTUNITY'
-  | 'MONTHLY_REVIEW'
-
-// Priority order (highest first):
-// MARKET_EVENT_ALERT > PORTFOLIO_HEALTH >
-// FIRE_TRAJECTORY > INVESTMENT_OPPORTUNITY
-
-interface Insight {
-  id: string
-  type: InsightType
-  headline: string           // max 10 words
-  body: string               // max 40 words
-  generatedAt: string        // ISO string
-  expiresAt: string          // ISO string
-  dismissed: boolean
-  dismissedAt: string | null
-  source?: string
-  sourceUrl?: string
-  sentiment?: 'bullish' | 'bearish' | 'mixed' | 'neutral'
-  confidence?: 'high' | 'medium' | 'low'
-  action?: {
-    label: string
-    type: 'VIEW_HOLDING' | 'VIEW_SUGGESTIONS' | 'VIEW_FIRE'
-    payload?: string
-  }
-}
-
-interface MonthlyReview {
-  monthYear: string          // "YYYY-MM"
-  generatedAt: string        // ISO string
-  viewed: boolean
-  whereYouStand: string
-  howMoneyIsWorking: {
-    growth: string | null
-    stability: string | null
-    locked: string | null
-    protection: string | null
-  }
-  thisMonthsPriority: {
-    headline: string
-    reasoning: string
-    bucketTarget: 'GROWTH' | 'STABILITY' | 'LOCKED' | null
-  }
-  fireUpdate: {
-    headline: string
-    detail: string
-  } | null
-  nextMonthWatchlist: string[]  // 2–3 items
-}
-
-interface AIUsageRecord {
-  inputTokensThisMonth: number
-  outputTokensThisMonth: number
-  callCount: number
-  monthYear: string           // "YYYY-MM"
-  tier: 'free' | 'paid'
-  lastUpdated: string         // ISO string
-}
-```
-
-### Audit types (built — /store/auditStore.ts)
-
-```typescript
-interface ImportAuditEvent {
-  id: string
+interface IngestionInput {
+  content: string           // raw file content or base64 for xlsx
+  fileType: FileType
+  filename: string
+  dataSourceId: string
   profileId: string
   householdId: string
-  timestamp: string               // ISO string
+  existingTransactions: SpendTransaction[]
+}
+
+interface ParseSuccess {
+  transactions: SpendTransaction[]
+  holdings: PortfolioHolding[]
+  pendingHoldings: PortfolioHolding[]   // unknown assetSubtype
+  duplicatesSkipped: number
+  probableDuplicates: ProbableDuplicate[]
+  confidence: ParseConfidence
+  routeDetection: RouteDetectionResult
+  fileType: FileType
+  auditData: ImportAuditData
+}
+
+interface ImportAuditData {
   institution: SupportedInstitution
   transactionCount: number
+  holdingCount: number                    // portfolio path
+  pendingCategorizationCount: number      // portfolio path
   duplicatesSkipped: number
   probableDuplicatesFound: number
-  layer2Queued: number            // transactions with confidence 0.0
-  parseConfidence: number         // ParseConfidence.overallScore
+  layer2Queued: number
+  parseConfidence: number
+  tier1Route: Tier1Route
+  tier2AccountType: Tier2AccountType | null
   status: 'success' | 'failed'
   errorCode?: string
+}
+```
+
+### UserFinancialProfile (built — /types/userProfile.ts)
+
+```typescript
+// The intelligence spine. Everything reads from this.
+// Built by userProfileService.ts. Stored in householdStore.
+
+interface UserFinancialProfile {
+  portfolioTier: 1 | 2 | 3 | 4
+  portfolioTierLabel: 'starter' | 'growing' | 'established' | 'significant'
+  previousPortfolioTier: 1 | 2 | 3 | 4 | null
+  tierChangedAt: string | null
+  tierChangeDirection: 'up' | 'down' | null
+  sophisticationScore: number
+  sophisticationBand: 'foundation' | 'building' | 'established' | 'sophisticated'
+  investmentStyle: 'passive' | 'active' | 'mixed' | 'unknown'
+  isNriProfile: boolean
+  financialVehicles: string[]
+  growthPct: number
+  stabilityPct: number
+  lockedPct: number
+  cashLikeVehiclePct: number
+  illiquidSpeculativePct: number
+  employerStockPct: number
+  largestHoldingPct: number
+  protectionMonthsCovered: number
+  hasVestingEventSoon: boolean
+  geographyExposure: Record<string, number>
+  currencyExposure: Record<string, number>
+  savingsRateBand: 'low' | 'medium' | 'high' | 'unknown'
+  investingFrequency: 'rarely' | 'monthly' | 'frequent' | 'unknown'
+  dataMonthsSpend: number
+  dataMonthsPortfolio: number
+  institutionsConnected: number
+  hasSpendSource: boolean
+  hasPortfolioSource: boolean
+  hasIndianSource: boolean
+  hasEuropeanSource: boolean
+  hasInvestmentPlatform: boolean
+  hasSalarySlip: boolean
+  importFreshness: 'fresh' | 'stale' | 'very_stale' | 'never'
+  lastSpendImportDate: string | null
+  lastPortfolioImportDate: string | null
+  importCountLifetime: number
+  onboardingComplete: boolean
+  riskProfileActivelySet: boolean
+  protectionDesignated: boolean
+  aiInsightsEnabled: boolean
+  monthlyReviewCount: number
+  budgetsConfigured: boolean
+  monthlyTargetSet: boolean
+  fireIsSetUp: boolean
+  householdType: 'individual' | 'couple' | 'family' | 'multi_managed'
+  managedProfileCount: number
+  hasMortgage: boolean
+  skippedAgeScreen: boolean
+  firstSeenDate: string
+  firstUploadDate: string | null
+  lastCalculatedAt: string | null
 }
 ```
 
@@ -315,45 +274,30 @@ interface ImportAuditEvent {
 
 ```typescript
 interface SpendStore {
-  // Raw data
   transactions: SpendTransaction[]
   budgets: Budget[]
   dataSources: DataSource[]
   merchantOverrides: MerchantOverride[]
   retryQueue: PendingCategorization[]   // Layer 2 queue
 
-  // Derived cache (Option A — cached in store, not recalculated every render)
   derivedSpend: {
     spendByCategory: Record<SpendCategory, number>
     totalSpend: number
-    comparisonVsLastMonth: number       // percentage
-    comparisonVs3MonthAvg: number       // percentage
-    selectedMonth: string               // 'YYYY-MM' format
-    lastCalculatedAt: string | null     // null = never calculated
+    comparisonVsLastMonth: number
+    comparisonVs3MonthAvg: number
+    selectedMonth: string               // 'YYYY-MM'
+    lastCalculatedAt: string | null
   }
 
-  // Actions:
   addTransactions: (txns: SpendTransaction[], geography: string) => void
-  // Runs Layer 1 categorisation synchronously on all incoming transactions
-  // Layer 2 misses → retryQueue
-  // Sets derivedSpend.lastCalculatedAt to null (forces recalculation)
+  // Runs Layer 1 synchronously. Layer 2 misses → retryQueue.
+  // Sets derivedSpend.lastCalculatedAt to null.
+  // ALSO TRIGGERS: userProfileService update chain
 
   setBudget: (budget: Budget) => void
-
   recategorise: (txnId: string, category: SpendCategory) => void
-  // Updates category on transaction
-  // Calls applyUserCorrection() → updates merchantOverrides
-  // Re-runs categorise() on ALL transactions with same merchantNorm
-  // Sets derivedSpend.lastCalculatedAt to null
-
   setSelectedMonth: (month: string) => void
-  // Sets selectedMonth in derivedSpend
-  // Sets lastCalculatedAt to null (month switch = cache miss)
-
   updateDerivedSpend: (derived: {...}) => void
-  // Called by useSpend() after recalculation
-  // Sets lastCalculatedAt to new Date().toISOString()
-
   addDataSource: (source: DataSource) => void
   updateRetryQueue: (queue: PendingCategorization[]) => void
 }
@@ -363,46 +307,55 @@ interface SpendStore {
 
 ```typescript
 interface PortfolioStore {
-  // Raw data
-  holdings: PortfolioHolding[]    // uses existing portfolio types
+  holdings: PortfolioHolding[]
   bucketOverrides: BucketOverride[]
   protectionHoldingId: string | null
+  pendingCategorizationQueue: PortfolioHolding[]  // added Session 13
 
-  // Derived cache
   derived: {
     liveTotal: number
     lockedTotal: number
-    financialPosition: number       // liveTotal + lockedTotal - liabilities
-    allocationByBucket: Record<string, number>    // percentages
-    allocationByGeography: Record<string, number> // percentages
+    financialPosition: number
+    allocationByBucket: Record<string, number>
+    allocationByGeography: Record<string, number>
     protectionAsset: PortfolioHolding | null
     protectionMonthsCovered: number
     lastCalculatedAt: string | null
   }
 
-  // Actions:
   addHolding: (holding: PortfolioHolding) => void
-  // Sets derived.lastCalculatedAt to null
+  // ALSO TRIGGERS: userProfileService update chain
+
+  addHoldings: (holdings: PortfolioHolding[]) => void   // added Session 13
+  // Batch add. Dedup by id. Sets derived.lastCalculatedAt = null.
+  // ALSO TRIGGERS: userProfileService update chain
+
+  addPendingHoldings: (holdings: PortfolioHolding[]) => void  // added Session 13
+  // Appends to pendingCategorizationQueue. FIFO cap: 50.
+
+  resolveHolding: (id: string, assetSubtype: AssetSubtype) => void  // added Session 13
+  // Sets assetSubtype + bucket from DEFAULT_BUCKET.
+  // Moves from pendingCategorizationQueue → holdings.
+  // Sets derived.lastCalculatedAt = null.
 
   updateHolding: (holdingId: string, updates: Partial<PortfolioHolding>) => void
-  // Immutable merge, sets derived.lastCalculatedAt to null
+  // ALSO TRIGGERS: userProfileService update chain
 
   setBucketOverride: (override: BucketOverride) => void
-  // Sets derived.lastCalculatedAt to null
-  // Also invalidates PORTFOLIO_HEALTH insight (insightsStore)
+  // ALSO TRIGGERS: userProfileService update chain
+  // ALSO invalidates PORTFOLIO_HEALTH insight
 
   setProtection: (holdingId: string) => void
-  // Sets derived.lastCalculatedAt to null
+  // ALSO TRIGGERS: userProfileService update chain
 
   updateDerived: (derived: PortfolioDerived) => void
-  // Called by usePortfolio() after recalculation
 }
 
 interface BucketOverride {
   holdingId: string
   overrideBucket: 'GROWTH' | 'STABILITY' | 'LOCKED'
   systemBucket: 'GROWTH' | 'STABILITY' | 'LOCKED'
-  overriddenAt: string    // ISO string
+  overriddenAt: string
   profileId: string
 }
 ```
@@ -412,18 +365,20 @@ interface BucketOverride {
 ```typescript
 interface InsightsStore {
   activeInsight: Insight | null
-  monthlyReviews: MonthlyReview[]   // last 12 months
+  monthlyReviews: MonthlyReview[]
   aiUsage: AIUsageRecord
-  lastInsightCheck: string | null   // ISO string — throttle API calls
+  lastInsightCheck: string | null
+  discoveredSources: DiscoveredSource[]
+  lastGenerationWindows: Record<string, string>
 
-  // Actions:
   setActiveInsight: (insight: Insight | null) => void
   dismissInsight: (insightId: string) => void
   setMonthlyReview: (review: MonthlyReview) => void
   markReviewViewed: (monthYear: string) => void
   logAPIUsage: (tokens: { input: number, output: number }) => void
-  // Handles monthly rollover automatically
   setLastInsightCheck: (timestamp: string) => void
+  addDiscoveredSource: (source: DiscoveredSource) => void
+  setLastGenerationWindow: (key: string, timestamp: string) => void
 }
 ```
 
@@ -433,22 +388,20 @@ interface InsightsStore {
 interface HouseholdStore {
   household: Household | null
   profiles: Profile[]
-  activeProfileId: string | 'household'   // 'household' = all
+  activeProfileId: string | 'household'
   isAuthenticated: boolean
   riskProfile: 'conservative' | 'balanced' | 'growth'
   onboardingComplete: boolean
+  financialProfile: UserFinancialProfile | null  // added DL-09
 
-  // Actions:
   setHousehold: (household: Household) => void
   addProfile: (profile: Profile) => void
   setActiveProfile: (profileId: string | 'household') => void
   setAuthenticated: (value: boolean) => void
   setRiskProfile: (profile: RiskProfileType) => void
   setOnboardingComplete: (value: boolean) => void
+  updateFinancialProfile: (profile: UserFinancialProfile) => void
 }
-
-// Default riskProfile: 'balanced'
-// RECOMMEND Balanced — never silently assume. Locked.
 ```
 
 ### auditStore (Zustand + secureStorageAdapter)
@@ -457,28 +410,59 @@ interface HouseholdStore {
 interface AuditStore {
   events: ImportAuditEvent[]    // last 100 events, FIFO eviction
 
-  // Actions:
   logImport: (event: ImportAuditEvent) => void
-  // Appends event, evicts oldest if > 100
-
   clearAuditLog: () => void
-  // ONLY called from "delete all data" flow (Session 16)
-  // Never called anywhere else
+  // clearAuditLog ONLY called from "delete all data" flow (Session 16)
 }
 ```
 
 ---
 
-## Caching Strategy — LOCKED (19 March 2026)
+## UserFinancialProfile — The Intelligence Spine
 
-### The pattern
+### What it feeds
 
 ```
-All expensive derived values are cached IN their store.
+getActiveSeedSources(profile)             → which sources to search
+evaluateAllTriggers(profile, fxParams)    → which health checks fire
+buildHoldingsContext(profile, holdings)   → what Claude receives
+analyticsService.updateUserProperties()  → all PostHog properties
+aiInsightService                          → search depth, framing, discovery pass
+```
+
+### updateUserProfile() triggers
+
+Called automatically after:
+- `spendStore.addTransactions()`
+- `portfolioStore.addHolding()` / `addHoldings()`
+- `portfolioStore.updateHolding()`
+- `portfolioStore.setBucketOverride()`
+- `portfolioStore.setProtection()`
+- `householdStore.setRiskProfile()` (if changed from default)
+- `householdStore.setOnboardingComplete()`
+- Monthly target set
+- FIRE inputs set
+
+### Sophistication score
+
+0–100. Five components. NEVER shown to user.
+Drives: insight depth, PORTFOLIO_HEALTH framing, prompt conservatism.
+
+### Portfolio tier hysteresis
+
+Tier up: immediately when value crosses floor.
+Tier down: only when 20% BELOW floor (prevents oscillation).
+Floors: Tier 1 <€25k, Tier 2 €25k–€100k, Tier 3 €100k–€500k, Tier 4 >€500k.
+
+---
+
+## Caching Strategy — LOCKED (19 March 2026)
+
+```
+All expensive derived values cached IN their store.
 Hooks check lastCalculatedAt on mount.
 If null or >24h old: recalculate from raw data, update store.
 If fresh: return cached values directly.
-
 This is Option A — derived cache in stores.
 Never Option B (recalculate in hook every render).
 ```
@@ -489,59 +473,53 @@ Never Option B (recalculate in hook every render).
 Home screen
   Source: portfolioStore.derived
   Staleness: 24 hours
-  Event invalidation: addHolding, updateHolding, setBucketOverride
-                      new CSV upload
+  Invalidation: addHolding, addHoldings, updateHolding, setBucketOverride, new upload
 
 Spend screen
   Source: spendStore.derivedSpend
   Staleness: 24 hours (time-based)
-  Event invalidation (immediate):
-    addTransactions(), recategorise(), setSelectedMonth()
+  Invalidation: addTransactions(), recategorise(), setSelectedMonth()
   Month caching: ONE MONTH AT A TIME
-    Month switch = lastCalculatedAt set to null = recalculate immediately
 
 Portfolio screen
   Source: portfolioStore.derived
   Staleness: 24 hours
-  Event invalidation: all portfolioStore mutations
+  Invalidation: all portfolioStore mutations
 
 Insights
   Source: insightsStore (per insight type)
-  MARKET_EVENT_ALERT: expiresAt 24h after generatedAt
+  MARKET_EVENT_ALERT: 24h from generatedAt
   PORTFOLIO_HEALTH: invalidated on holdings change
   INVESTMENT_OPPORTUNITY: invalidated on investment_transfer change
   MONTHLY_REVIEW: invalidated midnight on 1st of next month
-  One Claude call per app open maximum
-  Minimum 1 hour between calls for same insight type
+  Generation windows: A (00:00–11:59) B (12:00–23:59)
+  Max 2 generations per day
+
+UserFinancialProfile
+  Source: householdStore.financialProfile
+  Staleness: 24 hours
+  Invalidation: any data change event (see triggers above)
 ```
 
 ---
 
 ## Hooks — The UI Boundary
 
-Every hook has one job: translate store data into
-something a component can consume without knowing
-where it came from.
-
 ### useSpend()
 
 ```typescript
 // Returns:
 {
-  transactions: SpendTransaction[]  // filtered to active profile + selectedMonth
+  transactions: SpendTransaction[]
   budgets: Budget[]
   spendByCategory: Record<SpendCategory, number>
-  totalSpend: number                // excludes investment_transfer + transfer
-  comparisonVsLastMonth: number     // percentage
-  comparisonVs3MonthAvg: number     // percentage
+  totalSpend: number
+  comparisonVsLastMonth: number
+  comparisonVs3MonthAvg: number
   hasMinimumHistory: boolean        // true if ≥2 months data
   selectedMonth: string             // 'YYYY-MM'
   setSelectedMonth: (month: string) => void
 }
-
-// On mount: check derivedSpend.lastCalculatedAt
-// If null or >24h: recalculate + call updateDerivedSpend()
-// If fresh: return cached values
 ```
 
 ### usePortfolio()
@@ -550,19 +528,15 @@ where it came from.
 // Returns:
 {
   holdings: PortfolioHolding[]
-  liveTotal: number               // non-illiquid holdings
-  lockedTotal: number             // illiquid + LOCKED bucket
-  financialPosition: number       // liveTotal + lockedTotal - liabilities
-  allocationByBucket: Record<string, number>  // percentages
+  liveTotal: number
+  lockedTotal: number
+  financialPosition: number
+  allocationByBucket: Record<string, number>
   allocationByGeography: Record<string, number>
   protectionAsset: PortfolioHolding | null
   protectionMonthsCovered: number
-  savingsRate: number             // this month (from spendStore)
+  savingsRate: number
 }
-
-// On mount: check derived.lastCalculatedAt
-// Apply bucketOverrides when computing allocationByBucket
-// protectionMonthsCovered = protectionAsset.currentValue / avgMonthlySpend
 ```
 
 ### useInsights()
@@ -572,29 +546,10 @@ where it came from.
 {
   activeInsight: Insight | null
   currentMonthReview: MonthlyReview | null
-  pastReviews: MonthlyReview[]    // last 12, excl. current month
+  pastReviews: MonthlyReview[]
   reviewState: 'unavailable' | 'insufficient' | 'ready_unread' | 'ready_read'
-  isOverBudget: boolean           // any category >90% of budget
+  isOverBudget: boolean
   dismissInsight: () => void
-}
-
-// reviewState logic:
-// 'unavailable'  → no transactions at all
-// 'insufficient' → <3 months data
-// 'ready_unread' → review exists, viewed: false
-// 'ready_read'   → review exists, viewed: true
-```
-
-### useFirePlanner() [V2]
-
-```typescript
-// Returns:
-{
-  inputs: FIREInputs
-  outputs: FIREOutputs | null     // null if inputs incomplete
-  updateInputs: (partial: Partial<FIREInputs>) => void
-  recalculate: () => void
-  isSetUp: boolean
 }
 ```
 
@@ -606,10 +561,11 @@ where it came from.
   household: Household | null
   profiles: Profile[]
   activeProfile: Profile | 'household'
-  currentProfile: Profile | null  // null when household view
+  currentProfile: Profile | null
   setActiveProfile: (id: string | 'household') => void
   isAuthenticated: boolean
   riskProfile: RiskProfileType
+  financialProfile: UserFinancialProfile | null
 }
 ```
 
@@ -618,91 +574,97 @@ where it came from.
 ```typescript
 // Returns:
 {
-  getSuggestions: (
-    bucket: string,
-    riskProfile: RiskProfileType,
-    geography: string
-  ) => InstrumentCatalogueEntry[]
-
+  getSuggestions: (bucket, riskProfile, geography) => InstrumentCatalogueEntry[]
   getEntry: (id: string) => InstrumentCatalogueEntry | null
 }
-
-// V1: reads from /constants/instrumentCatalogue.ts directly
+// V1: reads /constants/instrumentCatalogue.ts directly
 // V2: replace with Supabase call — zero component changes
-// This boundary is exactly why the hook exists
-//
-// Safety: getSuggestions always filters out track_only
-// even if called with incorrect parameters
+// NOTE: currently sorts by tier ascending — fix to kasheScore desc in Session 16
 ```
 
 ---
 
 ## DataSource — First-Class Entity
 
-Every CSV upload creates or updates a DataSource record.
-The DataSource represents a bank account, not a file.
+Every file import creates or updates a DataSource record.
+The DataSource represents a bank/broker account, not a file.
 
 ```
-On CSV upload:
-1. parseCSV() runs — smart field detector identifies institution
+On import:
+1. ingestFile() runs — institution detected via fingerprints
 2. DataSourceConfirmSheet always shown:
-   Institution: detected name (e.g. "ABN Amro")
-   Account label: auto-generated (e.g. "ABN Amro ····4821") ← editable
-   "Is this a joint account?" toggle ← ALWAYS asked
-3. User confirms → DataSource created with accountType
+   - Institution: detected name (e.g. "ABN Amro")
+   - Tier 2 account type selector — user always picks
+   - Account label: auto-generated, editable
+   - "Is this a joint account?" toggle — ALWAYS asked
+3. User confirms → DataSource created
 4. Raw account holder name NEVER stored (security pipeline strips it)
-5. User-edited label is what gets stored in accountLabel
-6. Future imports from same institution + last4: auto-matched to existing DataSource
+5. User-edited label stored in accountLabel
+6. Future imports: auto-matched to existing DataSource by institution + last4
 
 Joint accounts:
   accountType: 'joint'
-  All transactions from this DataSource: ownership: 'joint'
+  All transactions: ownership: 'joint'
   Enables household vs individual view logic
 ```
 
 ---
 
-## CSV Upload Flow — LOCKED (19 March 2026)
+## Ingestion Pipeline — LOCKED (updated 25 March 2026)
 
 ```
 User taps [+] → CSVUploadSheet opens
-  → User selects "Upload bank statement"
-  → expo-document-picker opens (CSV only)
-  → User selects file
-  → CSV content read into MEMORY ONLY — never written to disk
-  → parseCSV(content, dataSourceId, profileId, householdId, existing)
-      → Papa Parse reads raw CSV
-      → Smart field detector scores columns
-      → detectColumnMapping() returns ParseConfidence
-      → If tier1Complete = false: ParseError TIER1_FIELDS_MISSING
-      → parseRow() for each row using ColumnMapping
-      → sanitiseTransaction() inside each parseRow() call
-          (account numbers masked, IBANs masked, BSN/PAN/Aadhaar stripped)
-      → deduplicateTransactions() — hybrid key hierarchy
-          Priority 1: referenceId (where present)
-          Priority 2: compound key
-          Priority 3: fuzzy Dice (Indian banks) → probableDuplicates[]
-      → Atomic: any failure → ParseError ATOMIC_ROLLBACK
-      → On success: ParseSuccess { transactions, duplicatesSkipped,
-                                   probableDuplicates, confidence, auditData }
-  → If probableDuplicates.length > 0: ProbableDuplicateSheet
-      User confirms each pair: skip or import
-  → DataSourceConfirmSheet shown (always)
-      Editable label, joint account toggle
+  → User selects "Upload bank statement" or "Upload portfolio CSV"
+  → expo-document-picker opens (CSV, TXT, XLSX accepted)
+  → File content read into MEMORY ONLY — never written to disk
+  → ingestFile(IngestionInput) called from /services/ingestion
+      Stage 1: fileReader.readFile() → RawRow[]
+        CSV/TXT: Papa Parse (auto-detect delimiter)
+        XLSX/XLS: SheetJS → first sheet → rows
+        All headers normalised (trim + lowercase)
+      Stage 2: columnDetector.detectColumnMapping() → ColumnMapping + institution
+        Scores column fingerprints against INSTITUTION_REGISTRY
+        If tier1Complete = false: ParseError TIER1_FIELDS_MISSING
+      Stage 3: routeDetector.detectRoute() → RouteDetectionResult
+        Institution-first routing (high/medium confidence)
+        Column scoring fallback (UNKNOWN institution)
+        Returns: { tier1Route, tier2Suggestion, confidence, signals[] }
+      Stage 4a (spend path):
+        transactionParser.parseTransactions() → SpendTransaction[]
+        deduplicator.deduplicateTransactions()
+        Returns ParseSuccess { transactions, holdings: [], pendingHoldings: [] }
+      Stage 4b (portfolio path):
+        holdingsParser.parseHoldings() → { holdings, pendingHoldings }
+          assetSubtype from ISIN prefix + column signals
+          Unknown → pendingHoldings[]
+        Returns ParseSuccess { transactions: [], holdings, pendingHoldings }
+      Any failure → ParseError ATOMIC_ROLLBACK
+  → If probableDuplicates.length > 0: ProbableDuplicateSheet (W-04)
+  → DataSourceConfirmSheet shown (ALWAYS):
+      Tier 2 account type selector — required
+      Pre-selected if confidence = high/medium
+      Confirm disabled if confidence = unknown until user picks
+      Account label (editable), joint account toggle
   → User confirms
-  → spendStore.addTransactions()
-      Layer 1 categorisation runs synchronously on all transactions
-      Layer 2 misses → retryQueue (capped at 20 per upload)
-      derivedSpend.lastCalculatedAt → null
+  → If tier1Route === 'spend':
+      spendStore.addTransactions(transactions, geography)
+  → If tier1Route === 'portfolio':
+      portfolioStore.addHoldings(holdings)
+      portfolioStore.addPendingHoldings(pendingHoldings)
+  → userProfileService.buildUserFinancialProfile()
+      → householdStore.updateFinancialProfile(profile)
+      → analyticsService.updateUserProperties(profile)
   → auditStore.logImport(auditData)
-  → Post-upload toast (always shown, never suppressed):
-      "✓ X transactions imported"
+  → UploadToast shown:
+      "✓ X transactions imported"        (spend path)
+      "✓ X holdings imported"            (portfolio path)
+      "⚠ Y holdings need categorisation" (if pendingHoldings > 0)
       "✓ Account numbers masked"
       "✓ Raw file discarded"
       "✓ Data stored securely on your device"
-  → Raw CSV content discarded from memory
-  → Spend screen updates reactively (Zustand)
-  → Relevant insight caches invalidated
+  → Raw file content discarded from memory
+  → Screen updates reactively (Zustand)
+  → Insight caches invalidated
 ```
 
 ---
@@ -710,7 +672,6 @@ User taps [+] → CSVUploadSheet opens
 ## Mock Data Rules
 
 All mock data lives in `/constants/mockData.ts`.
-Components import from there — never hardcode inline.
 
 ```typescript
 // Mock data must:
@@ -720,7 +681,7 @@ Components import from there — never hardcode inline.
 // 2. Match production TypeScript types exactly
 // 3. Be realistic — plausible numbers, not placeholder zeros
 // 4. Be stable — same data every time, no Math.random()
-// 5. Cover all component states (with data, partial, etc.)
+// 5. Cover all component states
 // 6. Use SpendTransaction type (not Transaction alias)
 ```
 
@@ -730,13 +691,15 @@ Components import from there — never hardcode inline.
 
 ```
 ✗ import spendCategoriser from '../services/spendCategoriser'
-✗ import { parseCSV } from '../services/csvParser'
+✗ import { parseCSV } from '../services/csvParser'  ← shim, use /ingestion
+✗ import { ingestFile } from '../services/ingestion'  ← only in CSVUploadSheet
 ✗ import useSpendStore from '../store/spendStore'
 ✗ const color = '#C8F04A'
 ✗ const { colorScheme } = useColorScheme()
 ✗ fetch('https://api.anthropic.com/...')
 ✗ await SecureStore.setItemAsync(...)
-✗ spendByCategory = transactions.reduce(...)  // inline calculation
+✗ spendByCategory = transactions.reduce(...)
+✗ const tier = financialPosition > 100000 ? 3 : 2
 ```
 
 All of these belong in services, stores, or hooks.
