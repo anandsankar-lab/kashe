@@ -1,38 +1,22 @@
 # Kāshe — CLAUDE-state.md
 *Current build state. ~30 lines. Rewrites every session.*
-*Last updated: 25 March 2026 — Session 13 in progress.*
+*Last updated: 27 April 2026 — Session 14 in progress.*
 
 ---
 
 ## CURRENT STATUS
 
-**Session 13: IN PROGRESS**
-W-01 ✅ W-02 ✅ W-03 ✅ W-03b ✅
-W-04 through W-10 remain.
+**Session 14: IN PROGRESS**
+W-04 complete and committed. Next ticket: W-05.
 
-**Next active ticket: W-04 — ProbableDuplicateSheet**
-
-**Last commit:** [W-03b] Ingestion pipeline — tiered taxonomy,
-35-institution registry, XLSX/TXT support, portfolio pending queue.
+**Last commit:** [W-04] Deduplicator — compound key logic, ProbableDuplicate removed
 
 ---
 
-## ACTIVE BLOCKERS
-
-None. W-04 can begin immediately.
-
-**Pre-requisite for W-08:** Export all real bank files before
-the stress test. CSV, TXT, or XLSX from:
-ABN Amro (personal + joint), HDFC (personal + joint + demat),
-SBI, DeGiro, Aditya Birla Capital. Partner accounts too.
-
----
-
-## SESSION 13 REMAINING TICKETS
+## SESSION 14 REMAINING TICKETS
 
 ```
-W-04  ProbableDuplicateSheet — fuzzy dedup UI
-W-05  Wire MonthlyReviewCard → useInsights
+W-05  Wire MonthlyReviewCard → useInsights            ← NEXT
 W-06  Wire useInstrumentCatalogue → InstrumentDiscoverySection
 W-07  Wire householdStore → RiskProfileCard
 W-08  Real Data Stress Test (observation only — no commit)
@@ -42,34 +26,37 @@ W-10  Wire UserFinancialProfile → insightTriggers
 
 ---
 
-## KEY SESSION 13 INFRASTRUCTURE (already committed)
+## WHAT CHANGED IN W-04
 
-New packages installed:
-  expo-document-picker, expo-file-system, xlsx (SheetJS),
-  @expo/vector-icons, babel-preset-expo
+- Deduplication logic replaced: Dice coefficient → compound key
+- Compound key: transactionId (Priority 1) + amount + date + normalisedDescription (Priority 2)
+- normalisedDescription: lowercase → trim → collapse spaces → strip /–_.#, → collapse again
+- ProbableDuplicate interface removed from types.ts entirely
+- probableDuplicates[] removed from ParseSuccess
+- probableDuplicatesFound removed from ImportAuditData
+- ProbableDuplicateSheet never built — spec retired
+- CSVUploadSheet: ProbableDuplicateSheet trigger removed
+- csvParser.ts shim: ProbableDuplicate re-export removed
+- Loose end: auditStore.ImportAuditEvent still has probableDuplicatesFound field
+  (hardcoded to 0 in CSVUploadSheet) — clean up Session 16
 
-New root config files:
-  metro.config.js — unstable_enablePackageExports: false
-                    fixes PostHog/ES module bundler crash
-  babel.config.js — babel-preset-expo preset
+---
 
-secureStorageAdapter.ts: web localStorage fallback added.
-  Web preview → localStorage. Native build → expo-secure-store.
+## ACTIVE BLOCKERS
 
-New ingestion pipeline: /services/ingestion/ (10 files)
-  csvParser.ts is now a re-export shim — do not add logic to it.
+None. W-05 can begin immediately.
 
 ---
 
 ## REMAINING BUILD ORDER (sessions)
 
 ```
-Session 13   Wire UI to data layer + real data stress test  ← IN PROGRESS
-Session 14   Onboarding (10 screens + UniversalAddSheet)
-Session 15   Sources screen
-Session 16   Settings + polish + bug fixes + tests + comment pass
-Session 16.5 PM dashboard + snapshot export + PostHog dashboards
-Session 17   QA + native build prep
+Session 14   Complete W-05 through W-10 + real data stress test
+Session 15   Onboarding (10 screens + UniversalAddSheet)
+Session 16   Sources screen
+Session 17   Settings + polish + bug fixes + tests + comment pass
+Session 17.5 PM dashboard + snapshot export + PostHog dashboards
+Session 18   QA + native build prep
 --- YOUR OWN TESTING ---
 --- 10 FRIENDS BETA ---
 --- INVESTOR READY ---
@@ -83,10 +70,10 @@ Session 17   QA + native build prep
 Repo:     github.com/anandsandk-lab/kashe
 Local:    ~/Documents/kashe
 Preview:  npx expo start → w → localhost:8081
-TS check: npx tsc --noEmit (9 pre-existing errors — zero new is the bar)
+TS check: npx tsc --noEmit (10 pre-existing errors — zero new is the bar)
 Node:     v25.6.1
 npm:      --legacy-peer-deps always
-PostHog:  eu.posthog.com, project 144615 (ANALYTICS_ENABLED = false)
+PostHog:  eu.posthog.com, project 144615
 ```
 
 *For full build history → CLAUDE-history.md*

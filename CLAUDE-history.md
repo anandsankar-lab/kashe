@@ -98,3 +98,15 @@ W-03b: csvParser.ts decomposed into /services/ingestion/ (10 files).
   portfolioStore: addHoldings(), addPendingHoldings(), resolveHolding() added.
   Target user confirmed: any globally mobile working professional (IN/UK/EU/US).
 W-04 through W-10 remain.
+
+[Session 14] 27 April 2026. W-04 complete.
+W-04 redefined: ProbableDuplicateSheet spec retired entirely.
+  Dice coefficient fuzzy matching removed from deduplicator.ts.
+  Replaced with compound key: transactionId (Priority 1) +
+  amount + date + normalisedDescription (Priority 2).
+  Deduplication is now geography-agnostic — works for all banks, all markets.
+  ProbableDuplicate interface removed from types.ts.
+  probableDuplicates[] removed from ParseSuccess and ImportAuditData.
+  CSVUploadSheet: ProbableDuplicateSheet trigger removed.
+  Loose end: auditStore.ImportAuditEvent.probableDuplicatesFound hardcoded 0 — clean up Session 16.
+W-05 through W-10 remain.
