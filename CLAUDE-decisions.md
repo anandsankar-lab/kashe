@@ -1,6 +1,6 @@
 # Kāshe — CLAUDE-decisions.md
 *All locked decisions. Rarely changes.*
-*Last updated: 25 March 2026 — Session 13 ingestion pipeline locked.*
+*Last updated: 27 April 2026 — Session 14 complete. Section 19 added.*
 *If a decision isn't here, it hasn't been made yet — ask the PM.*
 
 ---
@@ -58,8 +58,8 @@ Invest      Risk profile + investment plan + discovery + monthly review
 /app/(tabs)/invest.tsx         Invest
 /app/spend/[category].tsx      Spend category detail
 /app/portfolio/[holdingId].tsx Holding detail
-/app/settings.tsx              Settings (stub → full Session 16)
-/app/sources.tsx               Sources (Session 15)
+/app/settings.tsx              Settings (stub → full Session 18)
+/app/sources.tsx               Sources (Session 17)
 /app/invest/fire.tsx           NOT BUILT — V2 only
 ```
 
@@ -150,6 +150,7 @@ for file I/O. No other component may import from services/.
 - PostHog user properties → `services/analyticsService.ts` updateUserProperties()
   Source: UserFinancialProfile always. Never set properties manually.
 - Vehicle category taxonomy → `types/userProfile.ts` VEHICLE_CATEGORY_MAP
+- **Vehicle intelligence rules → `constants/vehicleRules.ts` VEHICLE_RULES** ← NEW VI-01
 
 **Storage — locked**
 - expo-secure-store for ALL persistence on native. Never AsyncStorage directly.
@@ -175,8 +176,12 @@ sanitiseTransaction(), sanitiseHolding(), isSafeValue(), maskAccountNumber().
 Store original currency + converted amount both.
 amountOriginal + currencyOriginal always preserved.
 
-**Duplicates — locked**
-Deduplicate + report count in toast. Never silent. Never partial import.
+**Duplicates — locked (updated W-04)**
+Compound key deduplication only. No fuzzy/Dice matching.
+Priority 1: transactionId (exact match).
+Priority 2: amount + date + normalisedDescription (compound key).
+Dedup count reported in toast. Never silent. Never partial import.
+ProbableDuplicate interface removed. ProbableDuplicateSheet retired.
 
 **Joint accounts — locked**
 DataSource.accountType: 'personal' | 'joint' | 'managed'.
@@ -201,7 +206,7 @@ Budget gate: always check isWithinBudget() before any call.
 ingestFile(input: IngestionInput): Promise<ParseResult>
 Import from: /services/ingestion (index.ts)
 NEVER import from csvParser.ts in new code — it is a shim.
-csvParser.ts will be removed in Session 16 cleanup.
+csvParser.ts will be removed in Session 18 cleanup.
 ```
 
 **Four-tier import taxonomy — locked (25 March 2026)**
@@ -291,7 +296,7 @@ Holdings where assetSubtype cannot be detected →
 Never blocks import. Atomic rule applies at file level, not row level.
 Cap: 50 items FIFO.
 resolveHolding(id, assetSubtype) moves item to main holdings.
-Surfaced for user resolution in Sources screen (Session 15).
+Surfaced for user resolution in Sources screen (Session 17).
 ```
 
 **Atomic import rule — locked (unchanged)**
@@ -443,6 +448,26 @@ T10: Stability >30% + bond exposure + rising rate environment
 T11: Portfolio tier 2+ AND cash-like >70% AND no equity held
 T12: Illiquid/speculative >70% AND stability <15% AND protection <2mo
 
+**18 triggers T13–T30 — locked (Session 14, VI-05)**
+T13: India equity approaching 12-month STCG→LTCG boundary
+T14: German crypto approaching 12-month tax-free threshold
+T15: German investment property approaching 10-year tax-free threshold
+T16: Sovereign Gold Bond approaching 8-year maturity (tax-free)
+T17: ELSS lock-in expiring (3-year)
+T18: Fixed Deposit approaching maturity date
+T19: US holding approaching 12-month long-term capital gains threshold
+T20: UK ISA headroom unused (within 90 days of April 5)
+T21: India 80C headroom unused (within 60 days of March 31) — old regime only
+T22: NL Box 3 peildatum approaching (within 60 days of January 1)
+T23: US 401k employer match not captured
+T24: UK pension employer match not captured
+T25: India NPS employer contribution (80CCD(2)) — both regimes
+T26: German Freistellungsauftrag not filed with broker
+T27: PFIC warning — US person holding Indian/non-US mutual funds (priority: 95)
+T28: NL Box 3 foreign assets included (since Jan 2025)
+T29: UK FIG regime window active (first 4 years of UK residency)
+T30: India new regime warning (80C investments but regime unknown or new)
+
 ---
 
 ## 10. ANALYTICS
@@ -507,11 +532,17 @@ Individual view: personal + joint for that profile, never partner's personal.
 
 ## 12. ONBOARDING
 
-**10 screens — locked order**
-1. Welcome  2. Household  3. Location  4. Age (skippable)
-5. Teach [+]  6. First Add  7. First Payoff
+**11 screens — updated Session 14**
+1. Welcome  2. Household  3. Location  3.5. Tax Profile (NEW — VI-08)
+4. Age (skippable)  5. Teach [+]  6. First Add  7. First Payoff
 8. Budget Suggestion (conditional — only if screen 6 upload succeeded)
 9. Portfolio Teaser  10. Complete
+
+**Tax Profile screen (3.5) — locked (Session 14)**
+Captures: citizenships, tax residency country, US person flag, India tax regime.
+Skippable — all fields default to 'unknown'. No triggers fire for 'unknown'.
+Questions: investments in multiple countries? / tax residency? / citizenships? /
+  US citizen or green card? / India tax regime (old/new/unsure)?
 
 **First Add flow — locked**
 Universal Add Sheet shown with isOnboarding=true.
@@ -539,7 +570,7 @@ Face ID (iOS) / Fingerprint (Android). PIN fallback.
 Auto-lock after 5 minutes in background.
 
 **GDPR / Data deletion — locked**
-"Delete all my data" in Settings (Session 16).
+"Delete all my data" in Settings (Session 18).
 Calls storageService.clear() + auditStore.clearAuditLog() + signs user out.
 V2: also deletes server-side data.
 
@@ -579,8 +610,9 @@ When gates are added: benefit-led bottom sheet, NEVER error state.
 **V1 (current build)**
 Four tabs, ingestion pipeline (35 institutions, CSV/TXT/XLSX),
 security pipeline, spend categoriser, AI insight engine,
-UserFinancialProfile, analytics (disabled), onboarding,
-settings stub, single OWNER profile, BYOK API keys, local encrypted storage.
+UserFinancialProfile, Vehicle Intelligence Engine, analytics (disabled),
+onboarding (11 screens including Tax Profile), settings stub,
+single OWNER profile, BYOK API keys, local encrypted storage.
 
 **V1b (after V1 stable)**
 Couple sync (Supabase E2E). PARTNER profile activated.
@@ -588,10 +620,10 @@ API key moves to Supabase Edge Functions (one-line change).
 Push notifications (opt-in). Server-side budget enforcement.
 
 **V2**
-FIRE planner screen, open banking, ML categorisation, tax field surface,
-historical portfolio charts, year-end wrapped, conversational advisor,
-property market estimate, Supabase instrument catalogue + merchant keywords,
-partner spend on Home, contextual education tooltips.
+FIRE planner screen, open banking, ML categorisation, full cross-border
+tax computation (not just facts), historical portfolio charts, year-end wrapped,
+conversational advisor, property market estimate, Supabase instrument catalogue
++ merchant keywords, partner spend on Home, contextual education tooltips.
 
 **Never built (permanent boundaries)**
 Physical assets, tax filing, money transfers, social features, ads,
@@ -608,7 +640,7 @@ Zustand with secureStorageAdapter for persistence.
 createJSONStorage() pattern (Zustand v5 compatibility).
 
 **Banned in web builds — locked**
-react-native-reanimated (breaks web bundler). Restore for native in Session 17.
+react-native-reanimated (breaks web bundler). Restore for native in Session 19.
 Intl.NumberFormat (unreliable in Expo web bundler). Use formatCurrency() always.
 
 **Banned everywhere — locked**
@@ -621,7 +653,7 @@ EXCEPTION: CSVUploadSheet may import ingestFile() from /services/ingestion.
 **Ingestion pipeline — locked**
 Papa Parse for CSV/TXT. SheetJS for XLSX/XLS.
 ingestFile() from /services/ingestion is the SINGLE entry point.
-csvParser.ts is a shim — do not add logic to it. Remove in Session 16.
+csvParser.ts is a shim — do not add logic to it. Remove in Session 18.
 
 **Model — locked**
 claude-haiku-4-5-20251001 for all V1 insight types.
@@ -640,3 +672,112 @@ All API calls in aiInsightService.ts. Key from storageService, never bundled.
 **MD files** always downloaded and replaced in full. Never edited inline.
 **Preview** before every commit. Never commit without visual verification.
 **API keys** never in commits. (PostHog write-only key is safe in client code.)
+
+---
+
+## 19. VEHICLE INTELLIGENCE ENGINE — LOCKED (Session 14, 27 April 2026)
+
+Vehicle Intelligence is the core cross-border product differentiator.
+It surfaces factual, deadline-aware, market-specific investment context for
+every holding, based on the user's citizenship, tax residency, and asset location.
+No other personal finance app does this for globally mobile professionals.
+
+**Source of truth**
+
+Six reference documents in project root (annually reviewed):
+vehicle-rules-IN/GB/NL/US/DE/XBORDER.md — double self-confirmed per market.
+VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md — master checklist, due April every year.
+
+constants/vehicleRules.ts — TypeScript implementation of those documents.
+The ONLY place investment vehicle facts live in code. Never hardcode elsewhere.
+
+**Locked data model decisions**
+
+citizenships: string[] — required on UserFinancialProfile.
+  US citizenship = worldwide US taxation regardless of residence.
+  Indian citizenship = NRI status rules, PPF/SCSS/NSC restrictions.
+
+isUSPerson: boolean — required. US citizen or green card holder.
+  Drives: PFIC rules, worldwide US income tax, ISA non-recognition.
+
+taxResidencyCountry: string — required.
+  Which country's domestic rules apply (Box 3, CGT, income tax bands).
+  Different from citizenship. Indian citizen + Dutch tax resident = NL rules primary.
+
+incomePrimaryCountry: string — required.
+  Determines pension access (401k, employer pension, NPS employer contribution).
+
+purchaseDate: Date — required on every PortfolioHolding (was optional).
+  Entire holding period engine depends on it.
+  For historical imports without date: purchaseDateKnown = false.
+  NEVER fire holding period alerts when purchaseDateKnown = false.
+
+countryOfAsset: string — required on every PortfolioHolding.
+  Determines Box 3 inclusion, PFIC risk, DTAA relevance.
+  'IN' | 'NL' | 'GB' | 'US' | 'DE' | 'other' | 'unknown'
+
+isInsideTaxWrapper: boolean — required on every PortfolioHolding.
+  ISA-wrapped = no Box 3. US 401k = excluded from Dutch Box 3.
+  Wrappers completely change cross-border treatment.
+
+**How vehicleRules.ts enters the insight engine**
+
+vehicleRules.ts is NEVER sent directly to Claude.
+It feeds the engine through four channels:
+1. insightTriggers.ts — when to fire (T13-T30)
+2. holdingsContextBuilder.ts — what structured context to send Claude
+3. insightSources.ts — which seed sources to search
+4. educationCatalogue.ts — which articles to surface
+
+Claude receives sanitised, structured context — never raw rules.
+
+**The 'unknown' and 'other' rule**
+
+Every classification field must have an 'unknown' or 'other' path.
+No enum, map, or lookup may return undefined or throw for unrecognised input.
+getVehicleCategory() returns 'unknown' for unrecognised subtypes. Never throws.
+No trigger fires when relevant classification is 'unknown'.
+
+**Vehicle Intelligence engineering rules — locked**
+
+RULE V1: Never compute tax liability.
+  Surface facts only. Never say "you owe X in tax".
+  Correct: "STCG rate is 20% for equity held under 12 months in India."
+  Wrong: "You would pay approximately ₹15,000 on this gain."
+
+RULE V2: Cross-border insights always carry a caveat.
+  Any insight involving two countries must include:
+  "Cross-border tax is complex — verify with a qualified advisor."
+
+RULE V3: purchaseDate required. purchaseDateKnown = false when unknown.
+  NEVER fire holding period alerts when purchaseDateKnown = false.
+
+RULE V4: Citizenship drives logic, not residency alone.
+  US person in Amsterdam: US worldwide tax STILL applies.
+  Never assume single-country rules for US persons.
+
+RULE V5: Unknown India regime = no 80C triggers.
+  If indiaTaxRegime = 'unknown', never fire T21. Fire T30 instead.
+
+RULE V6: vehicleRules.ts is the single source of truth for all vehicle facts.
+  Never hardcode vehicle-specific facts in components, hooks, prompts, or triggers.
+
+RULE V7: Annual review is mandatory every April.
+  VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md must be completed and committed.
+  Stale tax rules are worse than no rules.
+  Commit format: [ANNUAL] Vehicle Intelligence review — all figures verified April XXXX.
+
+RULE V8: Every enum and classification map must have 'unknown' or 'other'.
+  Applies to: VehicleCategory, TaxWrapperType, HoldingPeriodStatus,
+  TaxWrapperTaxType, taxResidencyCountry, countryOfAsset, citizenships, usState.
+
+**Known V1 limitations (by design — not bugs)**
+
+PFIC computation: flags risk, does not compute Form 8621 liability.
+US state taxes: CA, NY, TX, FL, WA covered. Other states: 'check your state'.
+India RNOR: captured, complex rules not fully surfaced in V1.
+UK domicile: captured, IHT computation not done in V1.
+Dual residency: secondary country captured, interaction not computed in V1.
+German church tax: flag present, not added to displayed rate in V1.
+Cross-border pension transfer: flagged, specific rules not surfaced.
+Actual tax computation: deliberately excluded from all of V1 and V1b.

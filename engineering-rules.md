@@ -1,7 +1,8 @@
 # Kāshe — Engineering Rules
 *Read this before starting any ticket. No exceptions.*
 *These rules apply to every agent, every session, every component.*
-*Last updated: 25 March 2026 — Session 13 complete.*
+*Last updated: 27 April 2026 — Session 14 complete.*
+*Vehicle Intelligence rules added: tax facts only, cross-border caveat, annual review.*
 *Ingestion pipeline rules added: single entry point, institution registry.*
 *Storage rules updated: web localStorage fallback via secureStorageAdapter.*
 
@@ -36,6 +37,7 @@ Every piece of data or configuration has exactly one home.
 - PostHog user properties → `services/analyticsService.ts` updateUserProperties()
   Source: UserFinancialProfile always. Never set properties manually.
 - Vehicle category taxonomy → `types/userProfile.ts` VEHICLE_CATEGORY_MAP
+- **Vehicle intelligence rules → `constants/vehicleRules.ts` VEHICLE_RULES**
 
 If you find yourself defining the same thing in two places, stop.
 One of them is wrong. Fix the source, not the symptom.
@@ -159,7 +161,7 @@ Mode: System-responsive (follows device dark/light) — intentional.
 RULE 1: Single entry point only.
   ingestFile(input: IngestionInput) from /services/ingestion
   NEVER call individual pipeline stages directly.
-  NEVER import from csvParser.ts — it is a shim, will be removed Session 16.
+  NEVER import from csvParser.ts — it is a shim, will be removed Session 18.
 
 RULE 2: Institution detection by fingerprints only.
   Column header fingerprints + sample value fingerprints.
@@ -287,6 +289,48 @@ RULE 10: Source quality.
   PM reviews seed sources quarterly (insightSources.ts).
   PM reviews auto-discovered sources weekly (15 min).
   Source quality review happens via snapshot export.
+```
+
+---
+
+## VEHICLE INTELLIGENCE RULES — LOCKED (27 April 2026)
+
+```
+RULE V1: Never compute tax liability.
+  Surface facts only. Never say "you owe X in tax" or "this saves you Y".
+  Correct: "STCG rate is 20% for equity held under 12 months in India."
+  Wrong:   "You would pay approximately ₹15,000 on this gain."
+
+RULE V2: Cross-border insights always carry a caveat.
+  Any insight involving two countries must end with:
+  "Cross-border tax is complex — verify with a qualified advisor for your situation."
+
+RULE V3: purchaseDate required. purchaseDateKnown = false when unknown.
+  NEVER fire holding period alerts when purchaseDateKnown = false.
+  Historical imports without date: purchaseDate = new Date(0), purchaseDateKnown = false.
+
+RULE V4: Citizenship drives logic, not residency alone.
+  US person in Amsterdam: US worldwide tax STILL applies alongside Dutch rules.
+  Never assume single-country rules for US persons regardless of where they live.
+
+RULE V5: Unknown India regime = no 80C triggers.
+  If indiaTaxRegime = 'unknown': do NOT fire T21 (80C headroom).
+  Fire T30 (India new regime warning) instead.
+
+RULE V6: vehicleRules.ts is the single source of truth for all vehicle facts.
+  Never hardcode vehicle-specific facts in components, hooks, prompts, or triggers.
+  All vehicle metadata — holding periods, allowances, deadlines — comes from VEHICLE_RULES.
+
+RULE V7: Annual review is mandatory every April.
+  VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md must be completed and committed each April.
+  Stale tax rules are worse than no rules — they give users false confidence.
+  Commit: [ANNUAL] Vehicle Intelligence review — all figures verified April XXXX.
+
+RULE V8: Every enum and map must have 'unknown' or 'other'.
+  No lookup ever returns undefined. No lookup ever throws.
+  getVehicleCategory() returns 'unknown' for unrecognised subtypes.
+  Applies to: VehicleCategory, TaxWrapperType, HoldingPeriodStatus,
+  TaxWrapperTaxType, taxResidencyCountry, countryOfAsset, citizenships, usState.
 ```
 
 ---
@@ -493,7 +537,7 @@ Rules:
 
 1. Read `CLAUDE-state.md` — know what exists and what the next ticket is
 2. Read the latest `kashe-handoff-session-XX.md`
-3. Check `CLAUDE-decisions.md` section 4b for ingestion pipeline rules
+3. Check `CLAUDE-decisions.md` sections 4b and 19
 4. Check that UserFinancialProfile has the fields your ticket needs
 5. Check that the TypeScript type exists in `/types/` before building
 6. Check that mock data exists in `/constants/mockData.ts` before building
@@ -523,6 +567,7 @@ Rules:
 [NEVER] Raw subtype keys in UI — use displayLabels.ts
 [NEVER] KasheScore shown to user as a number
 [NEVER] Sophistication score shown to user as a number
+[NEVER] crossBorderComplexityScore shown to user as a number
 [NEVER] track_only instruments in InstrumentDiscoverySection
 [NEVER] Crypto suggested to user
 [NEVER] Equity crowdfunding suggested to user
@@ -554,9 +599,14 @@ Rules:
 [NEVER] Import from csvParser.ts in new code — use /services/ingestion
 [NEVER] Filename used as institution detection signal
 [NEVER] Institution logic added outside INSTITUTION_REGISTRY
+[NEVER] Tax liability computed — surface facts only
+[NEVER] Vehicle-specific rules hardcoded outside vehicleRules.ts
+[NEVER] Holding period alerts when purchaseDateKnown = false
+[NEVER] Cross-border insights without specialist caveat
+[NEVER] vehicleRules.ts sent raw to Claude API
 ```
 
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 25 March 2026*
+*Last updated: 27 April 2026*

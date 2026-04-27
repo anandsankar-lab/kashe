@@ -1,6 +1,6 @@
 # Kāshe — CLAUDE-filetree.md
 *Current file tree. Rewrites every session.*
-*Last updated: 25 March 2026 — Session 13 in progress.*
+*Last updated: 27 April 2026 — Session 14 complete.*
 *✅ = built and committed. ⬜ = not yet built.*
 
 ---
@@ -23,8 +23,8 @@ portfolio/
 invest/
   fire.tsx          ⬜ V2 — do not build
 
-settings.tsx        ✅ Stub with Education section (Session 16: full build)
-sources.tsx         ⬜ Session 15
+settings.tsx        ✅ Stub with Education section (Session 18: full build)
+sources.tsx         ⬜ Session 17
 ```
 
 ---
@@ -55,22 +55,17 @@ sources.tsx         ⬜ Session 15
 
 /shared/
   AppHeader.tsx               ✅ Universal — all tabs
-  PMDashboard.tsx             ⬜ Session 16.5
-  UniversalAddSheet.tsx       ⬜ Session 14
+  PMDashboard.tsx             ⬜ Session 18.5
+  UniversalAddSheet.tsx       ⬜ Session 16
   CSVUploadSheet.tsx          ✅ Session 13 (W-03)
-                                 Accepts CSV, TXT, XLSX/XLS
-                                 Calls ingestFile() from /services/ingestion
   DataSourceConfirmSheet.tsx  ✅ Session 13 (W-03)
-                                 Tier 2 account type selector — always shown
-                                 Confirm disabled until user picks when confidence=unknown
-  ProbableDuplicateSheet.tsx  ⬜ Session 13 (W-04)
+  ProbableDuplicateSheet.tsx  ⬜ RETIRED — compound key dedup replaces this (W-04)
   UploadToast.tsx             ✅ Session 13 (W-03)
-                                 Shows pending count if pendingHoldings > 0
   EmptyState.tsx              ✅
   KasheAsterisk.tsx           ✅
   MacronRule.tsx              ✅
   RedactedNumber.tsx          ✅
-  InsightDetailSheet.tsx      ⬜ Session 13+
+  InsightDetailSheet.tsx      ⬜ Session 15+
 ```
 
 ---
@@ -84,14 +79,20 @@ spacing.ts              ✅
 formatters.ts           ✅ formatCurrency() — Intl.NumberFormat banned
 featureFlags.ts         ✅
 mockData.ts             ✅ Geography-neutral, production-shaped
+                           NOTE: must be updated for VI-02 + VI-03 new fields
 displayLabels.ts        ✅ Raw subtype keys never in UI
 instrumentCatalogue.ts  ✅ ~40 curated entries, 5 geographies
 educationCatalogue.ts   ✅ 20 articles, 5 geographies
 fireDefaults.ts         ✅ V2 foundation — do not delete
 merchantKeywords.ts     ✅ NL/IN/EU/GLOBAL
 insightSources.ts       ✅ Seed sources, getActiveSeedSources(profile)
-insightTriggers.ts      ✅ 12 triggers T1–T12, all pure functions
+insightTriggers.ts      ✅ 12 triggers T1–T12
+                           ⬜ VI-05: add T13–T30 (Vehicle Intelligence triggers)
 insightPrompts.ts       ✅ Prompt templates, injection defence
+                           ⬜ VI-06: add market-aware tax profile context
+vehicleRules.ts         ⬜ VI-01 (NEW) — VehicleRule[], VEHICLE_RULES constant
+                           TaxWrapperTaxType, VehicleCategory, HoldingPeriodStatus enums
+                           SHARED_LIMIT_GROUPS, getVehicleCategory() (never throws)
 ```
 
 ---
@@ -101,10 +102,22 @@ insightPrompts.ts       ✅ Prompt templates, injection defence
 ```
 spend.ts                ✅ SpendTransaction, SpendCategory, Budget, DataSource
 portfolio.ts            ✅ PortfolioHolding, DEFAULT_BUCKET, AssetSubtype (32 values)
+                           ⬜ VI-03: purchaseDate required, countryOfAsset,
+                              isInsideTaxWrapper, taxWrapperType, holdingPeriodStatus,
+                              holdingPeriodMonths, maturityDate, lockInExpiry,
+                              pficFlag, box3Included, dtaaRelevant
+                              NEW ENUMS: TaxWrapperType (18+), HoldingPeriodStatus (11)
 riskProfile.ts          ✅ RiskProfileType, RISK_PROFILES
 instrumentCatalogue.ts  ✅ InstrumentCatalogueEntry, CatalogueRole
 fire.ts                 ✅ FIREInputs, FIREOutputs — V2 foundation, do not delete
 userProfile.ts          ✅ UserFinancialProfile, VEHICLE_CATEGORY_MAP
+                           ⬜ VI-02: add citizenships[], isUSPerson, taxResidencyCountry,
+                              incomePrimaryCountry, ukResidencyStartDate, indiaTaxRegime,
+                              usState, deChurchTaxApplicable,
+                              crossBorderComplexityScore, hasPficRisk, figRegimeEligible,
+                              activeHoldingPeriodAlerts, vehiclePortabilityWarnings,
+                              primaryInvestmentMarkets
+                              VEHICLE_CATEGORY_MAP: add 'other' + 'unknown' catch-all
 ```
 
 ---
@@ -113,71 +126,41 @@ userProfile.ts          ✅ UserFinancialProfile, VEHICLE_CATEGORY_MAP
 
 ```
 storageService.ts         ✅ Session 12 — expo-secure-store vault door
-secureStorageAdapter.ts   ✅ Session 12 + Session 13
-                             Web localStorage fallback added Session 13
-                             Zustand bridge, separate from storageService
+secureStorageAdapter.ts   ✅ Session 12 + Session 13 — web localStorage fallback
 spendCategoriser.ts       ✅ Session 12 — Layer 3→1→2 pipeline
 csvParser.ts              ✅ NOW A SHIM — re-exports from /services/ingestion
-                             Do not add logic here. Session 16: remove shim.
+                             Do not add logic here. Session 18: remove shim.
 holdingsContextBuilder.ts ✅ Session 12
-                             TODO Session 13 W-09: wire to UserFinancialProfile
+                             ⬜ VI-07: add cross-border context (taxProfile, holdingFlags,
+                                activeWarnings) to what is sent to Claude
 aiInsightService.ts       ✅ Session 12
 analyticsService.ts       ✅ Session 12 + Session 13
 userProfileService.ts     ✅ Session 12
-snapshotService.ts        ⬜ Session 16.5
-shareService.ts           ⬜ Session 16.5
+                             ⬜ VI-04: add 5 new computed functions:
+                                computeCrossBorderComplexityScore()
+                                computeHasPficRisk()
+                                computeFigRegimeEligible()
+                                computeBox3IncludedHoldings()
+                                computeVehiclePortabilityWarnings()
+snapshotService.ts        ⬜ Session 18.5
+shareService.ts           ⬜ Session 18.5
 ```
 
 ---
 
-## /services/ingestion/ ← NEW Session 13
+## /services/ingestion/
 
 ```
 types.ts                ✅ All ingestion types — single source of truth
-                           Tier1Route, Tier2AccountType, RouteDetectionResult
-                           IngestionInput, FileType, RawRow, RouteConfidence
-                           ParseSuccess (updated), ParseError, ParseResult
-                           SupportedInstitution (35 institutions)
-                           ImportAuditData (updated with holdingCount etc.)
-
-institutionRegistry.ts  ✅ 35 institutions across NL/IN/UK/US/EU
-                           InstitutionDefinition with column + content fingerprints
-                           INSTITUTION_REGISTRY — single source for all institution logic
-                           getInstitution(), getSpendInstitutions(), getPortfolioInstitutions()
-
+institutionRegistry.ts  ✅ 35 institutions, column + content fingerprints
 fileReader.ts           ✅ Raw file content → RawRow[]
-                           detectFileType(): csv | txt | xlsx
-                           readFile(): XLSX via SheetJS, CSV/TXT via Papa Parse
-                           All headers normalised (trim + lowercase)
-
 columnDetector.ts       ✅ RawRow[] → ColumnMapping + ParseConfidence + institution
-                           detectInstitution(): scores registry fingerprints
-                           detectColumnMapping(): returns full detection result
-
 routeDetector.ts        ✅ Institution + ColumnMapping → RouteDetectionResult
-                           Institution-first (high/medium confidence)
-                           Column scoring fallback (UNKNOWN institution)
-                           Returns tier1Route, tier2Suggestion, confidence, signals[]
-
 securityPipeline.ts     ✅ PII masking and sanitisation
-                           sanitiseTransaction(), sanitiseHolding()
-                           isSafeValue(), maskAccountNumber(), normaliseDescription()
-
 transactionParser.ts    ✅ RawRow[] + ColumnMapping → SpendTransaction[]
-                           parseTransactions(), parseRow(), parseAmount(), parseDate()
-
 holdingsParser.ts       ✅ RawRow[] + ColumnMapping → PortfolioHolding[]
-                           ISIN prefix detection for assetSubtype
-                           pendingHoldings[] for unknown assetSubtype rows
-
-deduplicator.ts         ✅ SpendTransaction[] deduplication
-                           Dice coefficient fuzzy match for Indian banks
-                           deduplicateTransactions()
-
-index.ts                ✅ ingestFile(IngestionInput): Promise<ParseResult>
-                           THE ONLY PUBLIC ENTRY POINT
-                           Orchestrates full pipeline stages 1–4
-                           Re-exports all types for consumers
+deduplicator.ts         ✅ Compound key dedup — geography-agnostic (W-04)
+index.ts                ✅ ingestFile() — THE ONLY PUBLIC ENTRY POINT
 ```
 
 ---
@@ -187,10 +170,6 @@ index.ts                ✅ ingestFile(IngestionInput): Promise<ParseResult>
 ```
 spendStore.ts       ✅ Session 12
 portfolioStore.ts   ✅ Session 12 + Session 13
-                       Added: addHoldings() — batch add with dedup by id
-                       Added: pendingCategorizationQueue — FIFO cap 50
-                       Added: addPendingHoldings()
-                       Added: resolveHolding(id, assetSubtype)
 insightsStore.ts    ✅ Session 12
 householdStore.ts   ✅ Session 12 + Session 13
 auditStore.ts       ✅ Session 12
@@ -207,7 +186,7 @@ usePortfolio.ts           ✅ Session 12
 useInsights.ts            ✅ Session 12
 useHousehold.ts           ✅ Session 12
 useInstrumentCatalogue.ts ✅ Session 12
-                             NOTE: sorts by tier asc — fix to kasheScore desc Session 16
+                             NOTE: sorts by tier asc — fix to kasheScore desc Session 18
 ```
 
 ---
@@ -232,19 +211,27 @@ babel.config.js   ✅ Session 13 — babel-preset-expo
 ## /docs (project root)
 
 ```
-CLAUDE.md                    ✅
-CLAUDE-state.md              ✅ Rewrites each session
-CLAUDE-history.md            ✅ Append-only
-CLAUDE-filetree.md           ✅ This file
-CLAUDE-decisions.md          ✅ Updated Session 13
-CLAUDE-bugs.md               ✅ Updated Session 13
-CLAUDE-identity.md           ✅ Updated Session 13
-CLAUDE-financial.md          ✅
-engineering-rules.md         ✅ Updated Session 13
-data-architecture.md         ✅ Updated Session 13
-ai-insights.md               ✅
-design-system.md             ✅
-freemium-boundaries.md       ✅
-kashe-prd-complete.md        ✅
-kashe-handoff-session-XX.md  ✅ Per-session briefing
+CLAUDE.md                         ✅
+CLAUDE-state.md                   ✅ Updated Session 14
+CLAUDE-history.md                 ✅ Updated Session 14
+CLAUDE-filetree.md                ✅ This file — updated Session 14
+CLAUDE-decisions.md               ✅ Updated Session 14 — Section 19 added
+CLAUDE-bugs.md                    ✅ Updated Session 14 — items 45-55 added
+CLAUDE-identity.md                ✅
+CLAUDE-financial.md               ✅
+engineering-rules.md              ✅ Updated Session 14 — Vehicle Intelligence rules added
+data-architecture.md              ✅ Updated Session 14 — new types documented
+ai-insights.md                    ✅
+design-system.md                  ✅
+freemium-boundaries.md            ✅
+kashe-prd-complete.md             ✅
+kashe-handoff-session-15.md       ✅ Session 14 → Session 15 briefing
+
+vehicle-rules-IN.md               ✅ Session 14 — India market reference (double confirmed)
+vehicle-rules-GB.md               ✅ Session 14 — UK market reference (double confirmed)
+vehicle-rules-NL.md               ✅ Session 14 — Netherlands market reference (double confirmed)
+vehicle-rules-US.md               ✅ Session 14 — USA market reference (double confirmed)
+vehicle-rules-DE.md               ✅ Session 14 — Germany market reference (double confirmed)
+vehicle-rules-XBORDER.md          ✅ Session 14 — Cross-border interaction matrix (double confirmed)
+VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md  ✅ Session 14 — Annual review checklist
 ```

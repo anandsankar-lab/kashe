@@ -97,16 +97,23 @@ W-03b: csvParser.ts decomposed into /services/ingestion/ (10 files).
   Portfolio pending queue in portfolioStore — unknown assetSubtype held for resolution.
   portfolioStore: addHoldings(), addPendingHoldings(), resolveHolding() added.
   Target user confirmed: any globally mobile working professional (IN/UK/EU/US).
-W-04 through W-10 remain.
-
-[Session 14] 27 April 2026. W-04 complete.
-W-04 redefined: ProbableDuplicateSheet spec retired entirely.
+W-04 redefined and completed: ProbableDuplicateSheet spec retired entirely.
   Dice coefficient fuzzy matching removed from deduplicator.ts.
   Replaced with compound key: transactionId (Priority 1) +
   amount + date + normalisedDescription (Priority 2).
-  Deduplication is now geography-agnostic — works for all banks, all markets.
-  ProbableDuplicate interface removed from types.ts.
-  probableDuplicates[] removed from ParseSuccess and ImportAuditData.
-  CSVUploadSheet: ProbableDuplicateSheet trigger removed.
-  Loose end: auditStore.ImportAuditEvent.probableDuplicatesFound hardcoded 0 — clean up Session 16.
-W-05 through W-10 remain.
+  Deduplication geography-agnostic — works for all banks, all markets.
+  ProbableDuplicate interface removed. probableDuplicates[] removed from ParseSuccess.
+W-05 completed: MonthlyReviewCard wired to useInsights().
+  Four review states live: unavailable / insufficient / ready_unread / ready_read.
+
+[Session 14] 27 April 2026. Architecture and documentation session.
+Vehicle Intelligence Engine designed — the cross-border product differentiator.
+Six reference documents written, double self-confirmed as expert per market:
+  vehicle-rules-IN/GB/NL/US/DE/XBORDER.md + VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md.
+Complete code spec locked: VI-01 (vehicleRules.ts), VI-02 (userProfile types),
+  VI-03 (portfolio types — purchaseDate required, countryOfAsset, taxWrapperType),
+  VI-04 (userProfileService computed functions), VI-05 (triggers T13-T30),
+  VI-06 (insightPrompts market-aware), VI-07 (holdingsContextBuilder cross-border),
+  VI-08 (onboarding Tax Profile screen).
+8 Vehicle Intelligence engineering rules locked. All docs committed to repo.
+Session 15 fully specced: W-06/W-07/W-08 then VI-01 through VI-10.

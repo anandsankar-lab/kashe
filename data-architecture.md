@@ -1,12 +1,12 @@
 # Kāshe — Data Architecture
 *Read CLAUDE.md and engineering-rules.md before this file.*
 *This file covers the data layer: types, stores, hooks, services.*
-*Last updated: 25 March 2026 — Session 13 complete.*
+*Last updated: 27 April 2026 — Session 14 complete.*
+*Vehicle Intelligence Engine: new types, new profile fields, new computed functions.*
 *Ingestion pipeline restructured: /services/ingestion/ (10 files).*
 *csvParser.ts is now a re-export shim.*
 *portfolioStore: addHoldings, addPendingHoldings, resolveHolding added.*
-*ImportAuditEvent: holdingCount, pendingCategorizationCount, tier1Route added.*
-*Upload flow updated: ingestFile(), four-tier taxonomy, XLSX/TXT support.*
+*W-04: ProbableDuplicate removed. Compound key dedup only.*
 
 ---
 
@@ -23,6 +23,7 @@ This is the one permitted direct service import — it IS the boundary layer.
 
 ```
 /types/                TypeScript interfaces — the contract
+/constants/            Static data, vehicle rules, catalogues
 /services/             Business logic, API calls, parsing
 /services/ingestion/   Ingestion pipeline — 10 files, single entry point
 /store/                Zustand stores — in-memory state
@@ -52,7 +53,6 @@ type SpendCategory =
   | 'insurance' | 'gifts_giving' | 'other'
   | 'income' | 'investment_transfer' | 'transfer'
 
-// Categories excluded from spend totals + savings rate:
 const EXCLUDED_FROM_TOTALS: SpendCategory[] = [
   'income', 'investment_transfer', 'transfer'
 ]
@@ -64,13 +64,13 @@ interface SpendTransaction {
   householdId: string
   date: Date
   amount: number              // negative = debit, positive = credit
-  currency: string            // base currency (converted)
-  currencyOriginal: string    // original currency before conversion
-  amountOriginal: number      // original amount before conversion
+  currency: string
+  currencyOriginal: string
+  amountOriginal: number
   fxRateApplied: number | null
   merchant: string
   description: string
-  rawDescription: string      // sanitised original
+  rawDescription: string
   category: SpendCategory
   subcategory?: string
   geography: 'india' | 'europe' | 'other'
@@ -81,7 +81,7 @@ interface SpendTransaction {
   recurringGroupId?: string
   isExcluded: boolean
   dataSource: 'CSV' | 'MANUAL'
-  merchantNorm: string        // normalised for merchant memory
+  merchantNorm: string
   importedAt: Date
   tags: string[]
 }
@@ -101,16 +101,16 @@ interface DataSource {
   profileId: string
   institution: string
   accountType: 'personal' | 'joint' | 'managed'
-  accountLabel: string        // user-editable
+  accountLabel: string
   lastFourDigits?: string
   currency: string
   lastImported?: Date
   transactionCount: number
-  type: 'SPEND' | 'PORTFOLIO' | 'SALARY'  // routes to correct store
+  type: 'SPEND' | 'PORTFOLIO' | 'SALARY'
 }
 ```
 
-### Portfolio types (built — /types/portfolio.ts)
+### Portfolio types (updated VI-03 — /types/portfolio.ts)
 
 ```typescript
 interface PortfolioHolding {
@@ -119,17 +119,55 @@ interface PortfolioHolding {
   householdId: string
   name: string
   ticker?: string
-  isin?: string               // e.g. 'IE00B3RBWM25'
-  assetClass: AssetClass      // display/grouping hint
-  assetSubtype: AssetSubtype  // drives all logic — never use assetClass for logic
+  isin?: string
+  assetClass: AssetClass
+  assetSubtype: AssetSubtype
   geography: string
   currency: string
   currentValue: number
   quantity?: number
   purchasePrice?: number
-  purchaseDate?: Date
-  vestingDate?: Date          // RSU/ESPP only
-  unlockDate?: Date           // PPF, FD etc.
+
+  // REQUIRED (was optional before VI-03)
+  purchaseDate: Date
+  // For historical imports without known date:
+  //   purchaseDate = new Date(0), purchaseDateKnown = false
+  // NEVER fire holding period alerts when purchaseDateKnown = false
+
+  purchaseDateKnown: boolean
+
+  // REQUIRED (added VI-03)
+  countryOfAsset: string
+  // 'IN'|'NL'|'GB'|'US'|'DE'|'other'|'unknown'
+  // Drives: Box 3 inclusion, PFIC risk, DTAA relevance
+  // Default for legacy imports: 'unknown' — no triggers fire
+
+  isInsideTaxWrapper: boolean
+  // true: ISA, pension, 401k, Roth IRA, lijfrente, NPS, EPF, PPF
+  // false: GIA, direct equity, NRE account, cash savings
+
+  // OPTIONAL (added VI-03)
+  taxWrapperType?: TaxWrapperType
+
+  vestingDate?: Date
+  unlockDate?: Date
+
+  costBasis?: number
+  costBasisCurrency?: string
+
+  // COMPUTED by userProfileService (do not set manually)
+  holdingPeriodMonths?: number
+  holdingPeriodStatus?: HoldingPeriodStatus
+  pficFlag?: boolean          // isUSPerson + non-US mutual fund
+  box3Included?: boolean      // NL resident + not in excluded wrapper
+  dtaaRelevant?: boolean      // countryOfAsset != taxResidencyCountry
+
+  maturityDate?: Date         // FDs, PPF, NSC, SGBs, I Bonds
+  lockInExpiry?: Date         // ELSS 3yr, ULIP 5yr, NPS age 60, LISA 12mo
+  insurancePremiumAnnual?: number
+  insuranceSumAssured?: number
+  annualInterestRate?: number
+
   bucket: 'GROWTH' | 'STABILITY' | 'LOCKED'
   bucketOverridden: boolean
   isProtectionDesignated: boolean
@@ -137,38 +175,165 @@ interface PortfolioHolding {
   dataSource: 'CSV' | 'MANUAL' | 'API'
   lastPriceUpdate?: Date
 }
+
+// NEW (VI-03)
+export type TaxWrapperType =
+  | 'isa_stocks_shares' | 'isa_cash' | 'isa_lifetime' | 'isa_jisa'
+  | 'pension_uk' | 'sipp'
+  | 'pension_us_401k_traditional' | 'pension_us_401k_roth'
+  | 'pension_us_ira_traditional' | 'pension_us_ira_roth'
+  | 'pension_us_hsa' | 'us_529'
+  | 'pension_de_bav' | 'pension_de_rurup'
+  | 'pension_nl_lijfrente' | 'pension_nl_employer'
+  | 'pension_in_nps' | 'pension_in_epf' | 'pension_in_ppf'
+  | 'other_tax_wrapper' | 'unknown'
+
+// NEW (VI-03)
+export type HoldingPeriodStatus =
+  | 'short_term'
+  | 'approaching_long_term'   // within 60 days of long-term threshold
+  | 'long_term'
+  | 'approaching_tax_free'    // within 60 days of full tax-free (DE crypto/property)
+  | 'tax_free'
+  | 'locked'
+  | 'approaching_unlock'      // within 90 days of lock-in expiry
+  | 'unlocked'
+  | 'approaching_maturity'    // within 90 days of maturity
+  | 'matured'
+  | 'unknown'                 // purchaseDateKnown = false — never fire alerts
+```
+
+### Vehicle Intelligence types (new — /constants/vehicleRules.ts)
+
+```typescript
+// Single source of truth for all investment vehicle facts.
+// Derived from vehicle-rules-IN/GB/NL/US/DE/XBORDER.md.
+// Never hardcode vehicle facts anywhere else.
+
+interface VehicleRule {
+  vehicleId: string
+  displayName: string
+  geography: string[]
+  vehicleCategory: VehicleCategory
+
+  taxWrapper: {
+    type: TaxWrapperTaxType
+    annualLimit?: { amount: number; currency: string; period: string }
+    sharedLimitGroup?: string   // 'india_80c' | 'uk_isa' | 'india_80d'
+    taxFreeGrowth: boolean
+    taxFreeWithdrawal: boolean
+    taxReliefRate?: 'marginal' | number
+    keyFacts: string[]          // max 3, factual only, no advice
+    warningFacts?: string[]
+    crossBorderFacts?: string[]
+  }
+
+  holdingPeriodRules?: {
+    shortTermMonths: number
+    taxFreeAfterMonths?: number  // DE crypto: 12, DE property: 120
+    lockInMonths?: number
+    lockInAgeYears?: number      // NPS: 60
+    shortTermRate?: number
+    longTermRate?: number
+    taxFreeThreshold?: number    // India equity LTCG: 125000
+    maturityMonths?: number      // SGB: 96 (8 years)
+    earlyExitPenalty?: string
+    maturityBenefit?: string
+  }
+
+  deadline?: {
+    type: 'tax_year_end' | 'financial_year_end' | 'calendar_year_end' | 'peildatum'
+    month: number
+    day: number
+    label: string
+    daysWarningThreshold: number
+  }
+
+  crossBorderRules: {
+    pficRisk: boolean
+    box3Included: boolean
+    portabilityRating: 'high' | 'medium' | 'low' | 'none' | 'unknown'
+    portabilityNote?: string
+    nriRestricted?: boolean
+    nriRestrictedNote?: string
+    figRegimeEligible?: boolean
+    dtaaTreatment?: Record<string, string>
+  }
+
+  tierVisibility: (1 | 2 | 3)[]
+  priorityScore: number
+
+  triggerFlags: {
+    hasAnnualAllowance: boolean
+    hasDeadline: boolean
+    isEmployerMatched: boolean
+    hasHoldingPeriodAlert: boolean
+    hasMaturityAlert: boolean
+    hasLockInAlert: boolean
+    requiresRegimeCheck: boolean
+    isBox3Exposed: boolean
+    hasPficRisk: boolean
+    hasPortabilityRisk: boolean
+  }
+}
+
+export type TaxWrapperTaxType =
+  | 'eee'           // PPF, ISA — exempt contribution, growth, withdrawal
+  | 'eet'           // pension, 401k traditional
+  | 'tee'           // Roth IRA, Roth 401k
+  | 'exempt_growth' // S&S ISA (post-tax, tax-free growth + withdrawal)
+  | 'deductible'    // NPS old regime, Rürup
+  | 'taxed'         // GIA, NRO account
+  | 'complex'       // Box 3, ELSS under new regime
+  | 'conditional'   // depends on regime or circumstance
+  | 'unknown'
+
+export type VehicleCategory =
+  | 'pension' | 'isa_wrapper' | 'tax_advantaged_savings'
+  | 'equity_investment' | 'fixed_income' | 'property'
+  | 'emergency_fund' | 'insurance_investment' | 'employer_benefit'
+  | 'government_scheme' | 'alternative'
+  | 'other' | 'unknown'     // always required — no lookup ever throws
+
+export const SHARED_LIMIT_GROUPS = {
+  india_80c: { total: 150000, currency: 'INR', label: 'Section 80C (₹1.5L)' },
+  india_80d: { total: 25000, currency: 'INR', label: 'Section 80D (₹25k)' },
+  uk_isa: { total: 20000, currency: 'GBP', label: 'UK ISA (£20k)' },
+}
+
+// Never throws. Returns 'unknown' for unrecognised subtypes.
+export function getVehicleCategory(subtype: string): VehicleCategory {
+  return VEHICLE_CATEGORY_MAP[subtype] ?? 'unknown'
+}
+
+export const VEHICLE_RULES: VehicleRule[] = [ /* built in VI-01 */ ]
 ```
 
 ### Ingestion types (built — /services/ingestion/types.ts)
 
 ```typescript
-// The four-tier import taxonomy
 type Tier1Route = 'spend' | 'portfolio'
 
 type Tier2AccountType =
-  // Spend
   | 'savings_account' | 'current_account'
   | 'credit_card' | 'joint_account'
-  // Portfolio
   | 'brokerage' | 'mutual_fund_folio'
   | 'retirement' | 'fixed_deposit_account' | 'other_investment'
 
 type RouteConfidence = 'high' | 'medium' | 'low' | 'unknown'
-
 type FileType = 'csv' | 'txt' | 'xlsx'
-
 type RawRow = Record<string, string>
 
 interface RouteDetectionResult {
   tier1Route: Tier1Route
-  tier2Suggestion: Tier2AccountType | null  // null when confidence = unknown
+  tier2Suggestion: Tier2AccountType | null
   confidence: RouteConfidence
   detectedInstitution: SupportedInstitution
-  signals: string[]  // human-readable detection signals
+  signals: string[]
 }
 
 interface IngestionInput {
-  content: string           // raw file content or base64 for xlsx
+  content: string
   fileType: FileType
   filename: string
   dataSourceId: string
@@ -180,9 +345,9 @@ interface IngestionInput {
 interface ParseSuccess {
   transactions: SpendTransaction[]
   holdings: PortfolioHolding[]
-  pendingHoldings: PortfolioHolding[]   // unknown assetSubtype
+  pendingHoldings: PortfolioHolding[]
   duplicatesSkipped: number
-  probableDuplicates: ProbableDuplicate[]
+  // NOTE: probableDuplicates removed in W-04 — compound key dedup only
   confidence: ParseConfidence
   routeDetection: RouteDetectionResult
   fileType: FileType
@@ -192,10 +357,10 @@ interface ParseSuccess {
 interface ImportAuditData {
   institution: SupportedInstitution
   transactionCount: number
-  holdingCount: number                    // portfolio path
-  pendingCategorizationCount: number      // portfolio path
+  holdingCount: number
+  pendingCategorizationCount: number
   duplicatesSkipped: number
-  probableDuplicatesFound: number
+  probableDuplicatesFound: number  // always 0 after W-04 — clean up Session 18
   layer2Queued: number
   parseConfidence: number
   tier1Route: Tier1Route
@@ -205,13 +370,14 @@ interface ImportAuditData {
 }
 ```
 
-### UserFinancialProfile (built — /types/userProfile.ts)
+### UserFinancialProfile (updated VI-02 — /types/userProfile.ts)
 
 ```typescript
 // The intelligence spine. Everything reads from this.
 // Built by userProfileService.ts. Stored in householdStore.
 
 interface UserFinancialProfile {
+  // === EXISTING FIELDS (unchanged) ===
   portfolioTier: 1 | 2 | 3 | 4
   portfolioTierLabel: 'starter' | 'growing' | 'established' | 'significant'
   previousPortfolioTier: 1 | 2 | 3 | 4 | null
@@ -263,6 +429,75 @@ interface UserFinancialProfile {
   firstSeenDate: string
   firstUploadDate: string | null
   lastCalculatedAt: string | null
+
+  // === VEHICLE INTELLIGENCE ADDITIONS (VI-02) ===
+
+  // Citizenship — drives worldwide tax, PFIC, NRI restrictions
+  citizenships: string[]
+  // ['IN'] | ['NL'] | ['IN','NL'] | ['IN','US'] etc.
+  // Default: [] — empty until Tax Profile onboarding screen
+
+  isUSPerson: boolean
+  // true if US citizen or green card holder
+  // US persons: worldwide income tax regardless of residence,
+  //   ISA not sheltered from US tax, Indian MFs = PFIC risk
+  // Default: false
+
+  taxResidencyCountry: string
+  // Primary country whose domestic rules apply
+  // 'IN'|'NL'|'GB'|'US'|'DE'|'other'|'unknown'
+  // Default: 'unknown'
+
+  taxResidencyCountrySecondary?: string
+  // For split-year or dual residency
+
+  incomePrimaryCountry: string
+  // Where salary/employment income comes from
+  // Drives: pension access (401k, employer pension, NPS employer contribution)
+  // Default: 'unknown'
+
+  ukResidencyStartDate?: string
+  // ISO date string — for FIG regime eligibility
+  // FIG: foreign income and gains exempt for first 4 years of UK residency
+
+  ukDomicileStatus?: 'uk' | 'non_uk' | 'unknown'
+
+  indiaTaxRegime?: 'old' | 'new' | 'unknown'
+  // 'new' = default from FY 2024-25 (no 80C deductions)
+  // 'old' = opted in (full deduction ecosystem)
+  // 'unknown' = not captured → T21 (80C) never fires, T30 fires instead
+
+  indiaResidencyStatus?: 'resident' | 'nri' | 'rnor' | 'unknown'
+
+  usState?: string
+  // 'CA'|'NY'|'TX'|'FL'|'WA'|'NV'|'other'|'unknown'
+  // CA: +13.3% CGT. NY: +10.9%. TX/FL/NV: 0%.
+
+  deChurchTaxApplicable?: boolean
+
+  // === COMPUTED FIELDS (set by userProfileService — do not set manually) ===
+
+  primaryInvestmentMarkets: string[]
+  // Derived from countryOfAsset across all holdings
+  // e.g. ['IN', 'NL'] for Dutch resident with Indian investments
+
+  crossBorderComplexityScore: number
+  // 0 = single market, 1 = two markets, 2 = three+ or US person,
+  // 3 = US person + multiple markets
+  // NEVER shown to user
+
+  hasPficRisk: boolean
+  // true if isUSPerson + holds non-US/non-UCITS mutual fund
+
+  figRegimeEligible: boolean
+  // true if taxResidencyCountry='GB' + ukResidencyStartDate within 4 years
+  // + had 10+ years prior non-UK residence
+
+  activeHoldingPeriodAlerts: string[]
+  // Vehicle IDs approaching key holding period thresholds
+
+  vehiclePortabilityWarnings: string[]
+  // e.g. ['bav_portability_risk', 'rurup_not_transferable']
 }
 ```
 
@@ -278,22 +513,18 @@ interface SpendStore {
   budgets: Budget[]
   dataSources: DataSource[]
   merchantOverrides: MerchantOverride[]
-  retryQueue: PendingCategorization[]   // Layer 2 queue
+  retryQueue: PendingCategorization[]
 
   derivedSpend: {
     spendByCategory: Record<SpendCategory, number>
     totalSpend: number
     comparisonVsLastMonth: number
     comparisonVs3MonthAvg: number
-    selectedMonth: string               // 'YYYY-MM'
+    selectedMonth: string
     lastCalculatedAt: string | null
   }
 
   addTransactions: (txns: SpendTransaction[], geography: string) => void
-  // Runs Layer 1 synchronously. Layer 2 misses → retryQueue.
-  // Sets derivedSpend.lastCalculatedAt to null.
-  // ALSO TRIGGERS: userProfileService update chain
-
   setBudget: (budget: Budget) => void
   recategorise: (txnId: string, category: SpendCategory) => void
   setSelectedMonth: (month: string) => void
@@ -310,7 +541,7 @@ interface PortfolioStore {
   holdings: PortfolioHolding[]
   bucketOverrides: BucketOverride[]
   protectionHoldingId: string | null
-  pendingCategorizationQueue: PortfolioHolding[]  // added Session 13
+  pendingCategorizationQueue: PortfolioHolding[]
 
   derived: {
     liveTotal: number
@@ -324,39 +555,13 @@ interface PortfolioStore {
   }
 
   addHolding: (holding: PortfolioHolding) => void
-  // ALSO TRIGGERS: userProfileService update chain
-
-  addHoldings: (holdings: PortfolioHolding[]) => void   // added Session 13
-  // Batch add. Dedup by id. Sets derived.lastCalculatedAt = null.
-  // ALSO TRIGGERS: userProfileService update chain
-
-  addPendingHoldings: (holdings: PortfolioHolding[]) => void  // added Session 13
-  // Appends to pendingCategorizationQueue. FIFO cap: 50.
-
-  resolveHolding: (id: string, assetSubtype: AssetSubtype) => void  // added Session 13
-  // Sets assetSubtype + bucket from DEFAULT_BUCKET.
-  // Moves from pendingCategorizationQueue → holdings.
-  // Sets derived.lastCalculatedAt = null.
-
+  addHoldings: (holdings: PortfolioHolding[]) => void
+  addPendingHoldings: (holdings: PortfolioHolding[]) => void
+  resolveHolding: (id: string, assetSubtype: AssetSubtype) => void
   updateHolding: (holdingId: string, updates: Partial<PortfolioHolding>) => void
-  // ALSO TRIGGERS: userProfileService update chain
-
   setBucketOverride: (override: BucketOverride) => void
-  // ALSO TRIGGERS: userProfileService update chain
-  // ALSO invalidates PORTFOLIO_HEALTH insight
-
   setProtection: (holdingId: string) => void
-  // ALSO TRIGGERS: userProfileService update chain
-
   updateDerived: (derived: PortfolioDerived) => void
-}
-
-interface BucketOverride {
-  holdingId: string
-  overrideBucket: 'GROWTH' | 'STABILITY' | 'LOCKED'
-  systemBucket: 'GROWTH' | 'STABILITY' | 'LOCKED'
-  overriddenAt: string
-  profileId: string
 }
 ```
 
@@ -392,7 +597,7 @@ interface HouseholdStore {
   isAuthenticated: boolean
   riskProfile: 'conservative' | 'balanced' | 'growth'
   onboardingComplete: boolean
-  financialProfile: UserFinancialProfile | null  // added DL-09
+  financialProfile: UserFinancialProfile | null
 
   setHousehold: (household: Household) => void
   addProfile: (profile: Profile) => void
@@ -412,7 +617,7 @@ interface AuditStore {
 
   logImport: (event: ImportAuditEvent) => void
   clearAuditLog: () => void
-  // clearAuditLog ONLY called from "delete all data" flow (Session 16)
+  // clearAuditLog ONLY called from "delete all data" flow
 }
 ```
 
@@ -423,25 +628,76 @@ interface AuditStore {
 ### What it feeds
 
 ```
-getActiveSeedSources(profile)             → which sources to search
-evaluateAllTriggers(profile, fxParams)    → which health checks fire
-buildHoldingsContext(profile, holdings)   → what Claude receives
-analyticsService.updateUserProperties()  → all PostHog properties
-aiInsightService                          → search depth, framing, discovery pass
+getActiveSeedSources(profile)              → which sources to search
+evaluateAllTriggers(profile, fxParams)     → which triggers fire (T1-T30)
+buildHoldingsContext(profile, holdings)    → what Claude receives
+analyticsService.updateUserProperties()   → all PostHog properties
+aiInsightService                           → search depth, framing, discovery pass
+```
+
+### Vehicle Intelligence computed functions (VI-04 — userProfileService.ts)
+
+```typescript
+// Five new functions called inside buildUserFinancialProfile():
+
+computeCrossBorderComplexityScore(citizenships, taxResidencyCountry, primaryInvestmentMarkets)
+// Returns 0-3. US person always >= 2.
+
+computeHasPficRisk(citizenships, isUSPerson, financialVehicles)
+// true if US person + holds Indian/non-US/non-UCITS mutual funds
+
+computeFigRegimeEligible(taxResidencyCountry, ukResidencyStartDate?)
+// true if GB resident + within 4 years of arrival + 10+ years prior non-UK
+
+computeBox3IncludedHoldings(holdings, taxResidencyCountry)
+// Returns holding IDs. NL residents only.
+// Excludes: all pension wrappers, US 401k/IRA (confirmed excluded by Dutch tax authority)
+
+computeVehiclePortabilityWarnings(financialVehicles, taxResidencyCountry)
+// e.g. DE resident with bAV → 'bav_portability_risk'
+// e.g. DE resident with Rürup → 'rurup_not_transferable'
+```
+
+### How vehicleRules.ts enters the insight engine
+
+```
+vehicleRules.ts is NEVER sent directly to Claude.
+It feeds the engine through four channels only:
+
+1. insightTriggers.ts (T13-T30)
+   Reads VEHICLE_RULES to know: deadlines, holding period thresholds,
+   allowance limits, cross-border flags.
+
+2. holdingsContextBuilder.ts
+   Reads holdingPeriodStatus, pficFlag, box3Included, dtaaRelevant
+   from each holding. Adds taxProfile block to Claude context.
+   Never sends raw VEHICLE_RULES array.
+
+3. insightSources.ts
+   Seed sources filtered by profile.primaryInvestmentMarkets.
+   Dutch resident with Indian assets → NL + IN sources only.
+
+4. educationCatalogue.ts
+   Vehicle-specific articles linked by vehicleId.
+   Surfaces relevant education based on actual holdings.
+
+Claude receives sanitised, structured context — never raw rules.
 ```
 
 ### updateUserProfile() triggers
 
-Called automatically after:
-- `spendStore.addTransactions()`
-- `portfolioStore.addHolding()` / `addHoldings()`
-- `portfolioStore.updateHolding()`
-- `portfolioStore.setBucketOverride()`
-- `portfolioStore.setProtection()`
-- `householdStore.setRiskProfile()` (if changed from default)
-- `householdStore.setOnboardingComplete()`
-- Monthly target set
-- FIRE inputs set
+```
+spendStore.addTransactions()           → buildUserFinancialProfile()
+portfolioStore.addHolding()            → same
+portfolioStore.addHoldings()           → same
+portfolioStore.updateHolding()         → same
+portfolioStore.setBucketOverride()     → same
+portfolioStore.setProtection()         → same
+householdStore.setRiskProfile()        → same (if changed from default)
+householdStore.setOnboardingComplete() → same
+Monthly target set                     → same
+FIRE inputs set                        → same
+```
 
 ### Sophistication score
 
@@ -508,7 +764,6 @@ UserFinancialProfile
 ### useSpend()
 
 ```typescript
-// Returns:
 {
   transactions: SpendTransaction[]
   budgets: Budget[]
@@ -516,8 +771,8 @@ UserFinancialProfile
   totalSpend: number
   comparisonVsLastMonth: number
   comparisonVs3MonthAvg: number
-  hasMinimumHistory: boolean        // true if ≥2 months data
-  selectedMonth: string             // 'YYYY-MM'
+  hasMinimumHistory: boolean
+  selectedMonth: string
   setSelectedMonth: (month: string) => void
 }
 ```
@@ -525,7 +780,6 @@ UserFinancialProfile
 ### usePortfolio()
 
 ```typescript
-// Returns:
 {
   holdings: PortfolioHolding[]
   liveTotal: number
@@ -542,7 +796,6 @@ UserFinancialProfile
 ### useInsights()
 
 ```typescript
-// Returns:
 {
   activeInsight: Insight | null
   currentMonthReview: MonthlyReview | null
@@ -556,7 +809,6 @@ UserFinancialProfile
 ### useHousehold()
 
 ```typescript
-// Returns:
 {
   household: Household | null
   profiles: Profile[]
@@ -572,14 +824,13 @@ UserFinancialProfile
 ### useInstrumentCatalogue()
 
 ```typescript
-// Returns:
 {
   getSuggestions: (bucket, riskProfile, geography) => InstrumentCatalogueEntry[]
   getEntry: (id: string) => InstrumentCatalogueEntry | null
 }
 // V1: reads /constants/instrumentCatalogue.ts directly
 // V2: replace with Supabase call — zero component changes
-// NOTE: currently sorts by tier ascending — fix to kasheScore desc in Session 16
+// NOTE: currently sorts by tier ascending — fix to kasheScore desc in Session 18
 ```
 
 ---
@@ -587,20 +838,18 @@ UserFinancialProfile
 ## DataSource — First-Class Entity
 
 Every file import creates or updates a DataSource record.
-The DataSource represents a bank/broker account, not a file.
 
 ```
 On import:
 1. ingestFile() runs — institution detected via fingerprints
 2. DataSourceConfirmSheet always shown:
-   - Institution: detected name (e.g. "ABN Amro")
+   - Institution: detected name
    - Tier 2 account type selector — user always picks
    - Account label: auto-generated, editable
    - "Is this a joint account?" toggle — ALWAYS asked
 3. User confirms → DataSource created
 4. Raw account holder name NEVER stored (security pipeline strips it)
-5. User-edited label stored in accountLabel
-6. Future imports: auto-matched to existing DataSource by institution + last4
+5. Future imports: auto-matched by institution + last4
 
 Joint accounts:
   accountType: 'joint'
@@ -614,75 +863,66 @@ Joint accounts:
 
 ```
 User taps [+] → CSVUploadSheet opens
-  → User selects "Upload bank statement" or "Upload portfolio CSV"
-  → expo-document-picker opens (CSV, TXT, XLSX accepted)
+  → User selects file (CSV, TXT, XLSX accepted)
   → File content read into MEMORY ONLY — never written to disk
   → ingestFile(IngestionInput) called from /services/ingestion
       Stage 1: fileReader.readFile() → RawRow[]
-        CSV/TXT: Papa Parse (auto-detect delimiter)
-        XLSX/XLS: SheetJS → first sheet → rows
-        All headers normalised (trim + lowercase)
       Stage 2: columnDetector.detectColumnMapping() → ColumnMapping + institution
-        Scores column fingerprints against INSTITUTION_REGISTRY
         If tier1Complete = false: ParseError TIER1_FIELDS_MISSING
       Stage 3: routeDetector.detectRoute() → RouteDetectionResult
-        Institution-first routing (high/medium confidence)
-        Column scoring fallback (UNKNOWN institution)
-        Returns: { tier1Route, tier2Suggestion, confidence, signals[] }
       Stage 4a (spend path):
         transactionParser.parseTransactions() → SpendTransaction[]
-        deduplicator.deduplicateTransactions()
-        Returns ParseSuccess { transactions, holdings: [], pendingHoldings: [] }
+        deduplicator.deduplicateTransactions() — compound key only (W-04)
       Stage 4b (portfolio path):
         holdingsParser.parseHoldings() → { holdings, pendingHoldings }
-          assetSubtype from ISIN prefix + column signals
-          Unknown → pendingHoldings[]
-        Returns ParseSuccess { transactions: [], holdings, pendingHoldings }
       Any failure → ParseError ATOMIC_ROLLBACK
-  → If probableDuplicates.length > 0: ProbableDuplicateSheet (W-04)
-  → DataSourceConfirmSheet shown (ALWAYS):
-      Tier 2 account type selector — required
-      Pre-selected if confidence = high/medium
-      Confirm disabled if confidence = unknown until user picks
-      Account label (editable), joint account toggle
+  → DataSourceConfirmSheet shown (ALWAYS)
   → User confirms
-  → If tier1Route === 'spend':
-      spendStore.addTransactions(transactions, geography)
-  → If tier1Route === 'portfolio':
-      portfolioStore.addHoldings(holdings)
-      portfolioStore.addPendingHoldings(pendingHoldings)
+  → portfolioStore or spendStore updated
   → userProfileService.buildUserFinancialProfile()
       → householdStore.updateFinancialProfile(profile)
       → analyticsService.updateUserProperties(profile)
   → auditStore.logImport(auditData)
-  → UploadToast shown:
-      "✓ X transactions imported"        (spend path)
-      "✓ X holdings imported"            (portfolio path)
-      "⚠ Y holdings need categorisation" (if pendingHoldings > 0)
-      "✓ Account numbers masked"
-      "✓ Raw file discarded"
-      "✓ Data stored securely on your device"
+  → UploadToast shown
   → Raw file content discarded from memory
-  → Screen updates reactively (Zustand)
-  → Insight caches invalidated
 ```
 
 ---
 
 ## Mock Data Rules
 
-All mock data lives in `/constants/mockData.ts`.
-
 ```typescript
-// Mock data must:
-// 1. Use neutral, non-country-specific merchant names
-//    WRONG: "Albert Heijn", "Jumbo", "Thuisbezorgd"
-//    RIGHT: "Supermarket", "Food Delivery App"
-// 2. Match production TypeScript types exactly
-// 3. Be realistic — plausible numbers, not placeholder zeros
-// 4. Be stable — same data every time, no Math.random()
-// 5. Cover all component states
-// 6. Use SpendTransaction type (not Transaction alias)
+// All mock data lives in /constants/mockData.ts
+// Must be updated for VI-02 + VI-03 new fields
+
+// Mock UserFinancialProfile additions (VI-02):
+citizenships: ['IN'],
+isUSPerson: false,
+taxResidencyCountry: 'NL',
+incomePrimaryCountry: 'NL',
+indiaTaxRegime: 'new',
+indiaResidencyStatus: 'nri',
+crossBorderComplexityScore: 1,
+hasPficRisk: false,
+figRegimeEligible: false,
+primaryInvestmentMarkets: ['IN', 'NL'],
+activeHoldingPeriodAlerts: [],
+vehiclePortabilityWarnings: [],
+
+// Mock PortfolioHolding additions (VI-03):
+purchaseDate: new Date('2022-06-15'),  // realistic date
+purchaseDateKnown: true,
+countryOfAsset: 'NL',                 // or 'IN' per holding
+isInsideTaxWrapper: false,
+holdingPeriodMonths: 22,              // computed from purchaseDate
+holdingPeriodStatus: 'long_term',
+
+// Mock data rules:
+// 1. Never Dutch-specific brand names — neutral only
+// 2. Match production types exactly — always
+// 3. Realistic numbers — no placeholder zeros
+// 4. Stable — no Math.random()
+// 5. Use SpendTransaction type (not Transaction alias)
 ```
 
 ---
@@ -700,6 +940,8 @@ All mock data lives in `/constants/mockData.ts`.
 ✗ await SecureStore.setItemAsync(...)
 ✗ spendByCategory = transactions.reduce(...)
 ✗ const tier = financialPosition > 100000 ? 3 : 2
+✗ const category = VEHICLE_CATEGORY_MAP[subtype]  ← use getVehicleCategory()
+✗ const rule = VEHICLE_RULES.find(r => r.vehicleId === ...)  ← service layer only
 ```
 
 All of these belong in services, stores, or hooks.
