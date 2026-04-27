@@ -1,9 +1,11 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../context/ThemeContext'
 import colours from '../../constants/colours'
 import KasheAsterisk from '../shared/KasheAsterisk'
 import { RiskProfileType, RISK_PROFILES } from '../../types/riskProfile'
+import useHouseholdStore from '../../store/householdStore'
+import { trackRiskProfileSet } from '../../services/analyticsService'
 
 interface RiskProfileCardProps {
   riskProfile: RiskProfileType | null
@@ -16,6 +18,18 @@ export default function RiskProfileCard({
   onSetProfile,
 }: RiskProfileCardProps) {
   const theme = useTheme()
+  const { setRiskProfile } = useHouseholdStore()
+
+  // Persist to store whenever the prop changes (prop is updated by invest.tsx
+  // after the sheet confirms a selection). Fire analytics for non-default choices.
+  useEffect(() => {
+    if (riskProfile !== null) {
+      setRiskProfile(riskProfile)
+      if (riskProfile !== 'balanced') {
+        void trackRiskProfileSet({ profile: riskProfile })
+      }
+    }
+  }, [riskProfile, setRiskProfile])
 
   if (riskProfile === null) {
     return (
