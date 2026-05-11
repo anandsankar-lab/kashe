@@ -1,13 +1,16 @@
 // /services/ingestion/fileReader.ts
-// Raw file content → RawRow[]
+// Raw file content → RawRow[] (or PDF base64 passthrough)
 // Knows about file formats only. No financial logic.
 
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import type { FileType, RawRow } from './types'
 
+export type FileReadResult = RawRow[] | { type: 'pdf'; base64: string }
+
 export function detectFileType(filename: string): FileType {
   const lower = filename.toLowerCase()
+  if (lower.endsWith('.pdf')) return 'pdf'
   if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) return 'xlsx'
   if (lower.endsWith('.txt') || lower.endsWith('.tab')) return 'txt'
   return 'csv'
@@ -21,8 +24,12 @@ function normaliseHeaders(row: Record<string, string>): Record<string, string> {
   return normalised
 }
 
-export function readFile(content: string, fileType: FileType): RawRow[] {
+export function readFile(content: string, fileType: FileType): FileReadResult {
   try {
+    if (fileType === 'pdf') {
+      return { type: 'pdf', base64: content }
+    }
+
     if (fileType === 'xlsx') {
       const workbook = XLSX.read(content, { type: 'base64' })
       const firstSheetName = workbook.SheetNames[0]

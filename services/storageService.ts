@@ -23,6 +23,7 @@ export const STORAGE_KEYS = {
   RETRY_QUEUE:           'kashe_retry_queue',
   AI_USAGE:              'kashe_ai_usage',
   ANALYTICS_DISTINCT_ID: 'kashe_analytics_distinct_id',
+  PDF_EXTRACTION_BUDGET: 'kashe_pdf_extraction_budget',
 } as const
 
 const storageService = {

@@ -60,7 +60,21 @@ export type SupportedInstitution =
 
 // ── FILE FORMAT ───────────────────────────────────────────────────────────────
 
-export type FileType = 'csv' | 'txt' | 'xlsx'
+export type FileType = 'csv' | 'txt' | 'xlsx' | 'pdf'
+
+// ── PDF BUDGET ────────────────────────────────────────────────────────────────
+
+export interface PdfBudget {
+  monthKey: string   // YYYY-MM
+  tokensUsed: number
+  callsCount: number
+}
+
+// ── PDF EXTRACTION ────────────────────────────────────────────────────────────
+
+export type PdfExtractionResult =
+  | { success: true;  rows: RawRow[]; extractionType: 'spend' | 'portfolio' | 'unknown' }
+  | { success: false; error: 'extraction_failed' | 'no_data_found' | 'budget_exceeded' }
 
 // ── RAW ROW ───────────────────────────────────────────────────────────────────
 

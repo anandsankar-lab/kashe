@@ -7,9 +7,10 @@ import * as routeDetector from './routeDetector'
 import * as transactionParser from './transactionParser'
 import * as holdingsParser from './holdingsParser'
 import * as deduplicator from './deduplicator'
+import { extractFromPdf } from './pdfExtractor'
 import type {
   IngestionInput, ParseResult, ParseSuccess, ParseError,
-  ImportAuditData, SupportedInstitution,
+  ImportAuditData, SupportedInstitution, RawRow,
 } from './types'
 
 const SUPPORTED_FORMATS = [
@@ -79,12 +80,30 @@ function deriveGeography(inst: SupportedInstitution): 'NL' | 'IN' | 'EU' | 'UK' 
 
 export async function ingestFile(input: IngestionInput): Promise<ParseResult> {
   try {
-    // Stage 1: Read file → rows
-    let rows: ReturnType<typeof fileReader.readFile>
+    // Stage 1: Read file → rows (or PDF base64)
+    let readResult: ReturnType<typeof fileReader.readFile>
     try {
-      rows = fileReader.readFile(input.content, input.fileType)
+      readResult = fileReader.readFile(input.content, input.fileType)
     } catch {
       return makeError('UNSUPPORTED_FORMAT', 'Could not read this file format. Please export as CSV and try again.')
+    }
+
+    // Stage 1b: PDF extraction path
+    const isPdf = input.fileType === 'pdf'
+    let rows: RawRow[]
+    if (!Array.isArray(readResult)) {
+      const pdfResult = await extractFromPdf(readResult.base64)
+      if (!pdfResult.success) {
+        const messageMap: Record<typeof pdfResult.error, string> = {
+          extraction_failed: "We couldn't read this PDF. Please check it isn't password protected.",
+          no_data_found:     'No transactions or holdings were found in this PDF.',
+          budget_exceeded:   'Monthly PDF extraction limit reached. Try again next month.',
+        }
+        return makeError('PARSE_FAILED', messageMap[pdfResult.error])
+      }
+      rows = pdfResult.rows
+    } else {
+      rows = readResult
     }
 
     if (rows.length === 0) {
@@ -92,8 +111,12 @@ export async function ingestFile(input: IngestionInput): Promise<ParseResult> {
     }
 
     // Stage 2: Detect columns + institution
-    const { mapping, confidence, institution, institutionConfidence } =
-      columnDetector.detectColumnMapping(rows)
+    const detected = columnDetector.detectColumnMapping(rows)
+    const mapping = detected.mapping
+    const confidence = detected.confidence
+    // PDFs always use UNKNOWN institution — no bank fingerprints in extracted rows
+    const institution: SupportedInstitution = isPdf ? 'UNKNOWN' : detected.institution
+    const institutionConfidence = isPdf ? 'unknown' as const : detected.institutionConfidence
 
     if (!confidence.tier1Complete) {
       return makeError(
@@ -105,7 +128,11 @@ export async function ingestFile(input: IngestionInput): Promise<ParseResult> {
     }
 
     // Stage 3: Detect route
-    const route = routeDetector.detectRoute(institution, institutionConfidence, mapping)
+    // For PDFs: force confidence to 'unknown' so DataSourceConfirmSheet always shows
+    const detectedRoute = routeDetector.detectRoute(institution, institutionConfidence, mapping)
+    const route = isPdf
+      ? { ...detectedRoute, confidence: 'unknown' as const, detectedInstitution: 'UNKNOWN' as const }
+      : detectedRoute
 
     // Build account label
     let accountLabel = institutionDisplayName(institution)
