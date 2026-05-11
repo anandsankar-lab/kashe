@@ -1,6 +1,6 @@
 # Kāshe — CLAUDE-filetree.md
 *Current file tree. Rewrites every session.*
-*Last updated: 27 April 2026 — Session 14 complete.*
+*Last updated: 11 May 2026 — Session 15 complete.*
 *✅ = built and committed. ⬜ = not yet built.*
 
 ---
@@ -23,8 +23,9 @@ portfolio/
 invest/
   fire.tsx          ⬜ V2 — do not build
 
-settings.tsx        ✅ Stub with Education section (Session 18: full build)
-sources.tsx         ⬜ Session 17
+settings.tsx        ✅ Stub with Education section (Session 19: full build)
+sources.tsx         ⬜ Session 18
+onboarding/         ⬜ Session 17 — 10 screens including Tax Profile (VI-08)
 ```
 
 ---
@@ -48,15 +49,18 @@ sources.tsx         ⬜ Session 17
   BucketReassignSheet, LockedProjectionCard, ProtectionStatusCard
   HoldingPriceChart, HoldingInsightCard
 
-/invest/            ✅ All complete
-  RiskProfileCard, RiskProfileSheet, InvestmentPlanFull
-  MonthlyReviewCard, MonthlyReviewSheet, FIRETeaserCard (built, not rendered)
-  InstrumentDiscoverySection, FinancialEducationSection
+/invest/            ✅ All complete + wired
+  RiskProfileCard   ✅ Wired to householdStore — W-07
+  RiskProfileSheet, InvestmentPlanFull
+  MonthlyReviewCard ✅ Wired to useInsights() — W-05
+  MonthlyReviewSheet, FIRETeaserCard (built, not rendered)
+  InstrumentDiscoverySection ✅ Wired to useInstrumentCatalogue() — W-06
+  FinancialEducationSection
 
 /shared/
   AppHeader.tsx               ✅ Universal — all tabs
-  PMDashboard.tsx             ⬜ Session 18.5
-  UniversalAddSheet.tsx       ⬜ Session 16
+  PMDashboard.tsx             ⬜ Session 19.5
+  UniversalAddSheet.tsx       ⬜ Session 17
   CSVUploadSheet.tsx          ✅ Session 13 (W-03)
   DataSourceConfirmSheet.tsx  ✅ Session 13 (W-03)
   ProbableDuplicateSheet.tsx  ⬜ RETIRED — compound key dedup replaces this (W-04)
@@ -65,7 +69,7 @@ sources.tsx         ⬜ Session 17
   KasheAsterisk.tsx           ✅
   MacronRule.tsx              ✅
   RedactedNumber.tsx          ✅
-  InsightDetailSheet.tsx      ⬜ Session 15+
+  InsightDetailSheet.tsx      ⬜ Session 16+
 ```
 
 ---
@@ -129,7 +133,7 @@ storageService.ts         ✅ Session 12 — expo-secure-store vault door
 secureStorageAdapter.ts   ✅ Session 12 + Session 13 — web localStorage fallback
 spendCategoriser.ts       ✅ Session 12 — Layer 3→1→2 pipeline
 csvParser.ts              ✅ NOW A SHIM — re-exports from /services/ingestion
-                             Do not add logic here. Session 18: remove shim.
+                             Do not add logic here. Session 19: remove shim.
 holdingsContextBuilder.ts ✅ Session 12
                              ⬜ VI-07: add cross-border context (taxProfile, holdingFlags,
                                 activeWarnings) to what is sent to Claude
@@ -142,8 +146,8 @@ userProfileService.ts     ✅ Session 12
                                 computeFigRegimeEligible()
                                 computeBox3IncludedHoldings()
                                 computeVehiclePortabilityWarnings()
-snapshotService.ts        ⬜ Session 18.5
-shareService.ts           ⬜ Session 18.5
+snapshotService.ts        ⬜ Session 19.5
+shareService.ts           ⬜ Session 19.5
 ```
 
 ---
@@ -171,7 +175,7 @@ index.ts                ✅ ingestFile() — THE ONLY PUBLIC ENTRY POINT
 spendStore.ts       ✅ Session 12
 portfolioStore.ts   ✅ Session 12 + Session 13
 insightsStore.ts    ✅ Session 12
-householdStore.ts   ✅ Session 12 + Session 13
+householdStore.ts   ✅ Session 12 + Session 13 + W-07 (riskProfile persistence)
 auditStore.ts       ✅ Session 12
 ```
 
@@ -185,8 +189,8 @@ useSpend.ts               ✅ Session 12
 usePortfolio.ts           ✅ Session 12
 useInsights.ts            ✅ Session 12
 useHousehold.ts           ✅ Session 12
-useInstrumentCatalogue.ts ✅ Session 12
-                             NOTE: sorts by tier asc — fix to kasheScore desc Session 18
+useInstrumentCatalogue.ts ✅ Session 12 — wired to InstrumentDiscoverySection (W-06)
+                             NOTE: sorts by tier asc — fix to kasheScore desc Session 19
 ```
 
 ---
@@ -212,13 +216,11 @@ babel.config.js   ✅ Session 13 — babel-preset-expo
 
 ```
 CLAUDE.md                         ✅
-CLAUDE-state.md                   ✅ Updated Session 14
-CLAUDE-history.md                 ✅ Updated Session 14
-CLAUDE-filetree.md                ✅ This file — updated Session 14
-CLAUDE-decisions.md               ✅ Updated Session 14 — Section 19 added
-CLAUDE-bugs.md                    ✅ Updated Session 14 — items 45-55 added
-CLAUDE-identity.md                ✅
-CLAUDE-financial.md               ✅
+CLAUDE-state.md                   ✅ Updated Session 15
+CLAUDE-history.md                 ✅ Updated Session 15
+CLAUDE-filetree.md                ✅ This file — updated Session 15
+CLAUDE-decisions.md               ✅ Updated Session 14 — Section 19 added (no new decisions Session 15)
+CLAUDE-bugs.md                    ✅ Updated Session 15
 engineering-rules.md              ✅ Updated Session 14 — Vehicle Intelligence rules added
 data-architecture.md              ✅ Updated Session 14 — new types documented
 ai-insights.md                    ✅
@@ -226,6 +228,7 @@ design-system.md                  ✅
 freemium-boundaries.md            ✅
 kashe-prd-complete.md             ✅
 kashe-handoff-session-15.md       ✅ Session 14 → Session 15 briefing
+kashe-handoff-session-16.md       ✅ Session 15 → Session 16 briefing (NEW)
 
 vehicle-rules-IN.md               ✅ Session 14 — India market reference (double confirmed)
 vehicle-rules-GB.md               ✅ Session 14 — UK market reference (double confirmed)

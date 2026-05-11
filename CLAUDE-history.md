@@ -117,3 +117,18 @@ Complete code spec locked: VI-01 (vehicleRules.ts), VI-02 (userProfile types),
   VI-08 (onboarding Tax Profile screen).
 8 Vehicle Intelligence engineering rules locked. All docs committed to repo.
 Session 15 fully specced: W-06/W-07/W-08 then VI-01 through VI-10.
+
+[Session 15] 11 May 2026. Wiring tickets W-06 and W-07 completed.
+W-06: InstrumentDiscoverySection wired to useInstrumentCatalogue() hook.
+  Direct import of getInstrumentsByTierAndBucket removed. Hook call added.
+  getSuggestions(bucketLabel, resolvedGeography) replaces direct catalogue access.
+  commit 5cf9053.
+W-07: RiskProfileCard wired to householdStore for risk profile persistence.
+  useEffect syncs riskProfile prop → store on change.
+  trackRiskProfileSet() fires for any non-balanced selection.
+  Claude Code self-corrected two wrong prompt assumptions:
+  trackMilestoneReached does not exist (correct fn: trackRiskProfileSet);
+  householdStore is a default export not named; component has no local selected state.
+W-08 (real data stress test) deferred to Session 16 — Anand has IN + NL files ready.
+CLAUDE-state.md confirmed stale across sessions — root cause: project file cached
+  in planning chat, not read from local repo. Verbal confirmation always takes precedence.
