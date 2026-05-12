@@ -25,7 +25,8 @@ invest/
 
 settings.tsx        ✅ Stub with Education section (Session 19: full build)
 sources.tsx         ⬜ Session 18
-onboarding/         ⬜ Session 17 — 10 screens including Tax Profile (VI-08)
+onboarding/         ⬜ Session 17 — 10 screens + Tax Profile (VI-08)
+                       + non-blocking property nudge card
 ```
 
 ---
@@ -50,9 +51,9 @@ onboarding/         ⬜ Session 17 — 10 screens including Tax Profile (VI-08)
   HoldingPriceChart, HoldingInsightCard
 
 /invest/            ✅ All complete + wired
-  RiskProfileCard   ✅ Wired to householdStore — W-07
+  RiskProfileCard        ✅ Wired to householdStore — W-07
   RiskProfileSheet, InvestmentPlanFull
-  MonthlyReviewCard ✅ Wired to useInsights() — W-05
+  MonthlyReviewCard      ✅ Wired to useInsights() — W-05
   MonthlyReviewSheet, FIRETeaserCard (built, not rendered)
   InstrumentDiscoverySection ✅ Wired to useInstrumentCatalogue() — W-06
   FinancialEducationSection
@@ -60,7 +61,7 @@ onboarding/         ⬜ Session 17 — 10 screens including Tax Profile (VI-08)
 /shared/
   AppHeader.tsx               ✅ Universal — all tabs
   PMDashboard.tsx             ⬜ Session 19.5
-  UniversalAddSheet.tsx       ⬜ Session 17
+  UniversalAddSheet.tsx       ⬜ Session 17 — includes property entry form
   CSVUploadSheet.tsx          ✅ Session 13 (W-03)
   DataSourceConfirmSheet.tsx  ✅ Session 13 (W-03)
   ProbableDuplicateSheet.tsx  ⬜ RETIRED — compound key dedup replaces this (W-04)
@@ -95,8 +96,6 @@ insightTriggers.ts      ✅ 12 triggers T1–T12
 insightPrompts.ts       ✅ Prompt templates, injection defence
                            ⬜ VI-06: add market-aware tax profile context
 vehicleRules.ts         ⬜ VI-01 (NEW) — VehicleRule[], VEHICLE_RULES constant
-                           TaxWrapperTaxType, VehicleCategory, HoldingPeriodStatus enums
-                           SHARED_LIMIT_GROUPS, getVehicleCategory() (never throws)
 ```
 
 ---
@@ -107,21 +106,12 @@ vehicleRules.ts         ⬜ VI-01 (NEW) — VehicleRule[], VEHICLE_RULES constan
 spend.ts                ✅ SpendTransaction, SpendCategory, Budget, DataSource
 portfolio.ts            ✅ PortfolioHolding, DEFAULT_BUCKET, AssetSubtype (32 values)
                            ⬜ VI-03: purchaseDate required, countryOfAsset,
-                              isInsideTaxWrapper, taxWrapperType, holdingPeriodStatus,
-                              holdingPeriodMonths, maturityDate, lockInExpiry,
-                              pficFlag, box3Included, dtaaRelevant
-                              NEW ENUMS: TaxWrapperType (18+), HoldingPeriodStatus (11)
+                              isInsideTaxWrapper, taxWrapperType, holdingPeriodStatus
 riskProfile.ts          ✅ RiskProfileType, RISK_PROFILES
 instrumentCatalogue.ts  ✅ InstrumentCatalogueEntry, CatalogueRole
 fire.ts                 ✅ FIREInputs, FIREOutputs — V2 foundation, do not delete
 userProfile.ts          ✅ UserFinancialProfile, VEHICLE_CATEGORY_MAP
-                           ⬜ VI-02: add citizenships[], isUSPerson, taxResidencyCountry,
-                              incomePrimaryCountry, ukResidencyStartDate, indiaTaxRegime,
-                              usState, deChurchTaxApplicable,
-                              crossBorderComplexityScore, hasPficRisk, figRegimeEligible,
-                              activeHoldingPeriodAlerts, vehiclePortabilityWarnings,
-                              primaryInvestmentMarkets
-                              VEHICLE_CATEGORY_MAP: add 'other' + 'unknown' catch-all
+                           ⬜ VI-02: cross-border fields, citizenships[], PFIC, FIG, Box3
 ```
 
 ---
@@ -129,23 +119,16 @@ userProfile.ts          ✅ UserFinancialProfile, VEHICLE_CATEGORY_MAP
 ## /services
 
 ```
-storageService.ts         ✅ Session 12 — expo-secure-store vault door
+storageService.ts         ✅ Session 12 + PDF_EXTRACTION_BUDGET key (DL-10)
 secureStorageAdapter.ts   ✅ Session 12 + Session 13 — web localStorage fallback
 spendCategoriser.ts       ✅ Session 12 — Layer 3→1→2 pipeline
-csvParser.ts              ✅ NOW A SHIM — re-exports from /services/ingestion
-                             Do not add logic here. Session 19: remove shim.
+csvParser.ts              ✅ SHIM — re-exports from /services/ingestion. Remove Session 19.
 holdingsContextBuilder.ts ✅ Session 12
-                             ⬜ VI-07: add cross-border context (taxProfile, holdingFlags,
-                                activeWarnings) to what is sent to Claude
+                             ⬜ VI-07: add cross-border context
 aiInsightService.ts       ✅ Session 12
 analyticsService.ts       ✅ Session 12 + Session 13
 userProfileService.ts     ✅ Session 12
-                             ⬜ VI-04: add 5 new computed functions:
-                                computeCrossBorderComplexityScore()
-                                computeHasPficRisk()
-                                computeFigRegimeEligible()
-                                computeBox3IncludedHoldings()
-                                computeVehiclePortabilityWarnings()
+                             ⬜ VI-04: 5 new computed functions
 snapshotService.ts        ⬜ Session 19.5
 shareService.ts           ⬜ Session 19.5
 ```
@@ -155,16 +138,17 @@ shareService.ts           ⬜ Session 19.5
 ## /services/ingestion/
 
 ```
-types.ts                ✅ All ingestion types — single source of truth
+types.ts                ✅ All ingestion types + PdfBudget + PdfExtractionResult (DL-10)
 institutionRegistry.ts  ✅ 35 institutions, column + content fingerprints
-fileReader.ts           ✅ Raw file content → RawRow[]
+fileReader.ts           ✅ CSV/TXT/XLSX + PDF branch (DL-10)
 columnDetector.ts       ✅ RawRow[] → ColumnMapping + ParseConfidence + institution
 routeDetector.ts        ✅ Institution + ColumnMapping → RouteDetectionResult
 securityPipeline.ts     ✅ PII masking and sanitisation
 transactionParser.ts    ✅ RawRow[] + ColumnMapping → SpendTransaction[]
 holdingsParser.ts       ✅ RawRow[] + ColumnMapping → PortfolioHolding[]
 deduplicator.ts         ✅ Compound key dedup — geography-agnostic (W-04)
-index.ts                ✅ ingestFile() — THE ONLY PUBLIC ENTRY POINT
+pdfExtractor.ts         ✅ Claude Haiku extraction — 50 call/month cap (DL-10)
+index.ts                ✅ ingestFile() — PDF branch added (DL-10)
 ```
 
 ---
@@ -219,22 +203,21 @@ CLAUDE.md                         ✅
 CLAUDE-state.md                   ✅ Updated Session 15
 CLAUDE-history.md                 ✅ Updated Session 15
 CLAUDE-filetree.md                ✅ This file — updated Session 15
-CLAUDE-decisions.md               ✅ Updated Session 14 — Section 19 added (no new decisions Session 15)
-CLAUDE-bugs.md                    ✅ Updated Session 15
-engineering-rules.md              ✅ Updated Session 14 — Vehicle Intelligence rules added
-data-architecture.md              ✅ Updated Session 14 — new types documented
+CLAUDE-decisions.md               ✅ Updated Session 14 (no new locked decisions Session 15)
+CLAUDE-bugs.md                    ✅ Updated Session 15 — password-protected file error added
+engineering-rules.md              ✅ Updated Session 14
+data-architecture.md              ✅ Updated Session 14
 ai-insights.md                    ✅
 design-system.md                  ✅
 freemium-boundaries.md            ✅
 kashe-prd-complete.md             ✅
-kashe-handoff-session-15.md       ✅ Session 14 → Session 15 briefing
-kashe-handoff-session-16.md       ✅ Session 15 → Session 16 briefing (NEW)
+kashe-handoff-session-16.md       ✅ Session 15 → Session 16 briefing
 
-vehicle-rules-IN.md               ✅ Session 14 — India market reference (double confirmed)
-vehicle-rules-GB.md               ✅ Session 14 — UK market reference (double confirmed)
-vehicle-rules-NL.md               ✅ Session 14 — Netherlands market reference (double confirmed)
-vehicle-rules-US.md               ✅ Session 14 — USA market reference (double confirmed)
-vehicle-rules-DE.md               ✅ Session 14 — Germany market reference (double confirmed)
-vehicle-rules-XBORDER.md          ✅ Session 14 — Cross-border interaction matrix (double confirmed)
-VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md  ✅ Session 14 — Annual review checklist
+vehicle-rules-IN.md               ✅ Session 14
+vehicle-rules-GB.md               ✅ Session 14
+vehicle-rules-NL.md               ✅ Session 14
+vehicle-rules-US.md               ✅ Session 14
+vehicle-rules-DE.md               ✅ Session 14
+vehicle-rules-XBORDER.md          ✅ Session 14
+VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md ✅ Session 14
 ```

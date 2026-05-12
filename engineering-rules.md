@@ -1,10 +1,12 @@
 # Kāshe — Engineering Rules
 *Read this before starting any ticket. No exceptions.*
 *These rules apply to every agent, every session, every component.*
-*Last updated: 27 April 2026 — Session 14 complete.*
+*Last updated: 11 May 2026 — Session 15 complete.*
 *Vehicle Intelligence rules added: tax facts only, cross-border caveat, annual review.*
 *Ingestion pipeline rules added: single entry point, institution registry.*
 *Storage rules updated: web localStorage fallback via secureStorageAdapter.*
+*PDF extraction added: Claude Haiku via pdfExtractor.ts. DL-10.*
+*Property entry locked: UniversalAddSheet, market-aware form, not onboarding blocking.*
 
 ---
 
@@ -28,6 +30,7 @@ Every piece of data or configuration has exactly one home.
 - Storage keys → `services/storageService.ts` STORAGE_KEYS
 - Supported institutions → `services/ingestion/institutionRegistry.ts` INSTITUTION_REGISTRY
 - Ingestion entry point → `services/ingestion/index.ts` ingestFile()
+- PDF extraction → `services/ingestion/pdfExtractor.ts` extractFromPdf()
 - Import audit log → `store/auditStore.ts`
 - Insight seed sources → `constants/insightSources.ts`
 - Insight trigger conditions → `constants/insightTriggers.ts`
@@ -38,6 +41,8 @@ Every piece of data or configuration has exactly one home.
   Source: UserFinancialProfile always. Never set properties manually.
 - Vehicle category taxonomy → `types/userProfile.ts` VEHICLE_CATEGORY_MAP
 - **Vehicle intelligence rules → `constants/vehicleRules.ts` VEHICLE_RULES**
+- PDF extraction budget → `services/storageService.ts` STORAGE_KEYS.PDF_EXTRACTION_BUDGET
+  Separate from AI insight budget. 50 call/month cap.
 
 If you find yourself defining the same thing in two places, stop.
 One of them is wrong. Fix the source, not the symptom.
@@ -155,19 +160,20 @@ Mode: System-responsive (follows device dark/light) — intentional.
 
 ---
 
-## INGESTION PIPELINE RULES — LOCKED (25 March 2026)
+## INGESTION PIPELINE RULES — LOCKED (updated 11 May 2026)
 
 ```
 RULE 1: Single entry point only.
   ingestFile(input: IngestionInput) from /services/ingestion
   NEVER call individual pipeline stages directly.
-  NEVER import from csvParser.ts — it is a shim, will be removed Session 18.
+  NEVER import from csvParser.ts — it is a shim, will be removed Session 19.
 
 RULE 2: Institution detection by fingerprints only.
   Column header fingerprints + sample value fingerprints.
   NEVER use filename as a detection signal.
   NEVER hardcode institution logic outside INSTITUTION_REGISTRY.
   To add a new institution: add entry to INSTITUTION_REGISTRY only.
+  PDFs bypass column detection — institution always UNKNOWN for PDFs.
 
 RULE 3: Four-tier taxonomy — always in this order.
   Tier 1: Route (spend | portfolio) — auto-detected, user confirms
@@ -178,6 +184,7 @@ RULE 3: Four-tier taxonomy — always in this order.
 RULE 4: Confirm button disabled when confidence = unknown.
   DataSourceConfirmSheet must not allow import without Tier 2 selection
   when routeDetection.confidence === 'unknown'.
+  PDFs always have confidence 'unknown' — user must always confirm.
 
 RULE 5: Portfolio pending queue is not a failure state.
   Holdings with undetected assetSubtype → pendingCategorizationQueue.
@@ -185,14 +192,84 @@ RULE 5: Portfolio pending queue is not a failure state.
   Never block import because of unknown assetSubtype.
   Never roll back because of unknown assetSubtype.
 
-RULE 6: File formats.
-  CSV and TXT/TAB: Papa Parse, auto-detect delimiter.
+RULE 6: File formats — locked (updated DL-10).
+  CSV:      Papa Parse, auto-detect delimiter.
+  TXT/TAB:  Papa Parse, auto-detect delimiter.
   XLSX/XLS: SheetJS, first sheet only.
-  All headers normalised (trim + lowercase) before any detection.
+  PDF:      Claude Haiku via pdfExtractor.ts (DL-10).
+            extractFromPdf(base64) → RawRow[] → normal pipeline.
+            Always UNKNOWN institution. Always UNKNOWN confidence.
+            Always forces DataSourceConfirmSheet.
+            50 call/month cap (PDF_EXTRACTION_BUDGET — separate from insight budget).
+            Budget check BEFORE Haiku call. Never silent fail.
+  All headers normalised (trim + lowercase) before detection.
 
 RULE 7: Atomic at file level.
   Any pipeline failure → ParseError ATOMIC_ROLLBACK.
   Individual row failures (unknown subtype) are NOT rollback triggers.
+
+RULE 8: Password-protected files must be surfaced as a named error.
+  XLSX files protected with a password cannot be read by SheetJS.
+  fileReader.ts must detect this and return a named error.
+  CSVUploadSheet must show: "This file appears to be password protected.
+  Please open it, remove the password, and re-upload."
+  NEVER silent failure. NEVER generic parse error.
+  Indian bank XLSX exports are password-protected by default — this is a
+  blocking beta bug that MUST be fixed before beta launch.
+
+RULE 9: PDF extraction budget is separate from insight budget.
+  PDF_EXTRACTION_BUDGET tracks: { monthKey, tokensUsed, callsCount }.
+  Hard cap: 50 PDF extractions per month.
+  Reset automatically on new month.
+  NEVER share or deduct from AI insight token budget.
+```
+
+---
+
+## PROPERTY ENTRY RULES — LOCKED (11 May 2026)
+
+```
+RULE 1: Property entry lives in UniversalAddSheet — not in onboarding.
+  Onboarding has a non-blocking nudge card only. Skippable.
+  Tapping the nudge card opens UniversalAddSheet to the property entry flow.
+  Onboarding NEVER blocks on property entry.
+
+RULE 2: Property form is market-aware.
+  The form fields adapt based on which country the property is in.
+  
+  All markets (universal fields):
+    - Property value (current estimate)
+    - Outstanding mortgage balance
+    - Monthly payment
+    - Interest rate
+    - Fix end date (or loan end date)
+
+  NL only:
+    - Erfpacht (leasehold) yes/no
+    
+  IN only:
+    - Old/new tax regime (pre-populated from Tax Profile if already captured)
+    
+  DE only:
+    - Owner-occupied vs rented (interest deductibility depends on this)
+    
+  UK/US: universal fields only — no extra fields required
+
+RULE 3: Property stored as a PortfolioHolding.
+  assetType: 'property'
+  assetSubtype: 'primary_residence' | 'investment_property' | 'unknown'
+  countryOfAsset: the country the property is in
+  This triggers relevant Vehicle Intelligence insights.
+
+RULE 4: Mortgage transaction identification.
+  Regular mortgage debits in transaction data appear as housing spend.
+  They are NOT automatically linked to the property holding.
+  V1: they stay as spend. V2: smart linking between mortgage payments and holding.
+
+RULE 5: No market value estimates from Kāshe.
+  Kāshe stores what the user inputs as property value.
+  Kāshe NEVER fetches or estimates market value.
+  "Worth exploring" framing applies to any suggestions about the property.
 ```
 
 ---
@@ -289,6 +366,11 @@ RULE 10: Source quality.
   PM reviews seed sources quarterly (insightSources.ts).
   PM reviews auto-discovered sources weekly (15 min).
   Source quality review happens via snapshot export.
+
+RULE 11: PDF extraction budget is separate.
+  pdfExtractor.ts uses PDF_EXTRACTION_BUDGET — a completely separate
+  storage key and cap from the AI insight token budget.
+  Never mix PDF extraction costs with insight generation costs.
 ```
 
 ---
@@ -583,6 +665,8 @@ Rules:
 [NEVER] Partial file imports — atomic or nothing (file level)
 [NEVER] Raw files written to disk
 [NEVER] Silent write failures
+[NEVER] Silent file parse failures — always surface named error states
+[NEVER] Generic parse error when file is password-protected — use named error
 [NEVER] Services imported directly into components
   (Exception: CSVUploadSheet → ingestFile() from /services/ingestion)
 [NEVER] Derived values recalculated inline in components
@@ -604,9 +688,13 @@ Rules:
 [NEVER] Holding period alerts when purchaseDateKnown = false
 [NEVER] Cross-border insights without specialist caveat
 [NEVER] vehicleRules.ts sent raw to Claude API
+[NEVER] PDF_EXTRACTION_BUDGET deducted from insight token budget
+[NEVER] Property entry as a blocking onboarding step
+[NEVER] Property market value fetched or estimated by Kāshe
+[NEVER] Mortgage payments auto-linked to property holding in V1
 ```
 
 ---
 
 *Maintained by: Anand (PM)*
-*Last updated: 27 April 2026*
+*Last updated: 11 May 2026*

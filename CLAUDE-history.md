@@ -84,51 +84,33 @@ Infrastructure fixed: secureStorageAdapter web localStorage fallback,
   metro.config.js (unstable_enablePackageExports:false), babel.config.js,
   babel-preset-expo, @expo/vector-icons, expo-document-picker, SheetJS installed.
 W-03b: csvParser.ts decomposed into /services/ingestion/ (10 files).
-  Four-tier import taxonomy locked: Tier1=Route, Tier2=AccountType,
-  Tier3=LineItemType, Tier4=Direction (auto).
-  35 institutions in registry: NL(ABN Amro, ING, Rabobank),
-  IN(HDFC Bank, SBI, ICICI, Axis, Kotak, Zerodha, Groww, Upstox,
-  Angel One, HDFC Securities, Aditya Birla Capital, SBI MF, Mirae Asset),
-  UK(Barclays, Lloyds, HSBC UK, NatWest, Monzo, Starling),
-  US(Chase, BofA, Wells Fargo, Citi, Capital One, Fidelity, Schwab,
-  Vanguard, Interactive Brokers), EU(DeGiro), UNKNOWN.
+  Four-tier import taxonomy locked. 35 institutions in registry.
   Detection: column header + sample value fingerprints only. Filename never used.
-  File formats: CSV, TXT/TAB (auto-detect), XLSX/XLS (SheetJS).
-  Portfolio pending queue in portfolioStore — unknown assetSubtype held for resolution.
-  portfolioStore: addHoldings(), addPendingHoldings(), resolveHolding() added.
-  Target user confirmed: any globally mobile working professional (IN/UK/EU/US).
-W-04 redefined and completed: ProbableDuplicateSheet spec retired entirely.
-  Dice coefficient fuzzy matching removed from deduplicator.ts.
-  Replaced with compound key: transactionId (Priority 1) +
-  amount + date + normalisedDescription (Priority 2).
-  Deduplication geography-agnostic — works for all banks, all markets.
-  ProbableDuplicate interface removed. probableDuplicates[] removed from ParseSuccess.
-W-05 completed: MonthlyReviewCard wired to useInsights().
-  Four review states live: unavailable / insufficient / ready_unread / ready_read.
+  Portfolio pending queue in portfolioStore for unknown assetSubtype.
+W-04: Compound key dedup — geography-agnostic. ProbableDuplicateSheet retired.
+W-05: MonthlyReviewCard wired to useInsights(). Four review states live.
 
 [Session 14] 27 April 2026. Architecture and documentation session.
 Vehicle Intelligence Engine designed — the cross-border product differentiator.
 Six reference documents written, double self-confirmed as expert per market:
   vehicle-rules-IN/GB/NL/US/DE/XBORDER.md + VEHICLE_INTELLIGENCE_ANNUAL_REVIEW.md.
-Complete code spec locked: VI-01 (vehicleRules.ts), VI-02 (userProfile types),
-  VI-03 (portfolio types — purchaseDate required, countryOfAsset, taxWrapperType),
-  VI-04 (userProfileService computed functions), VI-05 (triggers T13-T30),
-  VI-06 (insightPrompts market-aware), VI-07 (holdingsContextBuilder cross-border),
-  VI-08 (onboarding Tax Profile screen).
+Complete code spec locked: VI-01 through VI-08.
 8 Vehicle Intelligence engineering rules locked. All docs committed to repo.
-Session 15 fully specced: W-06/W-07/W-08 then VI-01 through VI-10.
 
-[Session 15] 11 May 2026. Wiring tickets W-06 and W-07 completed.
-W-06: InstrumentDiscoverySection wired to useInstrumentCatalogue() hook.
-  Direct import of getInstrumentsByTierAndBucket removed. Hook call added.
-  getSuggestions(bucketLabel, resolvedGeography) replaces direct catalogue access.
-  commit 5cf9053.
-W-07: RiskProfileCard wired to householdStore for risk profile persistence.
-  useEffect syncs riskProfile prop → store on change.
-  trackRiskProfileSet() fires for any non-balanced selection.
-  Claude Code self-corrected two wrong prompt assumptions:
-  trackMilestoneReached does not exist (correct fn: trackRiskProfileSet);
-  householdStore is a default export not named; component has no local selected state.
-W-08 (real data stress test) deferred to Session 16 — Anand has IN + NL files ready.
-CLAUDE-state.md confirmed stale across sessions — root cause: project file cached
-  in planning chat, not read from local repo. Verbal confirmation always takes precedence.
+[Session 15] 11 May 2026. DL-10 + W-06 + W-07 completed. Key product decisions locked.
+W-06: InstrumentDiscoverySection wired to useInstrumentCatalogue() hook. commit 5cf9053.
+W-07: RiskProfileCard wired to householdStore. trackRiskProfileSet() on non-balanced selection.
+  Claude Code self-corrected wrong prompt assumptions (default export, no local state).
+DL-10: PDF extraction via Claude Haiku. commit 9dcc750.
+  pdfExtractor.ts (NEW). 50 call/month cap. UNKNOWN route always → DataSourceConfirmSheet.
+  Separate PDF_EXTRACTION_BUDGET key in storageService. Never silent fail.
+Product decisions locked this session:
+  PDF parsing: Claude Haiku (Option B — UNKNOWN route, user always confirms).
+  Property entry: UniversalAddSheet with market-aware form (NL/IN/UK/US/DE).
+    NL: erfpacht flag. IN: old/new tax regime. DE: owner-occupied vs rented.
+    Non-blocking onboarding nudge card — not a blocking step.
+  Aggregator roadmap: Nordigen (NL) + Setu (IN) for V1.5 post-beta.
+  Password-protected file error message added to blocking bug list.
+  ABN Amro mortgage (€530k, 1.19% fix to May 2030, erfpacht) noted as real test case for
+    property form and Vehicle Intelligence insights (2030 refinancing risk).
+W-08 deferred to Session 16 — Anand + wife's files ready (IN + NL mix, PDFs + CSVs).

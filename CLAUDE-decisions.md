@@ -1,6 +1,6 @@
 # Kāshe — CLAUDE-decisions.md
 *All locked decisions. Rarely changes.*
-*Last updated: 27 April 2026 — Session 14 complete. Section 19 added.*
+*Last updated: 11 May 2026 — Session 15 complete. PDF extraction + property entry added.*
 *If a decision isn't here, it hasn't been made yet — ask the PM.*
 
 ---
@@ -281,13 +281,28 @@ To add a new institution: add entry to INSTITUTION_REGISTRY only.
 No other pipeline changes needed — registry is read at runtime.
 ```
 
-**File formats supported — locked**
+**File formats supported — locked (updated DL-10, 11 May 2026)**
 ```
 CSV:      Papa Parse, auto-detect delimiter
 TXT/TAB:  Papa Parse, auto-detect delimiter
 XLSX/XLS: SheetJS → first sheet → rows → column detector
+PDF:      Claude Haiku via pdfExtractor.ts (DL-10).
+          extractFromPdf(base64) → RawRow[] → normal pipeline downstream.
+          Institution: always UNKNOWN. Confidence: always unknown.
+          DataSourceConfirmSheet: always shown — user must always confirm.
+          Budget: PDF_EXTRACTION_BUDGET (50 calls/month, separate from insight budget).
+          Budget checked BEFORE Haiku call. Never silent fail.
+          Password-protected: cannot parse. Named error returned to CSVUploadSheet.
 All headers normalised (trim + lowercase) before detection.
 ```
+
+**Password-protected XLSX — locked (11 May 2026)**
+SheetJS cannot read password-protected XLSX files.
+Indian bank exports (HDFC, SBI, Zerodha etc.) are password-protected by default.
+fileReader.ts must detect this and return a named error — never a generic parse error.
+CSVUploadSheet must show: "This file appears to be password protected. Please open it,
+remove the password, and re-upload."
+This is a blocking beta bug. MUST be fixed before beta launch.
 
 **Portfolio pending queue — locked**
 ```
@@ -549,6 +564,14 @@ Universal Add Sheet shown with isOnboarding=true.
 Tooltip on bank statement option.
 User can upload or skip.
 
+**Property nudge card — locked (Session 15)**
+Non-blocking nudge card shown after First Add flow (screen 6).
+Copy: "Do you own property? Add it to see your full position."
+One tap opens UniversalAddSheet to the property entry flow.
+Entirely skippable — never blocks onboarding completion.
+NOT a separate onboarding screen. A card within the flow.
+Property entry is built in UniversalAddSheet (Session 17), not in onboarding.
+
 ---
 
 ## 13. SECURITY + ENCRYPTION
@@ -605,14 +628,54 @@ When gates are added: benefit-led bottom sheet, NEVER error state.
 
 ---
 
+## 15b. PROPERTY ENTRY — LOCKED (11 May 2026)
+
+**Property entry lives in UniversalAddSheet — not in onboarding.**
+Onboarding has a non-blocking nudge card only. Skippable.
+Tapping the nudge opens UniversalAddSheet to the property entry flow.
+
+**Market-aware form fields — locked**
+
+All markets:
+  - Property value (current estimate — user-entered, never fetched)
+  - Outstanding mortgage balance
+  - Monthly payment
+  - Interest rate
+  - Fix end date (or loan end date)
+
+NL only: erfpacht (leasehold) yes/no
+IN only: old/new tax regime (pre-populated from Tax Profile if captured)
+DE only: owner-occupied vs rented (deductibility depends on this)
+UK/US:   universal fields only
+
+**Storage — locked**
+Property stored as PortfolioHolding:
+  assetType: 'property'
+  assetSubtype: 'primary_residence' | 'investment_property' | 'unknown'
+  countryOfAsset: country the property is in
+  This triggers relevant Vehicle Intelligence insights.
+
+**What Kāshe does NOT do with property — locked**
+- Never fetches or estimates market value
+- Never auto-links mortgage payments from transaction data to property holding (V2)
+- Never computes property equity automatically
+
+**V1.5 / V2 roadmap (do not build in V1)**
+- Smart linking: recurring mortgage debits → property holding
+- Property equity tracking with estimated market value
+- Rental income tracking for investment properties
+
+---
+
 ## 16. VERSION SCOPE BOUNDARIES
 
 **V1 (current build)**
-Four tabs, ingestion pipeline (35 institutions, CSV/TXT/XLSX),
+Four tabs, ingestion pipeline (35 institutions, CSV/TXT/XLSX/PDF via Claude Haiku),
 security pipeline, spend categoriser, AI insight engine,
 UserFinancialProfile, Vehicle Intelligence Engine, analytics (disabled),
-onboarding (11 screens including Tax Profile), settings stub,
-single OWNER profile, BYOK API keys, local encrypted storage.
+onboarding (11 screens including Tax Profile + property nudge card),
+UniversalAddSheet with market-aware property entry form (NL/IN/UK/US/DE),
+settings stub, single OWNER profile, BYOK API keys, local encrypted storage.
 
 **V1b (after V1 stable)**
 Couple sync (Supabase E2E). PARTNER profile activated.
@@ -650,10 +713,11 @@ AsyncStorage directly. Raw SecureStore calls outside storageService.ts.
 Services imported directly into components.
 EXCEPTION: CSVUploadSheet may import ingestFile() from /services/ingestion.
 
-**Ingestion pipeline — locked**
+**Ingestion pipeline — locked (updated DL-10)**
 Papa Parse for CSV/TXT. SheetJS for XLSX/XLS.
+Claude Haiku via pdfExtractor.ts for PDF (DL-10).
 ingestFile() from /services/ingestion is the SINGLE entry point.
-csvParser.ts is a shim — do not add logic to it. Remove in Session 18.
+csvParser.ts is a shim — do not add logic to it. Remove in Session 19.
 
 **Model — locked**
 claude-haiku-4-5-20251001 for all V1 insight types.
